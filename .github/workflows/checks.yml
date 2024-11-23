@@ -61,7 +61,5 @@ jobs:
         run: php artisan test
       - name: Lint code
         run: composer pint:test
-      - name: Generate swagger documentation
-        run: composer openapi
       - name: Ensure OpenAPI documentation is up to date
         run: composer openapi:test
