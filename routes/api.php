@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\API\v1\Auth\AuthController;
+use App\Http\Controllers\API\v1\Auth\PasswordResetController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\TransactionCategoryController;
 use App\Http\Controllers\API\v1\TransactionController;
+use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,16 +21,22 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Auth routes
+Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/password/reset-code', [PasswordResetController::class, 'sendPasswordResetCode']);
+    Route::post('/password/reset', [PasswordResetController::class, 'resetPasswordWithCode']);
 });
 
-Route::prefix('v1')->group(function () {
-    // Auth routes
-    // Resource routes
-    Route::apiResource('groups', GroupController::class);
-    Route::apiResource('categories', TransactionCategoryController::class);
-    Route::apiResource('parties', PartyController::class);
-    Route::apiResource('wallets', WalletController::class);
-    Route::apiResource('transactions', TransactionController::class);
+// Resource routes
+Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function () {
+    Route::group(['middleware' => ['auth:sanctum']], function () {
+        Route::get('/user', [UserController::class, 'show']);
+        Route::apiResource('groups', GroupController::class);
+        Route::apiResource('categories', TransactionCategoryController::class);
+        Route::apiResource('parties', PartyController::class);
+        Route::apiResource('wallets', WalletController::class);
+        Route::apiResource('transactions', TransactionController::class);
+    });
 });
