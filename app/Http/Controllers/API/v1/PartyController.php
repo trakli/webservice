@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
 class PartyController extends ApiController
 {
     #[OA\Get(
-        path: '/api/parties',
+        path: '/parties',
         summary: 'List all parties',
         tags: ['Party'],
         responses: [
@@ -44,7 +44,7 @@ class PartyController extends ApiController
     }
 
     #[OA\Post(
-        path: '/api/parties',
+        path: '/parties',
         summary: 'Create a new party',
         tags: ['Party'],
         requestBody: new OA\RequestBody(
@@ -90,7 +90,7 @@ class PartyController extends ApiController
     }
 
     #[OA\Get(
-        path: '/api/parties/{id}',
+        path: '/parties/{id}',
         summary: 'Get a specific party',
         tags: ['Party'],
         parameters: [
@@ -133,7 +133,7 @@ class PartyController extends ApiController
     }
 
     #[OA\Put(
-        path: '/api/parties/{id}',
+        path: '/parties/{id}',
         summary: 'Update a specific party',
         tags: ['Party'],
         parameters: [
@@ -196,7 +196,7 @@ class PartyController extends ApiController
     }
 
     #[OA\Delete(
-        path: '/api/parties/{id}',
+        path: '/parties/{id}',
         summary: 'Delete a specific party',
         tags: ['Party'],
         parameters: [
