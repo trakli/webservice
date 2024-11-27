@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
 class WalletController extends ApiController
 {
     #[OA\Get(
-        path: '/api/wallets',
+        path: '/wallets',
         summary: 'List all wallets',
         tags: ['Wallet'],
         responses: [
@@ -44,7 +44,7 @@ class WalletController extends ApiController
     }
 
     #[OA\Post(
-        path: '/api/wallets',
+        path: '/wallets',
         summary: 'Create a new wallet',
         tags: ['Wallet'],
         requestBody: new OA\RequestBody(
@@ -92,7 +92,7 @@ class WalletController extends ApiController
     }
 
     #[OA\Get(
-        path: '/api/wallets/{id}',
+        path: '/wallets/{id}',
         summary: 'Get a specific wallet',
         tags: ['Wallet'],
         parameters: [
@@ -135,7 +135,7 @@ class WalletController extends ApiController
     }
 
     #[OA\Put(
-        path: '/api/wallets/{id}',
+        path: '/wallets/{id}',
         summary: 'Update a specific wallet',
         tags: ['Wallet'],
         parameters: [
@@ -200,7 +200,7 @@ class WalletController extends ApiController
     }
 
     #[OA\Delete(
-        path: '/api/wallets/{id}',
+        path: '/wallets/{id}',
         summary: 'Delete a specific wallet',
         tags: ['Wallet'],
         parameters: [

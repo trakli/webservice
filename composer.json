@@ -54,10 +54,10 @@
             "vendor/bin/pint --test"
         ],
         "openapi": [
-            "./vendor/bin/openapi --output public/docs/api.json ./app"
+            "./vendor/bin/openapi app --debug --output public/docs/api.json"
         ],
         "openapi:test": [
-            "./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1) ; rm -f public/docs/check-api.json"
+            "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
         ]
     },
     "extra": {

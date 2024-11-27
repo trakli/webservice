@@ -19,6 +19,222 @@
         }
     ],
     "paths": {
+        "/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user",
+                "operationId": "611a305423663b1414e03288a7455c8a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "first_name",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "first_name": {
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "type": "string"
+                                    },
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User registered successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User login",
+                "operationId": "43b6ed5a477f197b7055999dc6da9af4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User successfully logged in"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/password/reset-code": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Send password reset code",
+                "operationId": "d7bd4048a078e81fd162df22143d2202",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "description": "The email address of the user",
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset code sent successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password reset code sent successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/password/reset": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Reset password using verification code",
+                "operationId": "cbf277486c1013312ea1693dc185daa9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "code",
+                                    "new_password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "description": "The email address of the user",
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "code": {
+                                        "description": "The verification code sent to the user",
+                                        "type": "integer"
+                                    },
+                                    "new_password": {
+                                        "description": "The new password for the user",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset successful",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Password has been reset successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "400": {
+                        "description": "Invalid or expired code"
+                    }
+                }
+            }
+        },
         "/groups": {
             "get": {
                 "tags": [
@@ -212,13 +428,13 @@
                 }
             }
         },
-        "/api/parties": {
+        "/parties": {
             "get": {
                 "tags": [
                     "Party"
                 ],
                 "summary": "List all parties",
-                "operationId": "dbf02cfa9c090277ada8e1a69a988ed2",
+                "operationId": "fc4d9004084d5830ee271a716f7e1b47",
                 "responses": {
                     "200": {
                         "description": "Successful response",
@@ -246,7 +462,7 @@
                     "Party"
                 ],
                 "summary": "Create a new party",
-                "operationId": "9a5bda5e4c78a5c19152303a290dfdfc",
+                "operationId": "3d8bb107a2247bad1340e58a85382842",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -293,13 +509,13 @@
                 }
             }
         },
-        "/api/parties/{id}": {
+        "/parties/{id}": {
             "get": {
                 "tags": [
                     "Party"
                 ],
                 "summary": "Get a specific party",
-                "operationId": "b26df1ad454dd76564f16a157311b62b",
+                "operationId": "8b1cf22756993b628f213884aa66c766",
                 "parameters": [
                     {
                         "name": "id",
@@ -337,7 +553,7 @@
                     "Party"
                 ],
                 "summary": "Update a specific party",
-                "operationId": "9c33df4c48d651fac479f545000f61c5",
+                "operationId": "28f2dc81853db9555ed20af6906cefa0",
                 "parameters": [
                     {
                         "name": "id",
@@ -398,7 +614,7 @@
                     "Party"
                 ],
                 "summary": "Delete a specific party",
-                "operationId": "2ef523797d688c3e27213bd31638e093",
+                "operationId": "94f345744a74961f7013402cdd57261c",
                 "parameters": [
                     {
                         "name": "id",
@@ -976,13 +1192,13 @@
                 }
             }
         },
-        "/api/wallets": {
+        "/wallets": {
             "get": {
                 "tags": [
                     "Wallet"
                 ],
                 "summary": "List all wallets",
-                "operationId": "8b0f8b147ae2fe3b8ccba236347ac631",
+                "operationId": "205aac6c13391b324341f371573a6650",
                 "responses": {
                     "200": {
                         "description": "Successful response",
@@ -1010,7 +1226,7 @@
                     "Wallet"
                 ],
                 "summary": "Create a new wallet",
-                "operationId": "29840cbaac49decaec17e9172c2bd215",
+                "operationId": "08891505e22e770a4a722fd84e9e60d7",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1062,13 +1278,13 @@
                 }
             }
         },
-        "/api/wallets/{id}": {
+        "/wallets/{id}": {
             "get": {
                 "tags": [
                     "Wallet"
                 ],
                 "summary": "Get a specific wallet",
-                "operationId": "9d239c86139247e357af8f0567880e43",
+                "operationId": "2f10046077e0d411b96969ddb46ef801",
                 "parameters": [
                     {
                         "name": "id",
@@ -1106,7 +1322,7 @@
                     "Wallet"
                 ],
                 "summary": "Update a specific wallet",
-                "operationId": "4fd136c7ce174db1599a9775ccb46af6",
+                "operationId": "8415e94044dedc6ffdfc45c6fbb37816",
                 "parameters": [
                     {
                         "name": "id",
@@ -1171,7 +1387,7 @@
                     "Wallet"
                 ],
                 "summary": "Delete a specific wallet",
-                "operationId": "c35e6498c2e493804649549b470e0f41",
+                "operationId": "3f5000361bb9b5f04d24e0b0049be5e8",
                 "parameters": [
                     {
                         "name": "id",
@@ -1374,6 +1590,10 @@
         {
             "name": "Transactions",
             "description": "Endpoints for managing transactions"
+        },
+        {
+            "name": "Authentication",
+            "description": "Authentication"
         },
         {
             "name": "Groups",

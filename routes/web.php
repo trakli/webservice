@@ -14,5 +14,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return response()->json(['welcome' => 'Welcome to the trakli webservice! See API documentation here: /openapi/documentation']);
+    $host = request()->getHttpHost();
+
+    return response()->json(['welcome' => 'Welcome to the Trakli WebService! See API documentation here: '."$host/docs/swagger or $host/docs/api.json"]);
 });
