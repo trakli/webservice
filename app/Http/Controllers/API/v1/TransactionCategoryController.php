@@ -64,6 +64,7 @@ class TransactionCategoryController extends ApiController
                 properties: [
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense'], description: 'Type of the category'),
                     new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
+                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
                 ]
             )
         ),
@@ -88,6 +89,7 @@ class TransactionCategoryController extends ApiController
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -96,11 +98,15 @@ class TransactionCategoryController extends ApiController
 
         $data = $validator->validated();
         $category = null;
+        $user = $request->user();
+        $data['user_id'] = $user->id;
 
         if ($data['type'] === 'income') {
-            $category = IncomeCategory::create(['name' => $data['name']]);
+            unset($data['type']);
+            $category = $user->incomeCategories()->firstOrcreate($data);
         } elseif ($data['type'] === 'expense') {
-            $category = ExpenseCategory::create(['name' => $data['name']]);
+            unset($data['type']);
+            $category = $user->expenseCategories()->firstOrCreate($data);
         }
 
         return $this->success($category, 'Category created successfully', 201);
@@ -186,6 +192,7 @@ class TransactionCategoryController extends ApiController
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
+                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
                 ]
             )
         ),
@@ -214,6 +221,7 @@ class TransactionCategoryController extends ApiController
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -222,11 +230,12 @@ class TransactionCategoryController extends ApiController
 
         $data = $validator->validated();
         $category = null;
+        $user = $request->user();
 
         if ($data['type'] === 'income') {
-            $category = IncomeCategory::find($id);
+            $category = $user->incomeCategories()->findOrFail($id);
         } elseif ($data['type'] === 'expense') {
-            $category = ExpenseCategory::find($id);
+            $category = $user->expenseCategories()->findOrFail($id);
         } else {
             return $this->failure('Invalid category type', 400);
         }
@@ -235,7 +244,8 @@ class TransactionCategoryController extends ApiController
             return $this->failure('Category not found', 404);
         }
 
-        $category->update(['name' => $data['name']]);
+        unset($data['type']);
+        $category->update($data);
 
         return $this->success($category, 'Category updated successfully');
     }
@@ -282,11 +292,11 @@ class TransactionCategoryController extends ApiController
     public function destroy(Request $request, int $id): JsonResponse
     {
         $type = $request->query('type');
-
+        $user = $request->user();
         if ($type === 'income') {
-            $category = IncomeCategory::find($id);
+            $category = $user->incomeCategories()->findOrFail($id);
         } elseif ($type === 'expense') {
-            $category = ExpenseCategory::find($id);
+            $category = $user->expenseCategories()->findOrFail($id);
         } else {
             return $this->failure('Invalid category type', 400);
         }

@@ -709,6 +709,10 @@
                                     "name": {
                                         "description": "Name of the category",
                                         "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "The description of the category",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -824,6 +828,10 @@
                                 "properties": {
                                     "name": {
                                         "description": "Name of the category",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "The description of the category",
                                         "type": "string"
                                     }
                                 },
@@ -1554,6 +1562,10 @@
                     },
                     "name": {
                         "description": "Name of the category",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "Description of the category",
                         "type": "string"
                     },
                     "type": {

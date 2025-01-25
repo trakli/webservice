@@ -12,6 +12,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer', description: 'ID of the category'),
         new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
+        new OA\Property(property: 'description', type: 'string', description: 'Description of the category'),
         new OA\Property(property: 'type', type: 'string', description: 'Type of the category (income or expense)'),
     ]
 )]
