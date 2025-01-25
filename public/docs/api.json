@@ -893,6 +893,16 @@
                                 "expense"
                             ]
                         }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of transactions to fetch",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
                     }
                 ],
                 "responses": {
@@ -926,14 +936,14 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "type",
-                                    "date",
-                                    "party_id",
-                                    "wallet_id",
                                     "amount",
-                                    "group_id"
+                                    "type"
                                 ],
                                 "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
                                     "type": {
                                         "type": "string",
                                         "enum": [
@@ -941,25 +951,28 @@
                                             "expense"
                                         ]
                                     },
-                                    "date": {
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "datetime": {
                                         "type": "string",
                                         "format": "date"
                                     },
                                     "party_id": {
                                         "type": "integer"
                                     },
-                                    "description": {
-                                        "type": "string"
-                                    },
                                     "wallet_id": {
                                         "type": "integer"
                                     },
-                                    "amount": {
-                                        "type": "number",
-                                        "format": "float"
-                                    },
                                     "group_id": {
                                         "type": "integer"
+                                    },
+                                    "categories": {
+                                        "type": "array",
+                                        "items": {
+                                            "description": "Category ID array",
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1411,33 +1424,6 @@
                 },
                 "type": "object"
             },
-            "Expense": {
-                "properties": {
-                    "id": {
-                        "description": "ID of the expense",
-                        "type": "integer"
-                    },
-                    "amount": {
-                        "description": "Amount of the expense",
-                        "type": "number",
-                        "format": "float"
-                    },
-                    "description": {
-                        "description": "Description of the expense",
-                        "type": "string"
-                    },
-                    "date": {
-                        "description": "Date of the expense",
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "category_id": {
-                        "description": "ID of the category to which the expense belongs",
-                        "type": "integer"
-                    }
-                },
-                "type": "object"
-            },
             "Group": {
                 "properties": {
                     "id": {
@@ -1451,33 +1437,6 @@
                     "description": {
                         "description": "Description of the group",
                         "type": "string"
-                    }
-                },
-                "type": "object"
-            },
-            "Income": {
-                "properties": {
-                    "id": {
-                        "description": "ID of the income",
-                        "type": "integer"
-                    },
-                    "amount": {
-                        "description": "Amount of the income",
-                        "type": "number",
-                        "format": "float"
-                    },
-                    "description": {
-                        "description": "Description of the income",
-                        "type": "string"
-                    },
-                    "date": {
-                        "description": "Date of the income",
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "category_id": {
-                        "description": "ID of the category to which the income belongs",
-                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1528,14 +1487,18 @@
                         "description": "Description of the transaction",
                         "type": "string"
                     },
-                    "date": {
-                        "description": "Date of the transaction",
+                    "datetime": {
+                        "description": "Date and time of the transaction",
                         "type": "string",
                         "format": "date"
                     },
-                    "category_id": {
-                        "description": "ID of the category to which the transaction belongs",
-                        "type": "integer"
+                    "categories": {
+                        "description": "List of categories of the transaction",
+                        "type": "array",
+                        "items": {
+                            "description": "Category ID array",
+                            "type": "integer"
+                        }
                     }
                 },
                 "type": "object"

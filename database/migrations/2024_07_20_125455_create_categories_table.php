@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug');
             $table->text('description')->nullable();
-            $table->enum('type', ['income', 'expense']);
+            $table->enum('type', ['income', 'expense', 'invoice']);
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
         });

@@ -21,6 +21,15 @@ class Category extends Model
 {
     use HasFactory, Sluggable;
 
+    public const TYPE_INCOME = 'income';
+
+    public const TYPE_EXPENSE = 'expense';
+
+    public const TYPES = [
+        self::TYPE_INCOME,
+        self::TYPE_EXPENSE,
+    ];
+
     protected $fillable = [
         'name',
         'description',

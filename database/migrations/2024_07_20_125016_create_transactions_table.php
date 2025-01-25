@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('incomes', function (Blueprint $table) {
+        Schema::create('transactions', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
             $table->float('amount');
+            $table->datetime('datetime');
+            $table->enum('type', ['income', 'expense']);
             $table->text('description');
-            $table->unsignedBigInteger('wallet_id');
+            $table->unsignedBigInteger('wallet_id')->nullable();
             $table->unsignedBigInteger('party_id')->nullable();
-            $table->unsignedBigInteger('income_category_id')->nullable();
             $table->timestamps();
         });
     }
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('incomes');
+        Schema::dropIfExists('transactions');
     }
 };
