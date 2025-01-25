@@ -30,7 +30,7 @@ class CategoriesTest extends TestCase
                 'message',
             ]);
 
-        $this->assertDatabaseHas('expense_categories', ['id' => $response->json('data.id')]);
+        $this->assertDatabaseHas('categories', ['id' => $response->json('data.id')]);
     }
 
     public function test_api_user_can_get_their_categories()
@@ -72,14 +72,14 @@ class CategoriesTest extends TestCase
         ]);
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->putJson('/api/v1/categories/'.$response->json('data.id'), [
+        $response = $this->actingAs($user)->putJson('/api/v1/categories/' . $response->json('data.id'), [
             'type' => 'expense',
             'name' => 'Updated Expense Category',
             'description' => 'Updated description',
         ]);
         $response->assertStatus(200);
 
-        $this->assertDatabaseHas('expense_categories', ['name' => $response->json('data.name'), 'description' => $response->json('data.description')]);
+        $this->assertDatabaseHas('categories', ['name' => $response->json('data.name'), 'description' => $response->json('data.description')]);
     }
 
     public function test_api_user_can_update_their_income_categories()
@@ -93,13 +93,13 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->putJson('/api/v1/categories/'.$response->json('data.id'), [
+        $response = $this->actingAs($user)->putJson('/api/v1/categories/' . $response->json('data.id'), [
             'type' => 'income',
             'name' => 'Updated Income Category',
             'description' => 'Updated description',
         ]);
 
-        $this->assertDatabaseHas('income_categories', ['name' => $response->json('data.name'), 'description' => $response->json('data.description')]);
+        $this->assertDatabaseHas('categories', ['name' => $response->json('data.name'), 'description' => $response->json('data.description')]);
     }
 
     public function test_api_user_can_delete_their_expense_categories()
@@ -113,7 +113,7 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->delete('/api/v1/categories/'.$response->json('data.id').'?type=expense');
+        $response = $this->actingAs($user)->delete('/api/v1/categories/' . $response->json('data.id') . '?type=expense');
 
         $response->assertStatus(204);
     }
@@ -129,7 +129,7 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->delete('/api/v1/categories/'.$response->json('data.id').'?type=income');
+        $response = $this->actingAs($user)->delete('/api/v1/categories/' . $response->json('data.id') . '?type=income');
 
         $response->assertStatus(204);
     }
@@ -154,13 +154,52 @@ class CategoriesTest extends TestCase
                 'message',
             ]);
 
-        $this->assertDatabaseHas('income_categories', ['id' => $response->json('data.id')]);
+        $this->assertDatabaseHas('categories', ['id' => $response->json('data.id')]);
     }
 
     public function test_api_user_can_not_create_categories_with_missing_information()
     {
         $user = User::factory()->create();
         $response = $this->actingAs($user)->postJson('/api/v1/categories', []);
+
+        $response->assertStatus(400);
+    }
+
+    public function test_api_user_cannot_create_category_with_invalid_type()
+    {
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->postJson('/api/v1/categories', [
+            'type' => 'invalid',
+            'name' => 'Test Category',
+            'description' => 'description',
+        ]);
+
+        $response->assertStatus(400);
+    }
+
+    public function test_unauthorized_user_cannot_access_categories()
+    {
+        $response = $this->getJson('/api/v1/categories');
+        $response->assertStatus(401);
+    }
+
+    public function test_api_user_cannot_create_duplicate_category_names_of_same_type()
+    {
+        $user = User::factory()->create();
+
+        // Create first category
+        $this->actingAs($user)->postJson('/api/v1/categories', [
+            'type' => 'expense',
+            'name' => 'Test Category',
+            'description' => 'description',
+        ]);
+
+        // Attempt to create duplicate
+        $response = $this->actingAs($user)->postJson('/api/v1/categories', [
+            'type' => 'expense',
+            'name' => 'Test Category',
+            'description' => 'description',
+        ]);
 
         $response->assertStatus(400);
     }

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
-    schema: 'TransactionCategory',
+    schema: 'Category',
     type: 'object',
     properties: [
         new OA\Property(property: 'id', type: 'integer', description: 'ID of the category'),
@@ -16,7 +16,14 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'type', type: 'string', description: 'Type of the category (income or expense)'),
     ]
 )]
-class TransactionCategory extends Model
+class Category extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'description',
+        'type',
+        'user_id',
+    ];
 }
