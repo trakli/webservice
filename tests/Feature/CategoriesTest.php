@@ -72,7 +72,7 @@ class CategoriesTest extends TestCase
         ]);
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->putJson('/api/v1/categories/' . $response->json('data.id'), [
+        $response = $this->actingAs($user)->putJson('/api/v1/categories/'.$response->json('data.id'), [
             'type' => 'expense',
             'name' => 'Updated Expense Category',
             'description' => 'Updated description',
@@ -93,7 +93,7 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->putJson('/api/v1/categories/' . $response->json('data.id'), [
+        $response = $this->actingAs($user)->putJson('/api/v1/categories/'.$response->json('data.id'), [
             'type' => 'income',
             'name' => 'Updated Income Category',
             'description' => 'Updated description',
@@ -113,7 +113,7 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->delete('/api/v1/categories/' . $response->json('data.id') . '?type=expense');
+        $response = $this->actingAs($user)->delete('/api/v1/categories/'.$response->json('data.id').'?type=expense');
 
         $response->assertStatus(204);
     }
@@ -129,7 +129,7 @@ class CategoriesTest extends TestCase
 
         $response->assertStatus(201);
 
-        $response = $this->actingAs($user)->delete('/api/v1/categories/' . $response->json('data.id') . '?type=income');
+        $response = $this->actingAs($user)->delete('/api/v1/categories/'.$response->json('data.id').'?type=income');
 
         $response->assertStatus(204);
     }

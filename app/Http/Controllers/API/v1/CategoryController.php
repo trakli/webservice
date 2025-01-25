@@ -139,7 +139,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->failure('Category not found', 404);
         }
 
@@ -205,7 +205,7 @@ class CategoryController extends ApiController
 
         $category = $user->categories()->find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->failure('Category not found', 404);
         }
 
@@ -251,7 +251,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($id);
 
-        if (!$category) {
+        if (! $category) {
             return $this->failure('Category not found', 404);
         }
 
