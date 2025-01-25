@@ -39,7 +39,7 @@ For detailed and explained installation steps see : [INSTALLATION.md](INSTALLATI
 ### Accessing the Application
 
 - The application will be available at `http://localhost:8000`.
-- API documentation (if implemented) will be accessible at `http://localhost:8000/api/documentation`.
+- API documentation will be accessible at `http://localhost:8000/docs/swagger`.
 
 ### Stopping the Containers
 
