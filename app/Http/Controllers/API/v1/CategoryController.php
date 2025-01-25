@@ -3,20 +3,18 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Models\ExpenseCategory;
-use App\Models\IncomeCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
-#[OA\Tag(name: 'Transaction Categories', description: 'Endpoints for managing transaction categories')]
-class TransactionCategoryController extends ApiController
+#[OA\Tag(name: 'Categories', description: 'Endpoints for managing transaction categories')]
+class CategoryController extends ApiController
 {
     #[OA\Get(
         path: '/categories',
         summary: 'List all categories',
-        tags: ['Transaction Categories'],
+        tags: ['Categories'],
         parameters: [
             new OA\Parameter(
                 name: 'type',
@@ -30,7 +28,7 @@ class TransactionCategoryController extends ApiController
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/TransactionCategory'))
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Category'))
             ),
             new OA\Response(
                 response: 500,
@@ -40,15 +38,14 @@ class TransactionCategoryController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $type = $request->query('type');
-
-        if ($type === 'income') {
-            $categories = IncomeCategory::paginate(20);
-        } elseif ($type === 'expense') {
-            $categories = ExpenseCategory::paginate(20);
-        } else {
-            return $this->failure('Invalid category type', 400);
+        $user = $request->user();
+        $categories = $user->categories();
+        if ($request->has('type') && $request->type == 'income') {
+            $categories = $categories->where('type', 'income');
+        } elseif ($request->has('type') && $request->type == 'expense') {
+            $categories = $categories->where('type', 'expense');
         }
+        $categories = $categories->paginate(20);
 
         return $this->success($categories);
     }
@@ -56,7 +53,7 @@ class TransactionCategoryController extends ApiController
     #[OA\Post(
         path: '/categories',
         summary: 'Create a new category',
-        tags: ['Transaction Categories'],
+        tags: ['Categories'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -64,6 +61,7 @@ class TransactionCategoryController extends ApiController
                 properties: [
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense'], description: 'Type of the category'),
                     new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
+                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
                 ]
             )
         ),
@@ -71,7 +69,7 @@ class TransactionCategoryController extends ApiController
             new OA\Response(
                 response: 201,
                 description: 'Category created successfully',
-                content: new OA\JsonContent(ref: '#/components/schemas/TransactionCategory')
+                content: new OA\JsonContent(ref: '#/components/schemas/Category')
             ),
             new OA\Response(
                 response: 400,
@@ -88,6 +86,7 @@ class TransactionCategoryController extends ApiController
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -95,13 +94,13 @@ class TransactionCategoryController extends ApiController
         }
 
         $data = $validator->validated();
-        $category = null;
-
-        if ($data['type'] === 'income') {
-            $category = IncomeCategory::create(['name' => $data['name']]);
-        } elseif ($data['type'] === 'expense') {
-            $category = ExpenseCategory::create(['name' => $data['name']]);
+        $user = $request->user();
+        $data['user_id'] = $user->id;
+        $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
+        if ($category_exists) {
+            return $this->failure('Category already exists', 400);
         }
+        $category = $user->categories()->firstOrCreate($data);
 
         return $this->success($category, 'Category created successfully', 201);
     }
@@ -109,7 +108,7 @@ class TransactionCategoryController extends ApiController
     #[OA\Get(
         path: '/categories/{id}',
         summary: 'Get a specific category',
-        tags: ['Transaction Categories'],
+        tags: ['Categories'],
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -118,19 +117,12 @@ class TransactionCategoryController extends ApiController
                 schema: new OA\Schema(type: 'integer'),
                 description: 'ID of the category'
             ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense']),
-                description: 'Type of the category (income or expense)'
-            ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
-                content: new OA\JsonContent(ref: '#/components/schemas/TransactionCategory')
+                content: new OA\JsonContent(ref: '#/components/schemas/Category')
             ),
             new OA\Response(
                 response: 404,
@@ -144,15 +136,8 @@ class TransactionCategoryController extends ApiController
     )]
     public function show(Request $request, int $id): JsonResponse
     {
-        $type = $request->query('type');
-
-        if ($type === 'income') {
-            $category = IncomeCategory::find($id);
-        } elseif ($type === 'expense') {
-            $category = ExpenseCategory::find($id);
-        } else {
-            return $this->failure('Invalid category type', 400);
-        }
+        $user = $request->user();
+        $category = $user->categories()->find($id);
 
         if (! $category) {
             return $this->failure('Category not found', 404);
@@ -164,7 +149,7 @@ class TransactionCategoryController extends ApiController
     #[OA\Put(
         path: '/categories/{id}',
         summary: 'Update a specific category',
-        tags: ['Transaction Categories'],
+        tags: ['Categories'],
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -173,19 +158,13 @@ class TransactionCategoryController extends ApiController
                 schema: new OA\Schema(type: 'integer'),
                 description: 'ID of the category'
             ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense']),
-                description: 'Type of the category (income or expense)'
-            ),
         ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
+                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
                 ]
             )
         ),
@@ -193,7 +172,7 @@ class TransactionCategoryController extends ApiController
             new OA\Response(
                 response: 200,
                 description: 'Category updated successfully',
-                content: new OA\JsonContent(ref: '#/components/schemas/TransactionCategory')
+                content: new OA\JsonContent(ref: '#/components/schemas/Category')
             ),
             new OA\Response(
                 response: 404,
@@ -214,6 +193,7 @@ class TransactionCategoryController extends ApiController
         $validator = Validator::make($request->all(), [
             'type' => 'required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -221,21 +201,15 @@ class TransactionCategoryController extends ApiController
         }
 
         $data = $validator->validated();
-        $category = null;
+        $user = $request->user();
 
-        if ($data['type'] === 'income') {
-            $category = IncomeCategory::find($id);
-        } elseif ($data['type'] === 'expense') {
-            $category = ExpenseCategory::find($id);
-        } else {
-            return $this->failure('Invalid category type', 400);
-        }
+        $category = $user->categories()->find($id);
 
         if (! $category) {
             return $this->failure('Category not found', 404);
         }
 
-        $category->update(['name' => $data['name']]);
+        $category->update($data);
 
         return $this->success($category, 'Category updated successfully');
     }
@@ -243,7 +217,7 @@ class TransactionCategoryController extends ApiController
     #[OA\Delete(
         path: '/categories/{id}',
         summary: 'Delete a specific category',
-        tags: ['Transaction Categories'],
+        tags: ['Categories'],
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -251,13 +225,6 @@ class TransactionCategoryController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'integer'),
                 description: 'ID of the category'
-            ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense']),
-                description: 'Type of the category (income or expense)'
             ),
         ],
         responses: [
@@ -281,15 +248,8 @@ class TransactionCategoryController extends ApiController
     )]
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $type = $request->query('type');
-
-        if ($type === 'income') {
-            $category = IncomeCategory::find($id);
-        } elseif ($type === 'expense') {
-            $category = ExpenseCategory::find($id);
-        } else {
-            return $this->failure('Invalid category type', 400);
-        }
+        $user = $request->user();
+        $category = $user->categories()->find($id);
 
         if (! $category) {
             return $this->failure('Category not found', 404);

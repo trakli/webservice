@@ -2,9 +2,9 @@
 
 use App\Http\Controllers\API\v1\Auth\AuthController;
 use App\Http\Controllers\API\v1\Auth\PasswordResetController;
+use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\PartyController;
-use App\Http\Controllers\API\v1\TransactionCategoryController;
 use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
@@ -34,7 +34,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function
     Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('/user', [UserController::class, 'show']);
         Route::apiResource('groups', GroupController::class);
-        Route::apiResource('categories', TransactionCategoryController::class);
+        Route::apiResource('categories', CategoryController::class);
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transactions', TransactionController::class);

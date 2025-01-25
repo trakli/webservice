@@ -235,6 +235,234 @@
                 }
             }
         },
+        "/categories": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "List all categories",
+                "operationId": "c27321a68b19607a6a072dd9002ae37e",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Type of the category (income or expense)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "income",
+                                "expense"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Category"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Create a new category",
+                "operationId": "d33322a954bf87d41863b999cd03741c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "description": "Type of the category",
+                                        "type": "string",
+                                        "enum": [
+                                            "income",
+                                            "expense"
+                                        ]
+                                    },
+                                    "name": {
+                                        "description": "Name of the category",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "The description of the category",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Category created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Category"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/categories/{id}": {
+            "get": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Get a specific category",
+                "operationId": "61a71bfaaf4769be14a5c2f6c16f280c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the category",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Category"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Update a specific category",
+                "operationId": "ce943d529a546d35c3e2d835c44b84bf",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the category",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "description": "Name of the category",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "The description of the category",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Category updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Category"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Categories"
+                ],
+                "summary": "Delete a specific category",
+                "operationId": "781e51577249dadbecb542f20c66a360",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the category",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Category deleted successfully"
+                    },
+                    "404": {
+                        "description": "Category not found"
+                    },
+                    "400": {
+                        "description": "Invalid category type"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/groups": {
             "get": {
                 "tags": [
@@ -637,265 +865,6 @@
                     },
                     "500": {
                         "description": "Server error"
-                    }
-                }
-            }
-        },
-        "/categories": {
-            "get": {
-                "tags": [
-                    "Transaction Categories"
-                ],
-                "summary": "List all categories",
-                "operationId": "a4465b22b2c7d5bd25ca4ad7efbeba90",
-                "parameters": [
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of the category (income or expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful operation",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/TransactionCategory"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Transaction Categories"
-                ],
-                "summary": "Create a new category",
-                "operationId": "0ac39edbc79c6531b64bf1cfb7d5d408",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "type",
-                                    "name"
-                                ],
-                                "properties": {
-                                    "type": {
-                                        "description": "Type of the category",
-                                        "type": "string",
-                                        "enum": [
-                                            "income",
-                                            "expense"
-                                        ]
-                                    },
-                                    "name": {
-                                        "description": "Name of the category",
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Category created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/TransactionCategory"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid input"
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            }
-        },
-        "/categories/{id}": {
-            "get": {
-                "tags": [
-                    "Transaction Categories"
-                ],
-                "summary": "Get a specific category",
-                "operationId": "c1536a645d623de2776049d454271769",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID of the category",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of the category (income or expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful operation",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/TransactionCategory"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Category not found"
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "Transaction Categories"
-                ],
-                "summary": "Update a specific category",
-                "operationId": "70e0548b143cfd5eaa7328269e1859e3",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID of the category",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of the category (income or expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "description": "Name of the category",
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Category updated successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/TransactionCategory"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Category not found"
-                    },
-                    "400": {
-                        "description": "Invalid input"
-                    },
-                    "500": {
-                        "description": "Internal server error"
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "Transaction Categories"
-                ],
-                "summary": "Delete a specific category",
-                "operationId": "54ecb4c34be820995fddf183b12987fe",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "description": "ID of the category",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of the category (income or expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Category deleted successfully"
-                    },
-                    "404": {
-                        "description": "Category not found"
-                    },
-                    "400": {
-                        "description": "Invalid category type"
-                    },
-                    "500": {
-                        "description": "Internal server error"
                     }
                 }
             }
@@ -1417,6 +1386,27 @@
     },
     "components": {
         "schemas": {
+            "Category": {
+                "properties": {
+                    "id": {
+                        "description": "ID of the category",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "description": "Name of the category",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "Description of the category",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "Type of the category (income or expense)",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "Expense": {
                 "properties": {
                     "id": {
@@ -1546,23 +1536,6 @@
                 },
                 "type": "object"
             },
-            "TransactionCategory": {
-                "properties": {
-                    "id": {
-                        "description": "ID of the category",
-                        "type": "integer"
-                    },
-                    "name": {
-                        "description": "Name of the category",
-                        "type": "string"
-                    },
-                    "type": {
-                        "description": "Type of the category (income or expense)",
-                        "type": "string"
-                    }
-                },
-                "type": "object"
-            },
             "Wallet": {
                 "properties": {
                     "id": {
@@ -1584,7 +1557,7 @@
     },
     "tags": [
         {
-            "name": "Transaction Categories",
+            "name": "Categories",
             "description": "Endpoints for managing transaction categories"
         },
         {
