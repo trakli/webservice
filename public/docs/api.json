@@ -70,7 +70,8 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/login": {
@@ -119,7 +120,8 @@
                     "500": {
                         "description": "Server error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/password/reset-code": {
@@ -169,7 +171,8 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/password/reset": {
@@ -232,7 +235,8 @@
                     "400": {
                         "description": "Invalid or expired code"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/categories": {
@@ -1553,9 +1557,25 @@
                 },
                 "type": "object"
             }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Bearer token authentication",
+                "scheme": "bearer"
+            }
         }
     },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
     "tags": [
+        {
+            "name": "Authentication",
+            "description": "Endpoints for password reset"
+        },
         {
             "name": "Categories",
             "description": "Endpoints for managing transaction categories"
@@ -1563,10 +1583,6 @@
         {
             "name": "Transactions",
             "description": "Endpoints for managing transactions"
-        },
-        {
-            "name": "Authentication",
-            "description": "Authentication"
         },
         {
             "name": "Groups",
