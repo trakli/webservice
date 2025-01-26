@@ -57,12 +57,12 @@ class AuthControllerTest extends TestCase
     public function test_api_user_can_login_successfully_with_email()
     {
         User::factory()->create([
-            'email' => 'user1@trakli.io',
+            'email' => 'bandolo@trakli.io',
             'password' => Hash::make('password123'),
         ]);
 
         $response = $this->postJson('/api/v1/login', [
-            'email' => 'user1@trakli.io',
+            'email' => 'bandolo@trakli.io',
             'password' => 'password123',
         ]);
 
@@ -126,12 +126,12 @@ class AuthControllerTest extends TestCase
     public function test_api_user_login_failed_with_invalid_credentials()
     {
         User::factory()->create([
-            'email' => 'user1@trakli.io',
+            'email' => 'bandolo@trakli.io',
             'password' => Hash::make('password123'),
         ]);
 
         $response = $this->postJson('/api/v1/login', [
-            'email' => 'user1@trakli.io',
+            'email' => 'bandolo@trakli.io',
             'password' => 'wrongpassword',
         ]);
 

@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->float('amount');
-            $table->datetime('datetime');
+            $table->datetime('datetime')->nullable();
             $table->enum('type', ['income', 'expense']);
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->unsignedBigInteger('wallet_id')->nullable();
             $table->unsignedBigInteger('party_id')->nullable();
             $table->timestamps();
