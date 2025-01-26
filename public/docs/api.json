@@ -1090,6 +1090,17 @@
                                     "group_id"
                                 ],
                                 "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "income",
+                                            "expense"
+                                        ]
+                                    },
                                     "date": {
                                         "type": "string",
                                         "format": "date"
@@ -1102,10 +1113,6 @@
                                     },
                                     "wallet_id": {
                                         "type": "integer"
-                                    },
-                                    "amount": {
-                                        "type": "number",
-                                        "format": "float"
                                     },
                                     "group_id": {
                                         "type": "integer"
@@ -1150,30 +1157,17 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of transaction (income/expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Transaction deleted successfully"
                     },
+                    "400": {
+                        "description": "Invalid input"
+                    },
                     "404": {
                         "description": "Transaction not found"
-                    },
-                    "400": {
-                        "description": "Invalid transaction type"
                     }
                 }
             }
@@ -1460,10 +1454,8 @@
             },
             "Transaction": {
                 "required": [
-                    "id",
-                    "type",
                     "amount",
-                    "date"
+                    "type"
                 ],
                 "properties": {
                     "id": {

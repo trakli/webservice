@@ -6,8 +6,8 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 class TransactionController extends ApiController
@@ -49,11 +49,15 @@ class TransactionController extends ApiController
         $type = $request->query('type');
         $limit = $request->query('limit', 20);
 
-        if (! in_array($type, ['income', 'expense'])) {
+        if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        $transactions = Transaction::where('type', $type)->paginate($limit);
+        $query = auth()->user()->transactions();
+        if (! empty($type)) {
+            $query->where('type', $type);
+        }
+        $transactions = $query->paginate($limit);
 
         return $this->success($transactions);
     }
@@ -92,7 +96,7 @@ class TransactionController extends ApiController
     )]
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validationResult = $this->validateRequest($request, [
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
@@ -104,17 +108,19 @@ class TransactionController extends ApiController
             'categories.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->failure($validator->errors(), 400);
+        if (! $validationResult['isValidated']) {
+            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
         }
 
-        $request = $validator->validated();
+        $request = $validationResult['data'];
+
         $categories = [];
         if (isset($request['categories'])) {
             $categories = $request['categories'];
             unset($request['categories']);
         }
-        $transaction = Transaction::create($request);
+
+        $transaction = auth()->user()->transactions()->create($request);
 
         if (! empty($categories)) {
             $transaction->categories()->sync($categories);
@@ -163,14 +169,25 @@ class TransactionController extends ApiController
     {
         $type = $request->query('type');
 
-        if (! in_array($type, ['income', 'expense'])) {
+        if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        $transaction = Transaction::where('type', $type)->find($id);
+        $query = Transaction::query();
+        if (! empty($type)) {
+            $query->where('type', $type);
+        }
+
+        $transaction = $query->find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
         return $this->success($transaction);
@@ -229,7 +246,7 @@ class TransactionController extends ApiController
     )]
     public function update(Request $request, $id): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validationResult = $this->validateRequest($request, [
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
             'datetime' => 'nullable|date',
@@ -241,15 +258,21 @@ class TransactionController extends ApiController
             'categories.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->failure($validator->errors(), 400);
+        if (! $validationResult['isValidated']) {
+            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
         }
 
-        $validatedData = $validator->validated();
+        $validatedData = $validationResult['data'];
         $transaction = Transaction::find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
         $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
@@ -273,13 +296,6 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'integer')
             ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                description: 'Type of transaction (income/expense)',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
-            ),
         ],
         responses: [
             new OA\Response(
@@ -287,27 +303,27 @@ class TransactionController extends ApiController
                 description: 'Transaction deleted successfully'
             ),
             new OA\Response(
+                response: 400,
+                description: 'Invalid input'
+            ),
+            new OA\Response(
                 response: 404,
                 description: 'Transaction not found'
             ),
-            new OA\Response(
-                response: 400,
-                description: 'Invalid transaction type'
-            ),
         ]
     )]
-    public function destroy($id, Request $request): JsonResponse
+    public function destroy($id): JsonResponse
     {
-        $type = $request->query('type');
-
-        if (! in_array($type, ['income', 'expense'])) {
-            return $this->failure('Invalid transaction type', 400);
-        }
-
-        $transaction = Transaction::where('type', $type)->find($id);
+        $transaction = Transaction::find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
         $transaction->delete();
