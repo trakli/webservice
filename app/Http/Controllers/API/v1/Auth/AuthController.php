@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Authentication', description: 'Endpoints for user authentication')]
 class AuthController extends ApiController
 {
     #[OA\Post(
         path: '/register',
         tags: ['Authentication'],
+        security: [],
         summary: 'Register a new user',
         requestBody: new OA\RequestBody(
             required: true,
@@ -68,6 +70,7 @@ class AuthController extends ApiController
     #[OA\Post(
         path: '/login',
         tags: ['Authentication'],
+        security: [],
         summary: 'User login',
         requestBody: new OA\RequestBody(
             required: true,

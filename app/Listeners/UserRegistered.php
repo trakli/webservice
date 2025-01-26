@@ -21,5 +21,20 @@ class UserRegistered
     public function handle(UserRegisteredEvent $event)
     {
         $user = $event->user;
+        //Create default user groups
+        $defaultGroups = [
+            'General',
+            'Personal',
+            'Family',
+            'Friends',
+            'Work',
+        ];
+
+        foreach ($defaultGroups as $group) {
+            $user->groups()->create([
+                'name' => $group,
+                'description' => "Default group for $group",
+            ]);
+        }
     }
 }

@@ -18,4 +18,10 @@ use OpenApi\Attributes as OA;
 class Wallet extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'description',
+        'user_id',
+    ];
 }

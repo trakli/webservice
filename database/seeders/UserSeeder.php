@@ -2,28 +2,37 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
+use App\Models\Group;
+use App\Models\Party;
 use App\Models\User;
-use Faker\Factory as Faker;
+use App\Models\Wallet;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = Faker::create();
-
         foreach (range(1, 10) as $index) {
-            $email = "user{$index}@trakli.io";
-            $username = "user{$index}";
+            $user = User::factory()->create([
+                'email' => "user{$index}@trakli.io",
+                'username' => "user{$index}",
+            ]);
 
-            User::create([
-                'first_name' => $faker->firstName,
-                'last_name' => $faker->lastName,
-                'email' => $email,
-                'username' => $username,
-                'phone' => $faker->phoneNumber,
-                'password' => Hash::make('password123'),
+            Party::factory(5)->create([
+                'user_id' => $user->id,
+            ]);
+
+            Category::factory(5)->create([
+                'user_id' => $user->id,
+            ]);
+
+            Wallet::factory(5)->create([
+                'user_id' => $user->id,
+            ]);
+
+            Group::factory(5)->create([
+                'user_id' => $user->id,
             ]);
         }
     }

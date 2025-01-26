@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Models\Expense;
-use App\Models\Income;
+use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 class TransactionController extends ApiController
@@ -24,6 +23,13 @@ class TransactionController extends ApiController
                 description: 'Type of transaction (income/expense)',
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
+            ),
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                description: 'Number of transactions to fetch',
+                required: true,
+                schema: new OA\Schema(type: 'integer', default: 20)
             ),
         ],
         responses: [
@@ -41,16 +47,17 @@ class TransactionController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $type = $request->query('type');
+        $limit = $request->query('limit', 20);
 
-        // Validate transaction type
-        if (! in_array($type, ['income', 'expense'])) {
+        if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        // Fetch transactions based on type
-        $transactions = ($type === 'income')
-            ? Income::all()
-            : Expense::paginate(20);
+        $query = auth()->user()->transactions();
+        if (! empty($type)) {
+            $query->where('type', $type);
+        }
+        $transactions = $query->paginate($limit);
 
         return $this->success($transactions);
     }
@@ -62,15 +69,16 @@ class TransactionController extends ApiController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['type', 'date', 'party_id', 'wallet_id', 'amount', 'group_id'],
+                required: ['amount', 'type'],
                 properties: [
-                    new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
-                    new OA\Property(property: 'date', type: 'string', format: 'date'),
-                    new OA\Property(property: 'party_id', type: 'integer'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
+                    new OA\Property(property: 'description', type: 'string'),
+                    new OA\Property(property: 'datetime', type: 'string', format: 'date'),
+                    new OA\Property(property: 'party_id', type: 'integer'),
+                    new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
+                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(type: 'integer', description: 'Category ID array')),
                 ]
             )
         ),
@@ -88,26 +96,37 @@ class TransactionController extends ApiController
     )]
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validationResult = $this->validateRequest($request, [
+            'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
-            'date' => 'required|date',
-            'party_id' => 'required|integer|exists:parties,id',
             'description' => 'nullable|string',
-            'wallet_id' => 'required|integer|exists:wallets,id',
-            'amount' => 'required|numeric',
-            'group_id' => 'required|integer|exists:groups,id',
+            'datetime' => 'nullable|date',
+            'group_id' => 'nullable|integer|exists:groups,id',
+            'party_id' => 'nullable|integer|exists:parties,id',
+            'wallet_id' => 'nullable|integer|exists:wallets,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->failure($validator->errors(), 400);
+        if (! $validationResult['isValidated']) {
+            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
         }
 
-        $data = $validator->validated();
-        $transaction = ($data['type'] === 'income')
-            ? Income::create($data)
-            : Expense::create($data);
+        $request = $validationResult['data'];
 
-        return $this->success($transaction, 201);
+        $categories = [];
+        if (isset($request['categories'])) {
+            $categories = $request['categories'];
+            unset($request['categories']);
+        }
+
+        $transaction = auth()->user()->transactions()->create($request);
+
+        if (! empty($categories)) {
+            $transaction->categories()->sync($categories);
+        }
+
+        return $this->success($transaction, statusCode: 201);
     }
 
     #[OA\Get(
@@ -150,16 +169,25 @@ class TransactionController extends ApiController
     {
         $type = $request->query('type');
 
-        if (! in_array($type, ['income', 'expense'])) {
+        if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        $transaction = ($type === 'income')
-            ? Income::find($id)
-            : Expense::find($id);
+        $query = Transaction::query();
+        if (! empty($type)) {
+            $query->where('type', $type);
+        }
+
+        $transaction = $query->find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
         return $this->success($transaction);
@@ -190,11 +218,12 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['date', 'party_id', 'wallet_id', 'amount', 'group_id'],
                 properties: [
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
                     new OA\Property(property: 'party_id', type: 'integer'),
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
-                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'group_id', type: 'integer'),
                 ]
             )
@@ -217,37 +246,42 @@ class TransactionController extends ApiController
     )]
     public function update(Request $request, $id): JsonResponse
     {
-        $type = $request->query('type');
-
-        if (! in_array($type, ['income', 'expense'])) {
-            return $this->failure('Invalid transaction type', 400);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'date' => 'required|date',
-            'party_id' => 'required|integer|exists:parties,id',
+        $validationResult = $this->validateRequest($request, [
+            'amount' => 'nullable|numeric|min:0.01',
+            'type' => 'nullable|string|in:income,expense',
+            'datetime' => 'nullable|date',
             'description' => 'nullable|string',
-            'wallet_id' => 'required|integer|exists:wallets,id',
-            'amount' => 'required|numeric',
-            'group_id' => 'required|integer|exists:groups,id',
+            'party_id' => 'nullable|integer|exists:parties,id',
+            'wallet_id' => 'nullable|integer|exists:wallets,id',
+            'group_id' => 'nullable|integer|exists:groups,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'integer|exists:categories,id',
         ]);
 
-        if ($validator->fails()) {
-            return $this->failure($validator->errors(), 400);
+        if (! $validationResult['isValidated']) {
+            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
         }
 
-        $data = $validator->validated();
-        $transaction = ($type === 'income')
-            ? Income::find($id)
-            : Expense::find($id);
+        $validatedData = $validationResult['data'];
+        $transaction = Transaction::find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
         }
 
-        $transaction->update($data);
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
+        }
 
-        return $this->success($transaction);
+        $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
+
+        if (isset($validatedData['categories'])) {
+            $transaction->categories()->sync($validatedData['categories']);
+        }
+
+        return $this->success($transaction, 200);
     }
 
     #[OA\Delete(
@@ -262,13 +296,6 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'integer')
             ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                description: 'Type of transaction (income/expense)',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
-            ),
         ],
         responses: [
             new OA\Response(
@@ -276,29 +303,27 @@ class TransactionController extends ApiController
                 description: 'Transaction deleted successfully'
             ),
             new OA\Response(
+                response: 400,
+                description: 'Invalid input'
+            ),
+            new OA\Response(
                 response: 404,
                 description: 'Transaction not found'
             ),
-            new OA\Response(
-                response: 400,
-                description: 'Invalid transaction type'
-            ),
         ]
     )]
-    public function destroy($id, Request $request): JsonResponse
+    public function destroy($id): JsonResponse
     {
-        $type = $request->query('type');
-
-        if (! in_array($type, ['income', 'expense'])) {
-            return $this->failure('Invalid transaction type', 400);
-        }
-
-        $transaction = ($type === 'income')
-            ? Income::find($id)
-            : Expense::find($id);
+        $transaction = Transaction::find($id);
 
         if (! $transaction) {
             return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            $this->userCanAccessResource($transaction);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
         $transaction->delete();

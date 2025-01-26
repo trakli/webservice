@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('wallets', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('type', ['bank', 'cash', 'mobile']);
-            $table->text('description');
+            $table->enum('type', ['bank', 'cash', 'credit_card', 'mobile']);
+            $table->text('description')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->timestamps();
         });

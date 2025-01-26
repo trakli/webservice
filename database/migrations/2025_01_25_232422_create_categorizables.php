@@ -11,14 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('incomes', function (Blueprint $table) {
+        Schema::create('categorizables', function (Blueprint $table) {
             $table->id();
-            $table->datetime('date');
-            $table->float('amount');
-            $table->text('description');
-            $table->unsignedBigInteger('wallet_id');
-            $table->unsignedBigInteger('party_id')->nullable();
-            $table->unsignedBigInteger('income_category_id')->nullable();
+            $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('categorizable_id');
+            $table->string('categorizable_type');
             $table->timestamps();
         });
     }
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('incomes');
+        Schema::dropIfExists('categorizables');
     }
 };

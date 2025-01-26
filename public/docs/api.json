@@ -70,7 +70,8 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/login": {
@@ -119,7 +120,8 @@
                     "500": {
                         "description": "Server error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/password/reset-code": {
@@ -169,7 +171,8 @@
                     "422": {
                         "description": "Validation error"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/password/reset": {
@@ -232,7 +235,8 @@
                     "400": {
                         "description": "Invalid or expired code"
                     }
-                }
+                },
+                "security": []
             }
         },
         "/categories": {
@@ -889,6 +893,16 @@
                                 "expense"
                             ]
                         }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of transactions to fetch",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
                     }
                 ],
                 "responses": {
@@ -922,14 +936,14 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "type",
-                                    "date",
-                                    "party_id",
-                                    "wallet_id",
                                     "amount",
-                                    "group_id"
+                                    "type"
                                 ],
                                 "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
                                     "type": {
                                         "type": "string",
                                         "enum": [
@@ -937,25 +951,28 @@
                                             "expense"
                                         ]
                                     },
-                                    "date": {
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "datetime": {
                                         "type": "string",
                                         "format": "date"
                                     },
                                     "party_id": {
                                         "type": "integer"
                                     },
-                                    "description": {
-                                        "type": "string"
-                                    },
                                     "wallet_id": {
                                         "type": "integer"
                                     },
-                                    "amount": {
-                                        "type": "number",
-                                        "format": "float"
-                                    },
                                     "group_id": {
                                         "type": "integer"
+                                    },
+                                    "categories": {
+                                        "type": "array",
+                                        "items": {
+                                            "description": "Category ID array",
+                                            "type": "integer"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1073,6 +1090,17 @@
                                     "group_id"
                                 ],
                                 "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "income",
+                                            "expense"
+                                        ]
+                                    },
                                     "date": {
                                         "type": "string",
                                         "format": "date"
@@ -1085,10 +1113,6 @@
                                     },
                                     "wallet_id": {
                                         "type": "integer"
-                                    },
-                                    "amount": {
-                                        "type": "number",
-                                        "format": "float"
                                     },
                                     "group_id": {
                                         "type": "integer"
@@ -1133,30 +1157,17 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "name": "type",
-                        "in": "query",
-                        "description": "Type of transaction (income/expense)",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "income",
-                                "expense"
-                            ]
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Transaction deleted successfully"
                     },
+                    "400": {
+                        "description": "Invalid input"
+                    },
                     "404": {
                         "description": "Transaction not found"
-                    },
-                    "400": {
-                        "description": "Invalid transaction type"
                     }
                 }
             }
@@ -1407,33 +1418,6 @@
                 },
                 "type": "object"
             },
-            "Expense": {
-                "properties": {
-                    "id": {
-                        "description": "ID of the expense",
-                        "type": "integer"
-                    },
-                    "amount": {
-                        "description": "Amount of the expense",
-                        "type": "number",
-                        "format": "float"
-                    },
-                    "description": {
-                        "description": "Description of the expense",
-                        "type": "string"
-                    },
-                    "date": {
-                        "description": "Date of the expense",
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "category_id": {
-                        "description": "ID of the category to which the expense belongs",
-                        "type": "integer"
-                    }
-                },
-                "type": "object"
-            },
             "Group": {
                 "properties": {
                     "id": {
@@ -1447,33 +1431,6 @@
                     "description": {
                         "description": "Description of the group",
                         "type": "string"
-                    }
-                },
-                "type": "object"
-            },
-            "Income": {
-                "properties": {
-                    "id": {
-                        "description": "ID of the income",
-                        "type": "integer"
-                    },
-                    "amount": {
-                        "description": "Amount of the income",
-                        "type": "number",
-                        "format": "float"
-                    },
-                    "description": {
-                        "description": "Description of the income",
-                        "type": "string"
-                    },
-                    "date": {
-                        "description": "Date of the income",
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "category_id": {
-                        "description": "ID of the category to which the income belongs",
-                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1497,10 +1454,8 @@
             },
             "Transaction": {
                 "required": [
-                    "id",
-                    "type",
                     "amount",
-                    "date"
+                    "type"
                 ],
                 "properties": {
                     "id": {
@@ -1524,14 +1479,18 @@
                         "description": "Description of the transaction",
                         "type": "string"
                     },
-                    "date": {
-                        "description": "Date of the transaction",
+                    "datetime": {
+                        "description": "Date and time of the transaction",
                         "type": "string",
                         "format": "date"
                     },
-                    "category_id": {
-                        "description": "ID of the category to which the transaction belongs",
-                        "type": "integer"
+                    "categories": {
+                        "description": "List of categories of the transaction",
+                        "type": "array",
+                        "items": {
+                            "description": "Category ID array",
+                            "type": "integer"
+                        }
                     }
                 },
                 "type": "object"
@@ -1553,9 +1512,25 @@
                 },
                 "type": "object"
             }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Bearer token authentication",
+                "scheme": "bearer"
+            }
         }
     },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
     "tags": [
+        {
+            "name": "Authentication",
+            "description": "Endpoints for password reset"
+        },
         {
             "name": "Categories",
             "description": "Endpoints for managing transaction categories"
@@ -1563,10 +1538,6 @@
         {
             "name": "Transactions",
             "description": "Endpoints for managing transactions"
-        },
-        {
-            "name": "Authentication",
-            "description": "Authentication"
         },
         {
             "name": "Groups",

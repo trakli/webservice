@@ -3,9 +3,17 @@
 namespace App\Http\Controllers\API;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
+#[OA\OpenApi(
+    security: [
+        ['bearerAuth' => []],
+    ]
+)]
 #[OA\Info(title: 'Trakli API', version: '1.0.0')]
 #[OA\Server(url: 'http://localhost:8000/api/v1', description: 'Development server')]
 #[OA\Server(url: 'https://api.trakli.io/v1', description: 'Production server')]
@@ -18,8 +26,68 @@ use OpenApi\Attributes as OA;
     //     new OA\ServerVariable(name: "host", default: "api.trakli.io", enum: ["api.trakli.io", "api.staging.example.com"])
     // ]
 )]
+#[OA\Components(
+    securitySchemes: [
+        new OA\SecurityScheme(
+            securityScheme: 'bearerAuth',
+            type: 'http',
+            scheme: 'bearer',
+            description: 'Bearer token authentication'
+        ),
+    ]
+)]
 class ApiController extends BaseController
 {
+    /**
+     * Check if the authenticated user can access the given resource.
+     *
+     * @param  mixed  $resource
+     * @param  string|null  $ownerKey
+     * @return void
+     *
+     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     */
+    public function userCanAccessResource($resource, $ownerKey = 'user_id')
+    {
+        if (is_null($resource)) {
+            abort(Response::HTTP_NOT_FOUND, 'Resource not found.');
+        }
+
+        if (auth()->id() !== $resource->{$ownerKey}) {
+            abort(Response::HTTP_FORBIDDEN, 'You are not authorized to access this resource.');
+        }
+    }
+
+    /**
+     * Validate the request data.
+     */
+    protected function validateRequest(Request $request, array $rules): array
+    {
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+
+            if ($errors->hasAny(array_keys($rules))) {
+                return [
+                    'isValidated' => false,
+                    'message' => 'Server failed to validate request.',
+                    'code' => 422,
+                    'errors' => $errors->toArray(),
+                ];
+            }
+
+            return [
+                'isValidated' => false,
+                'message' => 'Server unable to process request.',
+                'code' => 400,
+                'errors' => $errors->toArray(),
+            ];
+        }
+
+        return ['isValidated' => true, 'data' => $validator->validated()];
+    }
+
     /**
      * Return a success response.
      *

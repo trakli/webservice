@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Authentication', description: 'Endpoints for password reset')]
 class PasswordResetController extends ApiController
 {
     public function __construct(private NotificationService $notificationService) {}
@@ -18,6 +19,7 @@ class PasswordResetController extends ApiController
     #[OA\Post(
         path: '/password/reset-code',
         tags: ['Authentication'],
+        security: [],
         summary: 'Send password reset code',
         requestBody: new OA\RequestBody(
             required: true,
@@ -84,6 +86,7 @@ class PasswordResetController extends ApiController
     #[OA\Post(
         path: '/password/reset',
         tags: ['Authentication'],
+        security: [],
         summary: 'Reset password using verification code',
         requestBody: new OA\RequestBody(
             required: true,
