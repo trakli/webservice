@@ -1,10 +1,10 @@
 <p align="center"><a href="#" target="_blank"><img src="https://github.com/whilesmart/trakli/blob/main/logo.svg" width="400" alt="Trakli Logo"></a></p>
 
-# Trakli
+# Trakli Webservice [![Checks](https://github.com/trakli/trakli-webservice/actions/workflows/checks.yml/badge.svg)](https://github.com/trakli/trakli-webservice/actions/workflows/checks.yml)
 
 ## Overview
 
-Trakli is a personal income tracking application built using Laravel. The application allows users to manage and categorize their income and expenses under various groups.
+Trakli is a personal income tracking application built using Laravel. The application allows users to manage and categorize their income and expenses under various groups and categories.
 
 ## Features
 
@@ -17,7 +17,7 @@ Trakli is a personal income tracking application built using Laravel. The applic
 - Manage wallets and bank accounts (e.g., cash, bank accounts)
 - Record income and expense entries with details such as date, party, description, source/target wallet, and optional attachments
 
-## Setup Instructions
+## Setup instructions
 
 ### Prerequisites
 
@@ -46,7 +46,7 @@ For detailed and explained installation steps see : [INSTALLATION.md](INSTALLATI
 To stop the Docker containers, run:
 
 ```bash
-docker-compose down
+docker-compose stop
 ```
 
 ### LICENSE
