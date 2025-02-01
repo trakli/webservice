@@ -17,6 +17,15 @@ class PartyController extends ApiController
         path: '/parties',
         summary: 'List all parties',
         tags: ['Party'],
+        parameters: [
+            new OA\Parameter(
+                name: 'limit',
+                description: 'Number of items per page',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: 20)
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -36,9 +45,14 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $parties = Party::paginate(20);
+        $user = request()->user();
+        $limit = 20;
+        if ($request->has('limit')) {
+            $limit = $request->limit;
+        }
+        $parties = $user->parties()->paginate($limit);
 
         return $this->success($parties);
     }
@@ -46,17 +60,17 @@ class PartyController extends ApiController
     #[OA\Post(
         path: '/parties',
         summary: 'Create a new party',
-        tags: ['Party'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
-                    new OA\Property(property: 'user_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
                 ]
             )
         ),
+        tags: ['Party'],
         responses: [
             new OA\Response(
                 response: 201,
@@ -65,7 +79,7 @@ class PartyController extends ApiController
             ),
             new OA\Response(
                 response: 400,
-                description: 'Invalid input'
+                description: 'Invalid input|Party already exists'
             ),
             new OA\Response(
                 response: 401,
@@ -81,10 +95,16 @@ class PartyController extends ApiController
     {
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'user_id' => 'required|integer|exists:users,id',
+            'description' => 'sometimes|string',
         ]);
 
-        $party = Party::create($validatedData);
+        $user = $request->user();
+        $validatedData['user_id'] = $user->id;
+        $party = $user->parties()->where('name', $validatedData['name'])->first();
+        if ($party) {
+            return $this->failure('Party already exists', 400);
+        }
+        $party = $user->parties()->firstOrCreate($validatedData);
 
         return $this->success($party, 'Party created successfully', 201);
     }
@@ -135,6 +155,15 @@ class PartyController extends ApiController
     #[OA\Put(
         path: '/parties/{id}',
         summary: 'Update a specific party',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
+                    new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
+                ]
+            )
+        ),
         tags: ['Party'],
         parameters: [
             new OA\Parameter(
@@ -144,15 +173,6 @@ class PartyController extends ApiController
                 schema: new OA\Schema(type: 'integer')
             ),
         ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
-                    new OA\Property(property: 'user_id', type: 'integer', example: 1),
-                ]
-            )
-        ),
         responses: [
             new OA\Response(
                 response: 200,
@@ -179,16 +199,17 @@ class PartyController extends ApiController
     )]
     public function update(Request $request, int $id): JsonResponse
     {
-        $party = Party::find($id);
+        $validatedData = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+        ]);
+
+        $user = $request->user();
+        $party = $user->parties()->find($id);
 
         if (! $party) {
             return $this->failure('Party not found', 404);
         }
-
-        $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'user_id' => 'sometimes|integer|exists:users,id',
-        ]);
 
         $party->update($validatedData);
 
@@ -226,9 +247,10 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $party = Party::find($id);
+        $user = request()->user();
+        $party = $user->parties()->find($id);
 
         if (! $party) {
             return $this->failure('Party not found', 404);
