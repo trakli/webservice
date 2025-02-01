@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -17,6 +16,14 @@ class WalletController extends ApiController
         path: '/wallets',
         summary: 'List all wallets',
         tags: ['Wallet'],
+        parameters: [
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -36,9 +43,14 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $wallets = Wallet::paginate(20);
+        $user = $request->user();
+        $limit = 20;
+        if ($request->has('limit')) {
+            $limit = $request->limit;
+        }
+        $wallets = $user->wallets()->paginate($limit);
 
         return $this->success($wallets);
     }
@@ -46,7 +58,6 @@ class WalletController extends ApiController
     #[OA\Post(
         path: '/wallets',
         summary: 'Create a new wallet',
-        tags: ['Wallet'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -54,10 +65,11 @@ class WalletController extends ApiController
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
-                    new OA\Property(property: 'user_id', type: 'integer', example: 1),
+                    new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
                 ]
             )
         ),
+        tags: ['Wallet'],
         responses: [
             new OA\Response(
                 response: 201,
@@ -82,11 +94,13 @@ class WalletController extends ApiController
     {
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|string',
-            'user_id' => 'required|integer|exists:users,id',
+            'type' => 'required|string|in:bank,cash,credit_card,mobile',
+            'description' => 'sometimes|string',
         ]);
 
-        $wallet = Wallet::create($validatedData);
+        $user = $request->user();
+        $validatedData['user_id'] = $user->id;
+        $wallet = $user->wallets()->firstOrCreate($validatedData);
 
         return $this->success($wallet, 'Wallet created successfully', 201);
     }
@@ -123,9 +137,10 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $wallet = Wallet::find($id);
+        $user = $request->user();
+        $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
             return $this->failure('Wallet not found', 404);
@@ -137,6 +152,17 @@ class WalletController extends ApiController
     #[OA\Put(
         path: '/wallets/{id}',
         summary: 'Update a specific wallet',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'type'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
+                    new OA\Property(property: 'type', type: 'string', example: 'bank'),
+                    new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
+                ]
+            )
+        ),
         tags: ['Wallet'],
         parameters: [
             new OA\Parameter(
@@ -146,16 +172,6 @@ class WalletController extends ApiController
                 schema: new OA\Schema(type: 'integer')
             ),
         ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
-                    new OA\Property(property: 'type', type: 'string', example: 'bank'),
-                    new OA\Property(property: 'user_id', type: 'integer', example: 1),
-                ]
-            )
-        ),
         responses: [
             new OA\Response(
                 response: 200,
@@ -182,17 +198,18 @@ class WalletController extends ApiController
     )]
     public function update(Request $request, int $id): JsonResponse
     {
-        $wallet = Wallet::find($id);
+        $validatedData = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'type' => 'sometimes|string',
+            'description' => 'sometimes|string',
+        ]);
+        $user = $request->user();
+
+        $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
             return $this->failure('Wallet not found', 404);
         }
-
-        $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string',
-            'user_id' => 'sometimes|integer|exists:users,id',
-        ]);
 
         $wallet->update($validatedData);
 
@@ -230,9 +247,11 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $wallet = Wallet::find($id);
+        $user = $request->user();
+
+        $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
             return $this->failure('Wallet not found', 404);
