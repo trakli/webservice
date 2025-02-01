@@ -1191,6 +1191,16 @@
                 ],
                 "summary": "List all wallets",
                 "operationId": "205aac6c13391b324341f371573a6650",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful response",
@@ -1237,9 +1247,9 @@
                                         "type": "string",
                                         "example": "cash"
                                     },
-                                    "user_id": {
-                                        "type": "integer",
-                                        "example": 1
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Personal cash wallet"
                                     }
                                 },
                                 "type": "object"
@@ -1330,6 +1340,10 @@
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name",
+                                    "type"
+                                ],
                                 "properties": {
                                     "name": {
                                         "type": "string",
@@ -1339,9 +1353,9 @@
                                         "type": "string",
                                         "example": "bank"
                                     },
-                                    "user_id": {
-                                        "type": "integer",
-                                        "example": 1
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Updated wallet description"
                                     }
                                 },
                                 "type": "object"
