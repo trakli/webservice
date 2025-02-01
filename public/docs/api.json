@@ -474,6 +474,18 @@
                 ],
                 "summary": "List all groups",
                 "operationId": "daa5413644106e29d00c095c57c8bb63",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful operation",
@@ -510,6 +522,10 @@
                                 "properties": {
                                     "name": {
                                         "description": "Name of the group",
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "description": "Description of the group",
                                         "type": "string"
                                     }
                                 },

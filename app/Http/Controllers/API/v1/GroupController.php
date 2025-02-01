@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Models\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -18,6 +17,15 @@ class GroupController extends ApiController
         path: '/groups',
         summary: 'List all groups',
         tags: ['Groups'],
+        parameters: [
+            new OA\Parameter(
+                name: 'limit',
+                description: 'Number of items per page',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: 20)
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -33,9 +41,14 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $groups = Group::paginate(20);
+        $user = request()->user();
+        $limit = 20;
+        if ($request->has('limit')) {
+            $limit = $request->limit;
+        }
+        $groups = $user->groups()->paginate($limit);
 
         return $this->success($groups);
     }
@@ -43,7 +56,6 @@ class GroupController extends ApiController
     #[OA\Post(
         path: '/groups',
         summary: 'Create a new group',
-        tags: ['Groups'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -51,12 +63,18 @@ class GroupController extends ApiController
                 properties: [
                     new OA\Property(
                         property: 'name',
-                        type: 'string',
-                        description: 'Name of the group'
+                        description: 'Name of the group',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'description',
+                        description: 'Description of the group',
+                        type: 'string'
                     ),
                 ]
             )
         ),
+        tags: ['Groups'],
         responses: [
             new OA\Response(
                 response: 201,
@@ -77,13 +95,15 @@ class GroupController extends ApiController
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'description' => 'sometimes|string|max:255',
         ]);
 
         if ($validator->fails()) {
             return $this->failure('Validation error', 400, $validator->errors()->all());
         }
 
-        $group = Group::create($validator->validated());
+        $user = $request->user();
+        $group = $user->groups()->create($validator->validated());
 
         return $this->success($group, 'Group created successfully', 201);
     }
@@ -95,10 +115,10 @@ class GroupController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'id',
+                description: 'ID of the group',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the group'
+                schema: new OA\Schema(type: 'integer')
             ),
         ],
         responses: [
@@ -119,7 +139,8 @@ class GroupController extends ApiController
     )]
     public function show(int $id): JsonResponse
     {
-        $group = Group::find($id);
+        $user = request()->user();
+        $group = $user->groups()->find($id);
 
         if (! $group) {
             return $this->failure('Group not found', 404);
@@ -131,28 +152,28 @@ class GroupController extends ApiController
     #[OA\Put(
         path: '/groups/{id}',
         summary: 'Update a specific group',
-        tags: ['Groups'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the group'
-            ),
-        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(
                         property: 'name',
-                        type: 'string',
-                        description: 'Name of the group'
+                        description: 'Name of the group',
+                        type: 'string'
                     ),
                 ]
             )
         ),
+        tags: ['Groups'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the group',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -177,13 +198,15 @@ class GroupController extends ApiController
     {
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|string|max:255',
         ]);
 
         if ($validator->fails()) {
             return $this->failure('Validation error', 400, $validator->errors()->all());
         }
 
-        $group = Group::find($id);
+        $user = $request->user();
+        $group = $user->groups()->find($id);
 
         if (! $group) {
             return $this->failure('Group not found', 404);
@@ -201,10 +224,10 @@ class GroupController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'id',
+                description: 'ID of the group',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the group'
+                schema: new OA\Schema(type: 'integer')
             ),
         ],
         responses: [
@@ -222,9 +245,10 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $group = Group::find($id);
+        $user = $request->user();
+        $group = $user->groups()->find($id);
 
         if (! $group) {
             return $this->failure('Group not found', 404);
