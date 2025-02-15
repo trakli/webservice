@@ -46,7 +46,7 @@ For detailed and explained installation steps see : [INSTALLATION.md](INSTALLATI
 To stop the Docker containers, run:
 
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 ### LICENSE
