@@ -6,6 +6,7 @@ use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\TransactionController;
+use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
 use Illuminate\Support\Facades\Route;
@@ -38,5 +39,6 @@ Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transactions', TransactionController::class);
+        Route::apiResource('transfers', TransferController::class);
     });
 });
