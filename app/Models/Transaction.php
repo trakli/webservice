@@ -9,7 +9,7 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Transaction',
-    type: 'object',
+    required: ['amount', 'type'],
     properties: [
         new OA\Property(property: 'id', type: 'integer', description: 'ID of the transaction'),
         new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense'], description: 'Type of the transaction (income or expense)'),
@@ -18,12 +18,15 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'datetime', type: 'string', format: 'date', description: 'Date and time of the transaction'),
         new OA\Property(
             property: 'categories',
-            type: 'array',
             description: 'List of categories of the transaction',
+            type: 'array',
             items: new OA\Items(type: 'integer', description: 'Category ID array')
         ),
+        new OA\Property(property: 'user_id', type: 'integer', description: 'ID of the user who created the transaction'),
+        new OA\Property(property: 'transfer_id', type: 'integer', description: 'ID of the associated transfer, if any'),
+
     ],
-    required: ['amount', 'type']
+    type: 'object'
 )]
 class Transaction extends Model
 {
@@ -41,6 +44,8 @@ class Transaction extends Model
         'type',
         'party_id',
         'wallet_id',
+        'user_id',
+        'transfer_id',
     ];
 
     protected $appends = ['wallet', 'party', 'categories'];
@@ -50,19 +55,24 @@ class Transaction extends Model
         return $this->categories()->get();
     }
 
+    public function categories(): MorphToMany
+    {
+        return $this->morphToMany(Category::class, 'categorizable');
+    }
+
     public function getWalletAttribute()
     {
         return $this->wallet()->first();
     }
 
-    public function getPartyAttribute()
-    {
-        return $this->party()->first();
-    }
-
     public function wallet()
     {
         return $this->belongsTo(Wallet::class);
+    }
+
+    public function getPartyAttribute()
+    {
+        return $this->party()->first();
     }
 
     public function party()
@@ -73,10 +83,5 @@ class Transaction extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function categories(): MorphToMany
-    {
-        return $this->morphToMany(Category::class, 'categorizable');
     }
 }

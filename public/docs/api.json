@@ -1200,6 +1200,63 @@
                 }
             }
         },
+        "/transfer": {
+            "post": {
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Create a new transfer",
+                "operationId": "a7cdbf4848fdf9943c328b52373e3a48",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "from_wallet_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "to_wallet_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "exchange_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 9.23
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Transfer created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Transfer"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    }
+                }
+            }
+        },
         "/wallets": {
             "get": {
                 "tags": [
@@ -1544,6 +1601,51 @@
                             "description": "Category ID array",
                             "type": "integer"
                         }
+                    },
+                    "user_id": {
+                        "description": "ID of the user who created the transaction",
+                        "type": "integer"
+                    },
+                    "transfer_id": {
+                        "description": "ID of the associated transfer, if any",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Transfer": {
+                "required": [
+                    "amount",
+                    "from_wallet_id",
+                    "to_wallet_id",
+                    "user_id"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "ID of the transfer",
+                        "type": "integer"
+                    },
+                    "amount": {
+                        "description": "Amount of the transaction",
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "from_wallet_id": {
+                        "description": "Source wallet",
+                        "type": "integer"
+                    },
+                    "to_wallet_id": {
+                        "description": "Destination wallet",
+                        "type": "integer"
+                    },
+                    "exchange_rate": {
+                        "description": "The exchange rate",
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "user_id": {
+                        "description": "ID of the user",
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1599,6 +1701,10 @@
         {
             "name": "Transactions",
             "description": "Endpoints for managing transactions"
+        },
+        {
+            "name": "Transfers",
+            "description": "Endpoints for managing transfers"
         },
         {
             "name": "Groups",
