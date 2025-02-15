@@ -61,11 +61,13 @@ class WalletController extends ApiController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['name', 'type'],
+                required: ['name', 'type', 'currency'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
+                    new OA\Property(property: 'currency', type: 'string', example: 'XAF', pattern: '^[A-Z]{3}$'),
+                    new OA\Property(property: 'balance', type: 'number', format: 'float', example: 12.00),
                 ]
             )
         ),
@@ -96,6 +98,8 @@ class WalletController extends ApiController
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',
+            'currency' => 'required|string|size:3',
+            'balance' => 'sometimes|numeric|decimal:0,4',
         ]);
 
         $user = $request->user();
@@ -202,6 +206,8 @@ class WalletController extends ApiController
             'name' => 'sometimes|string|max:255',
             'type' => 'sometimes|string',
             'description' => 'sometimes|string',
+            'currency' => 'required|string|size:3',
+            'balance' => 'sometimes|numeric|decimal:0,4',
         ]);
         $user = $request->user();
 

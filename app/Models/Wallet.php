@@ -13,6 +13,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'integer', description: 'ID of the wallet'),
         new OA\Property(property: 'name', type: 'string', description: 'Name of the wallet'),
         new OA\Property(property: 'description', type: 'string', description: 'Description of the wallet'),
+        new OA\Property(property: 'currency', type: 'string', description: 'Currency of the wallet'),
+        new OA\Property(property: 'balance', type: 'integer', description: 'Balance of the wallet'),
     ]
 )]
 class Wallet extends Model
@@ -23,5 +25,7 @@ class Wallet extends Model
         'name',
         'description',
         'user_id',
+        'currency',
+        'balance',
     ];
 }

@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->enum('type', ['bank', 'cash', 'credit_card', 'mobile']);
+            $table->decimal('balance', 14, 4)->default(0);
+            $table->string('currency')->default('USD');
             $table->text('description')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->timestamps();

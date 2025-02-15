@@ -1252,7 +1252,8 @@
                             "schema": {
                                 "required": [
                                     "name",
-                                    "type"
+                                    "type",
+                                    "currency"
                                 ],
                                 "properties": {
                                     "name": {
@@ -1266,6 +1267,16 @@
                                     "description": {
                                         "type": "string",
                                         "example": "Personal cash wallet"
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "pattern": "^[A-Z]{3}$",
+                                        "example": "XAF"
+                                    },
+                                    "balance": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 12
                                     }
                                 },
                                 "type": "object"
@@ -1550,6 +1561,14 @@
                     "description": {
                         "description": "Description of the wallet",
                         "type": "string"
+                    },
+                    "currency": {
+                        "description": "Currency of the wallet",
+                        "type": "string"
+                    },
+                    "balance": {
+                        "description": "Balance of the wallet",
+                        "type": "integer"
                     }
                 },
                 "type": "object"
