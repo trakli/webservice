@@ -1,0 +1,59 @@
+name: Commit message validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - run: npm install --save-dev @commitlint/{config-conventional,cli}
+
+      - name: Create commitlint config file
+        run: |
+          cat << EOF > commitlint.config.js
+          module.exports = {
+            extends: ['@commitlint/config-conventional'],
+            rules: {
+              'type-enum': [2, 'always', [
+                'feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore', 'build', 'ci',
+                'enh', 'enhance', 'tweak', 'imp', 'improve',
+              ]],
+              'subject-case': [2, 'always', 'sentence-case'],
+              'header-max-length': [2, 'always', 72],
+            },
+            ignores: [
+              (commit) => commit.includes('Signed-off-by: dependabot[bot]')
+            ]
+          };
+          EOF
+
+      - name: Run commitlint
+        run: npx commitlint --from HEAD^ --to HEAD --config commitlint.config.js
+
+      - name: Fail if commitlint fails (but not for Dependabot)
+        if: ${{ failure() && github.actor != 'dependabot[bot]'}}
+        run: |
+          echo "::error::Invalid commit message format. Please follow the conventional commit guidelines:"
+          echo "::error::- Type: One of: feat, fix, docs, style, refactor, test, chore, build, ci, enh, enhance, tweak, imp, improve"
+          echo "::error::- Scope (optional): A short name of the part of the codebase affected (e.g., 'auth', 'ui')."
+          echo "::error::- Subject: A brief description of the change, starting with a capital letter and generally in lowercase. Keep it concise (under 72 characters)."
+          echo "::error::- Body (optional): More detailed explanation of the change."
+          echo "::error::- Footer (optional): Related issue references, etc."
+          echo ""
+          echo "::error::Example:"
+          echo "::error::feat(user-authentication): Implement user login"
+          echo ""
+          echo "::error::For more information, see: [https://github.com/whilesmart/conventions/blob/main/commits.md]"
+          exit 1
