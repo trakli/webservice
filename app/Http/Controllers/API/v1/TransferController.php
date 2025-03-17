@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use App\Enums\TransactionType;
 use App\Http\Controllers\API\ApiController;
-use App\Models\Transfer;
+use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +12,13 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Transfers', description: 'Endpoints for managing transfers')]
 class TransferController extends ApiController
 {
+    private TransferService $transferService;
+
+    public function __construct(TransferService $transferService)
+    {
+        $this->transferService = $transferService;
+    }
+
     #[OA\Post(
         path: '/transfer',
         summary: 'Create a new transfer',
@@ -83,43 +89,7 @@ class TransferController extends ApiController
         $amountToReceive = bcmul($data['amount'], $exchangeRate);
 
         $transfer = DB::Transaction(function () use ($data, $toWallet, $fromWallet, $amountToReceive, $user, $exchangeRate) {
-
-            // create transfer
-            $transfer = Transfer::create([
-                'amount' => $data['amount'],
-                'from_wallet_id' => $data['from_wallet_id'],
-                'to_wallet_id' => $data['to_wallet_id'],
-                'user_id' => $user->id,
-                'exchange_rate' => $exchangeRate,
-            ]);
-
-            // deduct from source wallet
-            $fromWallet->balance -= $data['amount'];
-            $fromWallet->save();
-
-            $user->transactions()->create([
-                'amount' => $data['amount'],
-                'datetime' => now(),
-                'type' => TransactionType::EXPENSE->value,
-                'description' => "Money transfer from $fromWallet->currency wallet to $toWallet->currency wallet",
-                'wallet_id' => $fromWallet->id,
-                'transfer_id' => $transfer->id,
-            ]);
-
-            // send  to destination wallet
-            $toWallet->balance = bcadd($toWallet->balance, $amountToReceive, 4);
-            $toWallet->save();
-
-            $user->transactions()->create([
-                'amount' => $amountToReceive,
-                'datetime' => now(),
-                'type' => TransactionType::INCOME->value,
-                'description' => "Money transfer from $fromWallet->currency wallet to $toWallet->currency wallet",
-                'wallet_id' => $toWallet->id,
-                'transfer_id' => $transfer->id,
-            ]);
-
-            return $transfer;
+            return $this->transferService->transfer(amountToSend: $data['amount'], fromWallet: $fromWallet, amountToReceive: $amountToReceive, toWallet: $toWallet, user: $user, exchangeRate: $exchangeRate);
         });
 
         return $this->success($transfer, statusCode: 201);

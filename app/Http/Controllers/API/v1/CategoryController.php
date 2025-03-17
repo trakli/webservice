@@ -18,10 +18,10 @@ class CategoryController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'type',
+                description: 'Type of the category (income or expense)',
                 in: 'query',
                 required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense']),
-                description: 'Type of the category (income or expense)'
+                schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
         ],
         responses: [
@@ -53,18 +53,18 @@ class CategoryController extends ApiController
     #[OA\Post(
         path: '/categories',
         summary: 'Create a new category',
-        tags: ['Categories'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
                 required: ['type', 'name'],
                 properties: [
-                    new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense'], description: 'Type of the category'),
-                    new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
-                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
+                    new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
+                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
+                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
                 ]
             )
         ),
+        tags: ['Categories'],
         responses: [
             new OA\Response(
                 response: 201,
@@ -112,10 +112,10 @@ class CategoryController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'id',
+                description: 'ID of the category',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the category'
+                schema: new OA\Schema(type: 'integer')
             ),
         ],
         responses: [

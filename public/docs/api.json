@@ -676,6 +676,184 @@
                 }
             }
         },
+        "/import": {
+            "post": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Import financial records into Trakli",
+                "operationId": "e61ecf7d684317bfd34159130cbca6bc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "file": {
+                                        "description": "File to upload",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FileImport"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/imports/{id}/failed": {
+            "get": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Get records that could not be imported for an import instance",
+                "operationId": "df475189b455661167f7e7c01e00afd1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Id of the import instance",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/FailedImport"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/imports": {
+            "get": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Get all scheduled imports",
+                "operationId": "62c70ab8d3763df2f5e2ff066ecf95a7",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/FileImport"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/imports/{id}/fix": {
+            "put": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Fix records that failed to import",
+                "operationId": "7fee593b680617f807bb359d192ad1d1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Id of the import instance",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id",
+                                    "amount",
+                                    "type",
+                                    "date"
+                                ],
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/FailedImport"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful response"
+                    },
+                    "206": {
+                        "description": "Some imports could not be fixed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/FailedImport"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
         "/parties": {
             "get": {
                 "tags": [
@@ -1528,6 +1706,78 @@
                 },
                 "type": "object"
             },
+            "FailedImport": {
+                "properties": {
+                    "id": {
+                        "description": "ID of the failed import",
+                        "type": "integer"
+                    },
+                    "amount": {
+                        "description": "The amount of the transaction",
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "type": {
+                        "description": "The type of the transaction",
+                        "type": "string"
+                    },
+                    "party": {
+                        "description": "The party of the transaction",
+                        "type": "string"
+                    },
+                    "wallet": {
+                        "description": "The wallet of the transaction",
+                        "type": "string"
+                    },
+                    "category": {
+                        "description": "The category of the transaction",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "The description of the transaction",
+                        "type": "string"
+                    },
+                    "date": {
+                        "description": "The date of the transaction",
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "reason": {
+                        "description": "The reason why the transaction failed",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "FileImport": {
+                "properties": {
+                    "id": {
+                        "description": "ID of the file import",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "description": "Name of the file to import",
+                        "type": "string"
+                    },
+                    "file_type": {
+                        "description": "Type of the file to import",
+                        "type": "string"
+                    },
+                    "progress": {
+                        "description": "Current import progress",
+                        "type": "integer"
+                    },
+                    "num_rows": {
+                        "description": "Total number of records to import",
+                        "type": "integer"
+                    },
+                    "failed_imports_count": {
+                        "description": "Total number of failed imports",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
             "Group": {
                 "properties": {
                     "id": {
@@ -1670,7 +1920,8 @@
                     },
                     "balance": {
                         "description": "Balance of the wallet",
-                        "type": "integer"
+                        "type": "number",
+                        "format": "float"
                     }
                 },
                 "type": "object"
@@ -1709,6 +1960,10 @@
         {
             "name": "Groups",
             "description": "Groups"
+        },
+        {
+            "name": "Import",
+            "description": "Import"
         },
         {
             "name": "Party",
