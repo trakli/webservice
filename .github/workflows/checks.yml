@@ -43,6 +43,7 @@ jobs:
         run: cp .env.example .env
       - name: Update .env file
         run: |
+            sed -i 's/APP_ENV=local/APP_ENV=testing/' .env
             sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
             sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
             sed -i 's/DB_DATABASE=trakli/DB_DATABASE=trakli/' .env

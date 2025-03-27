@@ -4,6 +4,7 @@ use App\Http\Controllers\API\v1\Auth\AuthController;
 use App\Http\Controllers\API\v1\Auth\PasswordResetController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
+use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransferController;
@@ -40,5 +41,15 @@ Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transactions', TransactionController::class);
         Route::apiResource('transfers', TransferController::class);
+
+    });
+});
+
+Route::group(['prefix' => 'v1'], function () {
+    Route::group(['middleware' => ['auth:sanctum']], function () {
+        Route::post('import', [ImportController::class, 'import']);
+        Route::get('imports', [ImportController::class, 'getImports']);
+        Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);
+        Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
     });
 });

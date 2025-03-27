@@ -19,15 +19,15 @@ class TransactionController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'type',
-                in: 'query',
                 description: 'Type of transaction (income/expense)',
+                in: 'query',
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
             new OA\Parameter(
                 name: 'limit',
-                in: 'query',
                 description: 'Number of transactions to fetch',
+                in: 'query',
                 required: true,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
@@ -65,7 +65,6 @@ class TransactionController extends ApiController
     #[OA\Post(
         path: '/transactions',
         summary: 'Create a new transaction',
-        tags: ['Transactions'],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -82,6 +81,7 @@ class TransactionController extends ApiController
                 ]
             )
         ),
+        tags: ['Transactions'],
         responses: [
             new OA\Response(
                 response: 201,
