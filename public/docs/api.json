@@ -7,15 +7,31 @@
     "servers": [
         {
             "url": "http://localhost:8000/api/v1",
+            "description": "Local server"
+        },
+        {
+            "url": "https://api.dev.trakli.app/api/v1",
             "description": "Development server"
         },
         {
-            "url": "https://api.trakli.io/v1",
-            "description": "Production server"
-        },
-        {
             "url": "{protocol}://{host}/api/v1",
-            "description": "Dynamic server URL"
+            "description": "Dynamic server URL",
+            "variables": {
+                "protocol": {
+                    "enum": [
+                        "http",
+                        "https"
+                    ],
+                    "default": "https"
+                },
+                "host": {
+                    "enum": [
+                        "api.dev.trakli.app",
+                        "api.staging.trakli.app"
+                    ],
+                    "default": "api.dev.trakli.app"
+                }
+            }
         }
     ],
     "paths": {
