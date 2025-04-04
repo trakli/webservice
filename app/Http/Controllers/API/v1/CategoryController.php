@@ -58,9 +58,12 @@ class CategoryController extends ApiController
             content: new OA\JsonContent(
                 required: ['type', 'name'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
                     new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -84,9 +87,11 @@ class CategoryController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => 'nullable|uuid',
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
         ]);
 
         if ($validator->fails()) {

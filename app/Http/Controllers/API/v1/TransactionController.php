@@ -70,10 +70,13 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'datetime', type: 'string', format: 'date'),
+                    new OA\Property(property: 'datetime', type: 'string', format: 'datetime'),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                     new OA\Property(property: 'party_id', type: 'integer'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
@@ -97,10 +100,12 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
+            'client_id' => 'nullable|uuid',
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
-            'datetime' => 'nullable|date',
+            'datetime' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
@@ -120,8 +125,12 @@ class TransactionController extends ApiController
             unset($request['categories']);
         }
 
+        /** @var Transaction */
         $transaction = auth()->user()->transactions()->create($request);
-
+        if (isset($request['client_id'])) {
+            $transaction->setClientGeneratedId($request['client_id']);
+        }
+        $transaction->markAsSynced();
         if (! empty($categories)) {
             $transaction->categories()->sync($categories);
         }
@@ -216,7 +225,7 @@ class TransactionController extends ApiController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['date', 'party_id', 'wallet_id', 'amount', 'group_id'],
+                required: ['amount', 'updated_at'],
                 properties: [
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
@@ -225,6 +234,7 @@ class TransactionController extends ApiController
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -249,13 +259,14 @@ class TransactionController extends ApiController
         $validationResult = $this->validateRequest($request, [
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
-            'datetime' => 'nullable|date',
+            'datetime' => ['nullable', 'date_format:Y-m-d H:i:s'],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
             'group_id' => 'nullable|integer|exists:groups,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',
+            'updated_at' => 'required|date',
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -263,6 +274,7 @@ class TransactionController extends ApiController
         }
 
         $validatedData = $validationResult['data'];
+        /** @var Transaction */
         $transaction = Transaction::find($id);
 
         if (! $transaction) {
@@ -276,6 +288,7 @@ class TransactionController extends ApiController
         }
 
         $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
+        $transaction->markAsSynced();
 
         if (isset($validatedData['categories'])) {
             $transaction->categories()->sync($validatedData['categories']);

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasClientCreatedAt;
+use App\Traits\Syncable;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,7 +31,9 @@ class Group extends Model
         'slug',
     ];
 
-    use HasFactory, Sluggable;
+    protected $appends = ['last_synced_at'];
+
+    use HasClientCreatedAt, HasFactory, Sluggable, Syncable;
 
     /**
      * Return the sluggable configuration array for this model.
@@ -46,5 +50,10 @@ class Group extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getLastSyncedAtAttribute()
+    {
+        return $this->syncState?->last_synced_at ?? null;
     }
 }

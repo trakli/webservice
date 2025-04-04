@@ -38,8 +38,9 @@ class TransactionsTest extends TestCase
             'amount' => 100,
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
-            'datetime' => '2025-01-01',
+            'datetime' => '2025-01-01 14:25:45',
         ]);
+
         $response->assertStatus(201);
 
         return $response->json('data');
@@ -80,6 +81,7 @@ class TransactionsTest extends TestCase
 
         $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
             'amount' => 200,
+            'updated_at' => '2025-02-02 14:25:45',
         ]);
 
         $response->assertStatus(200)
@@ -101,7 +103,7 @@ class TransactionsTest extends TestCase
             'type' => 'invalid_type',
             'amount' => 100,
             'wallet_id' => 1,
-            'datetime' => '2025-01-01',
+            'datetime' => '2025-01-01 14:25:45',
         ]);
 
         $response->assertStatus(422)
@@ -114,7 +116,7 @@ class TransactionsTest extends TestCase
             'type' => 'expense',
             'amount' => -100,
             'wallet_id' => 1,
-            'datetime' => '2025-01-01',
+            'datetime' => '2025-01-01 14:25:45',
         ]);
 
         $response->assertStatus(422)
@@ -164,7 +166,7 @@ class TransactionsTest extends TestCase
             ->assertStatus(403);
 
         $this->actingAs($user2)
-            ->putJson("/api/v1/transactions/{$expense['id']}", ['amount' => 200])
+            ->putJson("/api/v1/transactions/{$expense['id']}", ['amount' => 200, 'updated_at' => now()])
             ->assertStatus(403);
 
         $this->actingAs($user2)

@@ -61,6 +61,8 @@ class GroupController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(
                         property: 'name',
                         description: 'Name of the group',
@@ -71,6 +73,7 @@ class GroupController extends ApiController
                         description: 'Description of the group',
                         type: 'string'
                     ),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -94,8 +97,10 @@ class GroupController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string|max:255',
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
         ]);
 
         if ($validator->fails()) {

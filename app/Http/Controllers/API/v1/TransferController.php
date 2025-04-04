@@ -27,10 +27,14 @@ class TransferController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'from_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'to_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', example: 9.23),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+
                 ]
             )
         ),
@@ -50,10 +54,12 @@ class TransferController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
+            'client_id' => 'nullable|uuid',
             'amount' => 'required|numeric|min:0.01',
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
         ]);
 
         if (! $validationResult['isValidated']) {

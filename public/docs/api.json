@@ -312,6 +312,11 @@
                                     "name"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "type": {
                                         "description": "Type of the category",
                                         "type": "string",
@@ -327,6 +332,10 @@
                                     "description": {
                                         "description": "The description of the category",
                                         "type": "string"
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -536,6 +545,11 @@
                                     "name"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "name": {
                                         "description": "Name of the group",
                                         "type": "string"
@@ -543,6 +557,10 @@
                                     "description": {
                                         "description": "Description of the group",
                                         "type": "string"
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -926,6 +944,11 @@
                                     "name"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "name": {
                                         "type": "string",
                                         "example": "John Doe"
@@ -933,6 +956,10 @@
                                     "description": {
                                         "type": "string",
                                         "example": "Incomes from John Doe"
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -1162,6 +1189,11 @@
                                     "type"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "amount": {
                                         "type": "number",
                                         "format": "float"
@@ -1178,7 +1210,11 @@
                                     },
                                     "datetime": {
                                         "type": "string",
-                                        "format": "date"
+                                        "format": "datetime"
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     },
                                     "party_id": {
                                         "type": "integer"
@@ -1305,11 +1341,8 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "date",
-                                    "party_id",
-                                    "wallet_id",
                                     "amount",
-                                    "group_id"
+                                    "updated_at"
                                 ],
                                 "properties": {
                                     "amount": {
@@ -1338,6 +1371,10 @@
                                     },
                                     "group_id": {
                                         "type": "integer"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -1411,6 +1448,11 @@
                                     "type"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "amount": {
                                         "type": "number",
                                         "format": "float"
@@ -1427,6 +1469,10 @@
                                         "type": "number",
                                         "format": "float",
                                         "example": 9.23
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -1507,6 +1553,11 @@
                                     "currency"
                                 ],
                                 "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
                                     "name": {
                                         "type": "string",
                                         "example": "Personal Cash"
@@ -1528,6 +1579,10 @@
                                         "type": "number",
                                         "format": "float",
                                         "example": 12
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"

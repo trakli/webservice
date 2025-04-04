@@ -63,11 +63,15 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type', 'currency'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
                     new OA\Property(property: 'currency', type: 'string', example: 'XAF', pattern: '^[A-Z]{3}$'),
                     new OA\Property(property: 'balance', type: 'number', format: 'float', example: 12.00),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+
                 ]
             )
         ),
@@ -95,11 +99,13 @@ class WalletController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
+            'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',
             'currency' => 'required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
         ]);
 
         $user = $request->user();
