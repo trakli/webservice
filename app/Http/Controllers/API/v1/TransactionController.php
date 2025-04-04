@@ -70,10 +70,12 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
+                    new OA\Property(property: 'clientId', type: 'string'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'datetime', type: 'string', format: 'date'),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date'),
                     new OA\Property(property: 'party_id', type: 'integer'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
@@ -97,10 +99,12 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
+            'client_id' => 'nullable|uuid',
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
-            'datetime' => 'nullable|date',
+            'datetime' => 'nullable|datetime',
+            'created_at' => 'nullable|datetime',
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
@@ -216,7 +220,7 @@ class TransactionController extends ApiController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['date', 'party_id', 'wallet_id', 'amount', 'group_id'],
+                required: ['amount', 'updated_at'],
                 properties: [
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
@@ -225,6 +229,7 @@ class TransactionController extends ApiController
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'datetime'),
                 ]
             )
         ),
@@ -256,6 +261,7 @@ class TransactionController extends ApiController
             'group_id' => 'nullable|integer|exists:groups,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',
+            'updated_at' => 'required|datetime',
         ]);
 
         if (! $validationResult['isValidated']) {
