@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasClientCreatedAt;
+use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use OpenApi\Attributes as OA;
@@ -17,7 +19,7 @@ use OpenApi\Attributes as OA;
 )]
 class Party extends Model
 {
-    use HasFactory;
+    use HasClientCreatedAt, HasFactory, Syncable;
 
     /**
      * The attributes that are mass assignable.
@@ -29,4 +31,11 @@ class Party extends Model
         'description',
         'user_id',
     ];
+
+    protected $appends = ['last_synced_at'];
+
+    public function getLastSyncedAtAttribute()
+    {
+        return $this->syncState?->last_synced_at ?? null;
+    }
 }

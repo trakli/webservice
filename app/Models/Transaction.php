@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasClientCreatedAt;
+use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
@@ -30,7 +32,7 @@ use OpenApi\Attributes as OA;
 )]
 class Transaction extends Model
 {
-    use HasFactory;
+    use HasClientCreatedAt, HasFactory, Syncable;
 
     /**
      * The attributes that are mass assignable.
@@ -46,9 +48,11 @@ class Transaction extends Model
         'wallet_id',
         'user_id',
         'transfer_id',
+        'updated_at',
+        'created_at',
     ];
 
-    protected $appends = ['wallet', 'party', 'categories'];
+    protected $appends = ['wallet', 'party', 'categories', 'last_synced_at'];
 
     public function getCategoriesAttribute()
     {
@@ -83,5 +87,10 @@ class Transaction extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getLastSyncedAtAttribute()
+    {
+        return $this->syncState?->last_synced_at ?? null;
     }
 }

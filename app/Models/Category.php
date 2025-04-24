@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasClientCreatedAt;
+use App\Traits\Syncable;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +21,7 @@ use OpenApi\Attributes as OA;
 )]
 class Category extends Model
 {
-    use HasFactory, Sluggable;
+    use HasClientCreatedAt, HasFactory, Sluggable, Syncable;
 
     public const TYPE_INCOME = 'income';
 
@@ -38,6 +40,8 @@ class Category extends Model
         'slug',
     ];
 
+    protected $appends = ['last_synced_at'];
+
     /**
      * Return the sluggable configuration array for this model.
      */
@@ -48,5 +52,10 @@ class Category extends Model
                 'source' => 'name',
             ],
         ];
+    }
+
+    public function getLastSyncedAtAttribute()
+    {
+        return $this->syncState?->last_synced_at ?? null;
     }
 }

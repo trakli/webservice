@@ -18,6 +18,8 @@ class PartyController extends ApiController
         summary: 'List all parties',
         tags: ['Party'],
         parameters: [
+            new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                description: 'Unique identifier for your local client'),
             new OA\Parameter(
                 name: 'limit',
                 description: 'Number of items per page',
@@ -25,6 +27,7 @@ class PartyController extends ApiController
                 required: false,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
+
         ],
         responses: [
             new OA\Response(
@@ -65,8 +68,12 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
+                        description: 'Unique identifier for your local client'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+
                 ]
             )
         ),
@@ -94,8 +101,10 @@ class PartyController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
+            'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
+            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
         ]);
 
         $user = $request->user();
@@ -104,7 +113,12 @@ class PartyController extends ApiController
         if ($party) {
             return $this->failure('Party already exists', 400);
         }
+        /** @var Party */
         $party = $user->parties()->firstOrCreate($validatedData);
+        if (! empty($validatedData['client_id'])) {
+            $party->setClientGeneratedId($validatedData['client_id']);
+        }
+        $party->markAsSynced();
 
         return $this->success($party, 'Party created successfully', 201);
     }

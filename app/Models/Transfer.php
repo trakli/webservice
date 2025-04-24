@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Traits\HasClientCreatedAt;
+use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +24,7 @@ use OpenApi\Attributes as OA;
 )]
 class Transfer extends Model
 {
-    use HasFactory;
+    use HasClientCreatedAt, HasFactory, Syncable;
 
     /**
      * The attributes that are mass assignable.
@@ -37,7 +39,7 @@ class Transfer extends Model
         'to_wallet_id',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet'];
+    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at'];
 
     public function user(): BelongsTo
     {
@@ -62,5 +64,10 @@ class Transfer extends Model
     public function getDestinationWalletAttribute()
     {
         return $this->destinationWallet()->first();
+    }
+
+    public function getLastSyncedAtAttribute()
+    {
+        return $this->syncState?->last_synced_at ?? null;
     }
 }
