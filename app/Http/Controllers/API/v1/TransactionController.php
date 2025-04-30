@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
+use App\Rules\Iso8601Date;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -104,8 +105,8 @@ class TransactionController extends ApiController
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
-            'datetime' => ['nullable', 'date_format:Y-m-d H:i:s'],
-            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'datetime' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601Date],
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
@@ -118,6 +119,14 @@ class TransactionController extends ApiController
         }
 
         $request = $validationResult['data'];
+
+        if (isset($request['datetime'])) {
+            $request['datetime'] = format_iso8601_to_sql($request['datetime']);
+        }
+
+        if (isset($request['created_at'])) {
+            $request['created_at'] = format_iso8601_to_sql($request['created_at']);
+        }
 
         $categories = [];
         if (isset($request['categories'])) {
@@ -140,7 +149,6 @@ class TransactionController extends ApiController
             }
         } catch (\Throwable $e) {
             logger()->error('Transaction creation error: '.$e->getMessage(), [
-                'request' => $request->all(),
                 'exception' => $e,
             ]);
 
@@ -271,14 +279,14 @@ class TransactionController extends ApiController
         $validationResult = $this->validateRequest($request, [
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
-            'datetime' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'datetime' => ['nullable', new Iso8601Date],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
             'group_id' => 'nullable|integer|exists:groups,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',
-            'updated_at' => 'required|date',
+            'updated_at' => ['nullable', new Iso8601Date],
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -286,6 +294,15 @@ class TransactionController extends ApiController
         }
 
         $validatedData = $validationResult['data'];
+
+        if (isset($validatedData['datetime'])) {
+            $validatedData['datetime'] = format_iso8601_to_sql($validatedData['datetime']);
+        }
+
+        if (isset($validatedData['updated_at'])) {
+            $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
+        }
+
         /** @var Transaction */
         $transaction = Transaction::find($id);
 
