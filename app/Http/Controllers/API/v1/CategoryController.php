@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Category;
+use App\Rules\Iso8601Date;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -91,7 +93,7 @@ class CategoryController extends ApiController
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'created_at' => ['nullable', new Iso8601Date],
         ]);
 
         if ($validator->fails()) {
@@ -105,7 +107,18 @@ class CategoryController extends ApiController
         if ($category_exists) {
             return $this->failure('Category already exists', 400);
         }
-        $category = $user->categories()->firstOrCreate($data);
+
+        try {
+            /** @var Category */
+            $category = $user->categories()->create($data);
+
+            if (isset($request['client_id'])) {
+                $category->setClientGeneratedId($request['client_id']);
+            }
+            $category->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create category', 500, [$e->getMessage()]);
+        }
 
         return $this->success($category, 'Category created successfully', 201);
     }

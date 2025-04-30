@@ -33,6 +33,30 @@ class CategoriesTest extends TestCase
         $this->assertDatabaseHas('categories', ['id' => $response->json('data.id')]);
     }
 
+    public function test_api_user_can_create_expense_categories_with_client_id()
+    {
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->postJson('/api/v1/categories', [
+            'type' => 'expense',
+            'name' => 'Expense Category (with client id)',
+            'description' => 'description',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'name',
+                    'description',
+                    'user_id',
+                ],
+                'message',
+            ]);
+
+        $this->assertDatabaseHas('categories', ['id' => $response->json('data.id')]);
+    }
+
     public function test_api_user_can_get_their_categories()
     {
         $user = User::factory()->create();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Party;
+use App\Rules\Iso8601Date;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -104,7 +105,7 @@ class PartyController extends ApiController
             'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
-            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'created_at' => ['nullable', new Iso8601Date],
         ]);
 
         $user = $request->user();
@@ -113,12 +114,17 @@ class PartyController extends ApiController
         if ($party) {
             return $this->failure('Party already exists', 400);
         }
-        /** @var Party */
-        $party = $user->parties()->firstOrCreate($validatedData);
-        if (! empty($validatedData['client_id'])) {
-            $party->setClientGeneratedId($validatedData['client_id']);
+
+        try {
+            /** @var Party */
+            $party = $user->parties()->create($validatedData);
+            if (! empty($validatedData['client_id'])) {
+                $party->setClientGeneratedId($validatedData['client_id']);
+            }
+            $party->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create party', 500, [$e->getMessage()]);
         }
-        $party->markAsSynced();
 
         return $this->success($party, 'Party created successfully', 201);
     }

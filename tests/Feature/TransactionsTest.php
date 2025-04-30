@@ -38,7 +38,7 @@ class TransactionsTest extends TestCase
             'amount' => 100,
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
-            'datetime' => '2025-01-01 14:25:45',
+            'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
         $response->assertStatus(201);
@@ -53,6 +53,21 @@ class TransactionsTest extends TestCase
 
         $this->assertDatabaseHas('transactions', ['id' => $expense['id']]);
         $this->assertDatabaseHas('transactions', ['id' => $income['id']]);
+    }
+
+    public function test_api_user_can_create_transactions_with_client_id()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('transactions', ['id' => $response->json('data.id')]);
     }
 
     public function test_api_user_can_get_their_transactions()
@@ -81,7 +96,7 @@ class TransactionsTest extends TestCase
 
         $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
             'amount' => 200,
-            'updated_at' => '2025-02-02 14:25:45',
+            'updated_at' => '2025-05-01T15:17:54.120Z',
         ]);
 
         $response->assertStatus(200)
@@ -103,7 +118,7 @@ class TransactionsTest extends TestCase
             'type' => 'invalid_type',
             'amount' => 100,
             'wallet_id' => 1,
-            'datetime' => '2025-01-01 14:25:45',
+            'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
         $response->assertStatus(422)
@@ -116,7 +131,7 @@ class TransactionsTest extends TestCase
             'type' => 'expense',
             'amount' => -100,
             'wallet_id' => 1,
-            'datetime' => '2025-01-01 14:25:45',
+            'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
         $response->assertStatus(422)
@@ -166,7 +181,7 @@ class TransactionsTest extends TestCase
             ->assertStatus(403);
 
         $this->actingAs($user2)
-            ->putJson("/api/v1/transactions/{$expense['id']}", ['amount' => 200, 'updated_at' => now()])
+            ->putJson("/api/v1/transactions/{$expense['id']}", ['amount' => 200, 'updated_at' => '2025-05-01T15:17:54.120Z'])
             ->assertStatus(403);
 
         $this->actingAs($user2)

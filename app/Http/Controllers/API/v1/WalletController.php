@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Wallet;
+use App\Rules\Iso8601Date;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -105,12 +107,21 @@ class WalletController extends ApiController
             'description' => 'sometimes|string',
             'currency' => 'required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
-            'created_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'created_at' => ['nullable', new Iso8601Date],
         ]);
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
-        $wallet = $user->wallets()->firstOrCreate($validatedData);
+        try {
+            /** @var Wallet */
+            $wallet = $user->wallets()->create($validatedData);
+            if (isset($request['client_id'])) {
+                $wallet->setClientGeneratedId($request['client_id']);
+            }
+            $wallet->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Wallet already exists', 400);
+        }
 
         return $this->success($wallet, 'Wallet created successfully', 201);
     }
