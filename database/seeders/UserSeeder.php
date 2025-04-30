@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
     {
         foreach (range(1, 10) as $index) {
             $user = User::factory()->create([
-                'email' => "user{$index}@trakli.io",
+                'email' => "user{$index}@trakli.app",
                 'username' => "user{$index}",
             ]);
 
