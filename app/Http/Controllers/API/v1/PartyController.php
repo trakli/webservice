@@ -113,12 +113,17 @@ class PartyController extends ApiController
         if ($party) {
             return $this->failure('Party already exists', 400);
         }
-        /** @var Party */
-        $party = $user->parties()->firstOrCreate($validatedData);
-        if (! empty($validatedData['client_id'])) {
-            $party->setClientGeneratedId($validatedData['client_id']);
+
+        try {
+            /** @var Party */
+            $party = $user->parties()->create($validatedData);
+            if (! empty($validatedData['client_id'])) {
+                $party->setClientGeneratedId($validatedData['client_id']);
+            }
+            $party->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create party', 500, [$e->getMessage()]);
         }
-        $party->markAsSynced();
 
         return $this->success($party, 'Party created successfully', 201);
     }

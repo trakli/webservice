@@ -125,14 +125,26 @@ class TransactionController extends ApiController
             unset($request['categories']);
         }
 
-        /** @var Transaction */
-        $transaction = auth()->user()->transactions()->create($request);
-        if (isset($request['client_id'])) {
-            $transaction->setClientGeneratedId($request['client_id']);
-        }
-        $transaction->markAsSynced();
-        if (! empty($categories)) {
-            $transaction->categories()->sync($categories);
+        try {
+            /** @var Transaction */
+            $transaction = auth()->user()->transactions()->create($request);
+
+            if (isset($request['client_id'])) {
+                $transaction->setClientGeneratedId($request['client_id']);
+            }
+
+            $transaction->markAsSynced();
+
+            if (! empty($categories)) {
+                $transaction->categories()->sync($categories);
+            }
+        } catch (\Throwable $e) {
+            logger()->error('Transaction creation error: '.$e->getMessage(), [
+                'request' => $request->all(),
+                'exception' => $e,
+            ]);
+
+            return $this->failure('Failed to create transaction', 500, [$e->getMessage()]);
         }
 
         return $this->success($transaction, statusCode: 201);

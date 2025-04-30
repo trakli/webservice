@@ -46,6 +46,18 @@ class GroupTest extends TestCase
         ]);
     }
 
+    public function test_api_user_can_create_groups_with_client_id()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'My Group (with client id)',
+            'description' => 'test descriptoin',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('groups', ['id' => $response->json('data.id')]);
+    }
+
     public function test_api_user_can_update_their_groups()
     {
         $response = $this->createGroup();

@@ -33,6 +33,17 @@ class PartyTest extends TestCase
         ]);
     }
 
+    public function test_api_user_can_create_parties_with_client_id()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+        ]);
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
+    }
+
     private function createParty(): TestResponse
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [

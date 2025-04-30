@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -108,7 +109,17 @@ class GroupController extends ApiController
         }
 
         $user = $request->user();
-        $group = $user->groups()->create($validator->validated());
+        try {
+            /** @var Group */
+            $group = $user->groups()->create($validator->validated());
+
+            if (isset($request['client_id'])) {
+                $group->setClientGeneratedId($request['client_id']);
+            }
+            $group->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create group', 500, [$e->getMessage()]);
+        }
 
         return $this->success($group, 'Group created successfully', 201);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -110,7 +111,16 @@ class WalletController extends ApiController
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
-        $wallet = $user->wallets()->firstOrCreate($validatedData);
+        try {
+            /** @var Wallet */
+            $wallet = $user->wallets()->create($validatedData);
+            if (isset($request['client_id'])) {
+                $wallet->setClientGeneratedId($request['client_id']);
+            }
+            $wallet->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Wallet already exists', 400);
+        }
 
         return $this->success($wallet, 'Wallet created successfully', 201);
     }

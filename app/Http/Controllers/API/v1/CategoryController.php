@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -105,7 +106,18 @@ class CategoryController extends ApiController
         if ($category_exists) {
             return $this->failure('Category already exists', 400);
         }
-        $category = $user->categories()->firstOrCreate($data);
+
+        try {
+            /** @var Category */
+            $category = $user->categories()->create($data);
+
+            if (isset($request['client_id'])) {
+                $category->setClientGeneratedId($request['client_id']);
+            }
+            $category->markAsSynced();
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create category', 500, [$e->getMessage()]);
+        }
 
         return $this->success($category, 'Category created successfully', 201);
     }
