@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('source')->nullable();
             $table->uuid('client_generated_id')->index()->nullable();
             $table->timestamp('last_synced_at');
+            $table->unsignedBigInteger('user_id');
+            $table->unique(['syncable_type', 'client_generated_id', 'user_id'], 'syncable_user_unique');
             $table->timestamps();
         });
     }
