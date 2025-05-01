@@ -32,10 +32,5 @@ class Party extends Model
         'user_id',
     ];
 
-    protected $appends = ['last_synced_at'];
-
-    public function getLastSyncedAtAttribute()
-    {
-        return $this->syncState?->last_synced_at ?? null;
-    }
+    protected $appends = ['last_synced_at', 'client_generated_id'];
 }

@@ -24,12 +24,12 @@ class AuthController extends ApiController
             content: new OA\JsonContent(
                 required: ['email', 'first_name', 'password'],
                 properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email'),
-                    new OA\Property(property: 'first_name', type: 'string'),
-                    new OA\Property(property: 'last_name', type: 'string'),
-                    new OA\Property(property: 'username', type: 'string'),
-                    new OA\Property(property: 'phone', type: 'string'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'johndoe@trakli.app'),
+                    new OA\Property(property: 'first_name', type: 'string', example: 'John'),
+                    new OA\Property(property: 'last_name', type: 'string', example: 'Doe'),
+                    new OA\Property(property: 'username', type: 'string', example: 'johndoe'),
+                    new OA\Property(property: 'phone', type: 'string', example: '+1234567890'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'password123'),
                 ]
             )
         ),
@@ -77,10 +77,10 @@ class AuthController extends ApiController
             content: new OA\JsonContent(
                 required: ['password'],
                 properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', example: 'user1@trakli.app'),
                     new OA\Property(property: 'phone', type: 'string'),
-                    new OA\Property(property: 'username', type: 'string'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                    new OA\Property(property: 'username', type: 'string', example: 'user1'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', example: 'password123'),
                 ]
             )
         ),

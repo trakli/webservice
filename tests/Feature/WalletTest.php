@@ -24,6 +24,7 @@ class WalletTest extends TestCase
                 'name',
                 'description',
                 'user_id',
+                'client_generated_id',
             ],
             'message',
         ]);

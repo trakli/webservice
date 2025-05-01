@@ -31,7 +31,7 @@ class Group extends Model
         'slug',
     ];
 
-    protected $appends = ['last_synced_at'];
+    protected $appends = ['last_synced_at', 'client_generated_id'];
 
     use HasClientCreatedAt, HasFactory, Sluggable, Syncable;
 
@@ -50,10 +50,5 @@ class Group extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function getLastSyncedAtAttribute()
-    {
-        return $this->syncState?->last_synced_at ?? null;
     }
 }

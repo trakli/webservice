@@ -3,7 +3,6 @@
 namespace App\Traits;
 
 use App\Models\ModelSyncState;
-use Attribute;
 use Illuminate\Support\Facades\Log;
 
 trait Syncable
@@ -27,9 +26,14 @@ trait Syncable
         $this->syncState()->updateOrCreate([], ['client_generated_id' => $value]);
     }
 
-    public function getLastSyncedAtAttribute(): ?Attribute
+    public function getLastSyncedAtAttribute(): ?string
     {
-        return $this->syncState->last_synced_at ?? null;
+        return $this->syncState?->last_synced_at ?? null;
+    }
+
+    public function getClientGeneratedIdAttribute(): ?string
+    {
+        return $this->syncState?->client_generated_id ?? null;
     }
 
     public function syncState()

@@ -40,7 +40,7 @@ class Category extends Model
         'slug',
     ];
 
-    protected $appends = ['last_synced_at'];
+    protected $appends = ['last_synced_at', 'client_generated_id'];
 
     /**
      * Return the sluggable configuration array for this model.
@@ -52,10 +52,5 @@ class Category extends Model
                 'source' => 'name',
             ],
         ];
-    }
-
-    public function getLastSyncedAtAttribute()
-    {
-        return $this->syncState?->last_synced_at ?? null;
     }
 }

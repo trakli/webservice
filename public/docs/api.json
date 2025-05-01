@@ -55,23 +55,29 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "format": "email"
+                                        "format": "email",
+                                        "example": "johndoe@trakli.app"
                                     },
                                     "first_name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "John"
                                     },
                                     "last_name": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "Doe"
                                     },
                                     "username": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "johndoe"
                                     },
                                     "phone": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "+1234567890"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "format": "password"
+                                        "format": "password",
+                                        "example": "password123"
                                     }
                                 },
                                 "type": "object"
@@ -108,17 +114,20 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "format": "email"
+                                        "format": "email",
+                                        "example": "user1@trakli.app"
                                     },
                                     "phone": {
                                         "type": "string"
                                     },
                                     "username": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "example": "user1"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "format": "password"
+                                        "format": "password",
+                                        "example": "password123"
                                     }
                                 },
                                 "type": "object"
