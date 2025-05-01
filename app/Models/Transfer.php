@@ -39,7 +39,7 @@ class Transfer extends Model
         'to_wallet_id',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at'];
+    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id'];
 
     public function user(): BelongsTo
     {
@@ -64,10 +64,5 @@ class Transfer extends Model
     public function getDestinationWalletAttribute()
     {
         return $this->destinationWallet()->first();
-    }
-
-    public function getLastSyncedAtAttribute()
-    {
-        return $this->syncState?->last_synced_at ?? null;
     }
 }

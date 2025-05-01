@@ -41,6 +41,7 @@ class GroupTest extends TestCase
                 'description',
                 'user_id',
                 'slug',
+                'client_generated_id',
             ],
             'message',
         ]);

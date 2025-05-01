@@ -36,12 +36,27 @@ class TransactionsTest extends TestCase
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'type' => $type,
             'amount' => 100,
+            'description' => 'Test transaction description',
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
         $response->assertStatus(201);
+        $response->assertJsonStructure([
+            'success',
+            'data' => [
+                'type',
+                'amount',
+                'description',
+                'datetime',
+                'party_id',
+                'wallet_id',
+                'user_id',
+                'client_generated_id',
+            ],
+            'message',
+        ]);
 
         return $response->json('data');
     }

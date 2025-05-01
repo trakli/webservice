@@ -52,7 +52,7 @@ class Transaction extends Model
         'created_at',
     ];
 
-    protected $appends = ['wallet', 'party', 'categories', 'last_synced_at'];
+    protected $appends = ['wallet', 'party', 'categories', 'last_synced_at', 'client_generated_id'];
 
     public function getCategoriesAttribute()
     {
@@ -87,10 +87,5 @@ class Transaction extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function getLastSyncedAtAttribute()
-    {
-        return $this->syncState?->last_synced_at ?? null;
     }
 }
