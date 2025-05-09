@@ -12,6 +12,7 @@ trait Syncable
         static::created(function ($model) {
             $model->syncState()->create([
                 'last_synced_at' => now(),
+                'user_id' => auth()->id(),
             ]);
         });
     }
