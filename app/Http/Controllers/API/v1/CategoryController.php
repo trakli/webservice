@@ -209,7 +209,7 @@ class CategoryController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'type' => 'required|string|in:income,expense',
+            'type' => 'sometimes|required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
         ]);
