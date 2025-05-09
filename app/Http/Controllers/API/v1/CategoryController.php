@@ -211,7 +211,7 @@ class CategoryController extends ApiController
         $validator = Validator::make($request->all(), [
             'type' => 'sometimes|required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'sometimes|string',
         ]);
 
         if ($validator->fails()) {

@@ -220,7 +220,7 @@ class PartyController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255',
+            'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
         ]);
 
