@@ -220,10 +220,10 @@ class WalletController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string',
+            'name' => 'sometimes|required|string|max:255',
+            'type' => 'sometimes|required|string',
             'description' => 'sometimes|string',
-            'currency' => 'required|string|size:3',
+            'currency' => 'sometimes|required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
         ]);
         $user = $request->user();
