@@ -12,6 +12,7 @@ class TransactionSeeder extends Seeder
     {
         foreach (range(1, 10) as $index) {
             $user = User::find($index);
+            auth()->login($user);
             if (! $user) {
                 continue;
             }
