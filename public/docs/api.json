@@ -1990,6 +1990,10 @@
                         "description": "Name of the wallet",
                         "type": "string"
                     },
+                    "type": {
+                        "description": "Type of the wallet (bank, cash, credit_card, mobile)",
+                        "type": "string"
+                    },
                     "description": {
                         "description": "Description of the wallet",
                         "type": "string"

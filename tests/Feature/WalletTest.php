@@ -22,6 +22,7 @@ class WalletTest extends TestCase
             'success',
             'data' => [
                 'name',
+                'type',
                 'description',
                 'user_id',
                 'client_generated_id',
@@ -117,12 +118,20 @@ class WalletTest extends TestCase
 
     public function test_api_user_can_get_their_wallets()
     {
-        $response = $this->createWallet('bank');
-
-        $response->assertStatus(201);
+        $this->createWallet('bank');
+        $this->createWallet('cash');
+        $this->createWallet('credit_card');
 
         $response = $this->actingAs($this->user)->getJson('/api/v1/wallets');
         $response->assertStatus(200);
+
+        $wallets = $response->json('data.data');
+        $this->assertCount(3, $wallets);
+
+        $types = array_column($wallets, 'type');
+        $this->assertContains('bank', $types);
+        $this->assertContains('cash', $types);
+        $this->assertContains('credit_card', $types);
     }
 
     public function test_api_user_can_create_a_wallet_with_invalid_type()
@@ -140,14 +149,17 @@ class WalletTest extends TestCase
         $wallet = $response->json('data');
         $id = $wallet['id'];
 
+        // Update wallet including changing the type
         $response = $this->actingAs($this->user)->putJson('/api/v1/wallets/'.$id, [
             'name' => 'new name',
+            'type' => 'credit_card',
             'description' => 'new description',
             'currency' => 'XAF',
         ]);
 
         $data = $response->json('data');
         $this->assertEquals('new name', $data['name']);
+        $this->assertEquals('credit_card', $data['type']);
         $this->assertEquals('new description', $data['description']);
     }
 
