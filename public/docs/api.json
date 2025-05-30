@@ -1939,6 +1939,16 @@
                     "transfer_id": {
                         "description": "ID of the associated transfer, if any",
                         "type": "integer"
+                    },
+                    "wallet_client_generated_id": {
+                        "description": "Client-generated ID of the associated wallet",
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "party_client_generated_id": {
+                        "description": "Client-generated ID of the associated party",
+                        "type": "string",
+                        "format": "uuid"
                     }
                 },
                 "type": "object"
@@ -1988,6 +1998,10 @@
                     },
                     "name": {
                         "description": "Name of the wallet",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "Type of the wallet (bank, cash, credit_card, mobile)",
                         "type": "string"
                     },
                     "description": {
