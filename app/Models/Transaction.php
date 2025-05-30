@@ -26,6 +26,8 @@ use OpenApi\Attributes as OA;
         ),
         new OA\Property(property: 'user_id', type: 'integer', description: 'ID of the user who created the transaction'),
         new OA\Property(property: 'transfer_id', type: 'integer', description: 'ID of the associated transfer, if any'),
+        new OA\Property(property: 'wallet_client_generated_id', type: 'string', format: 'uuid', description: 'Client-generated ID of the associated wallet'),
+        new OA\Property(property: 'party_client_generated_id', type: 'string', format: 'uuid', description: 'Client-generated ID of the associated party'),
 
     ],
     type: 'object'
@@ -52,7 +54,25 @@ class Transaction extends Model
         'created_at',
     ];
 
-    protected $appends = ['wallet', 'party', 'categories', 'last_synced_at', 'client_generated_id'];
+    protected $appends = [
+        'wallet',
+        'party',
+        'categories',
+        'last_synced_at',
+        'client_generated_id',
+        'wallet_client_generated_id',
+        'party_client_generated_id',
+    ];
+
+    public function getWalletClientGeneratedIdAttribute()
+    {
+        return $this->wallet ? $this->wallet->client_generated_id : null;
+    }
+
+    public function getPartyClientGeneratedIdAttribute()
+    {
+        return $this->party ? $this->party->client_generated_id : null;
+    }
 
     public function getCategoriesAttribute()
     {
