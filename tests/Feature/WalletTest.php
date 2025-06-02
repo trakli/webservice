@@ -177,6 +177,45 @@ class WalletTest extends TestCase
         $this->assertDatabaseMissing('wallets', ['id' => $id]);
     }
 
+    public function test_wallet_balance_has_consistent_type()
+    {
+        $this->actingAs($this->user);
+
+        $testWallet = $this->user->wallets()->create([
+            'name' => 'Test Balance Type Wallet',
+            'type' => 'bank',
+            'balance' => 100.50,
+            'currency' => 'XAF',
+            'description' => 'Test wallet for balance type checking',
+        ]);
+
+        try {
+            $response = $this->getJson('/api/v1/wallets');
+            $response->assertStatus(200);
+
+            $walletInList = collect($response->json('data.data'))
+                ->firstWhere('id', $testWallet->id);
+
+            $this->assertNotNull($walletInList, 'Test wallet should be in the list');
+            $this->assertIsNumeric($walletInList['balance'] ?? 0, 'Balance in list should be numeric');
+
+            $response = $this->getJson("/api/v1/wallets/{$testWallet->id}");
+            $response->assertStatus(200);
+            $this->assertIsNumeric($response->json('data.balance') ?? 0, 'Balance in show should be numeric');
+
+            $response = $this->putJson("/api/v1/wallets/{$testWallet->id}", [
+                'name' => 'Updated Wallet',
+                'type' => 'bank',
+                'balance' => 200.75,
+                'currency' => 'XAF',
+            ]);
+            $response->assertStatus(200);
+            $this->assertIsNumeric($response->json('data.balance') ?? 0, 'Updated balance should be numeric');
+        } finally {
+            $testWallet->delete();
+        }
+    }
+
     public function test_api_user_cannot_delete_another_users_wallet()
     {
         $response = $this->createWallet('bank');

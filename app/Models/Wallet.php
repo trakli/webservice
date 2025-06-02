@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\FloatCast;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,4 +35,13 @@ class Wallet extends Model
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id'];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'balance' => FloatCast::class,
+    ];
 }
