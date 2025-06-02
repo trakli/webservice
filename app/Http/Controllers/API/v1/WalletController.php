@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Wallet;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -107,7 +107,7 @@ class WalletController extends ApiController
             'description' => 'sometimes|string',
             'currency' => 'required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
-            'created_at' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         $user = $request->user();

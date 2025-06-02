@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,7 +60,7 @@ class TransferController extends ApiController
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
-            'created_at' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if (! $validationResult['isValidated']) {

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Group;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -102,7 +102,7 @@ class GroupController extends ApiController
             'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string|max:255',
-            'created_at' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if ($validator->fails()) {
