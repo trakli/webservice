@@ -120,7 +120,12 @@ class WalletController extends ApiController
             }
             $wallet->markAsSynced();
         } catch (\Exception $e) {
-            return $this->failure('Wallet already exists', 400);
+            logger()->error('Failed to create wallet', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return $this->failure('Failed to create wallet', 400, [$e->getMessage()]);
         }
 
         return $this->success($wallet, 'Wallet created successfully', 201);
