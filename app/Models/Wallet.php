@@ -18,6 +18,14 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'description', description: 'Description of the wallet', type: 'string'),
         new OA\Property(property: 'currency', description: 'Currency of the wallet', type: 'string'),
         new OA\Property(property: 'balance', description: 'Balance of the wallet', type: 'number', format: 'float'),
+        new OA\Property(
+            property: 'stats',
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'total_income', type: 'number', format: 'float'),
+                new OA\Property(property: 'total_expense', type: 'number', format: 'float'),
+            ]
+        ),
     ],
     type: 'object'
 )]
@@ -34,7 +42,27 @@ class Wallet extends Model
         'balance',
     ];
 
-    protected $appends = ['last_synced_at', 'client_generated_id'];
+    protected $appends = ['last_synced_at', 'client_generated_id', 'stats'];
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function getStatsAttribute()
+    {
+        $transactions = $this->transactions()
+            ->selectRaw('
+                COALESCE(SUM(CASE WHEN type = "income" THEN amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN type = "expense" THEN amount ELSE 0 END), 0) as total_expense
+            ')
+            ->first();
+
+        return [
+            'total_income' => (float) $transactions->total_income,
+            'total_expense' => (float) $transactions->total_expense,
+        ];
+    }
 
     /**
      * The attributes that should be cast.

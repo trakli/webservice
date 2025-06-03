@@ -2016,6 +2016,19 @@
                         "description": "Balance of the wallet",
                         "type": "number",
                         "format": "float"
+                    },
+                    "stats": {
+                        "properties": {
+                            "total_income": {
+                                "type": "number",
+                                "format": "float"
+                            },
+                            "total_expense": {
+                                "type": "number",
+                                "format": "float"
+                            }
+                        },
+                        "type": "object"
                     }
                 },
                 "type": "object"
