@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Party;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -105,7 +105,7 @@ class PartyController extends ApiController
             'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
-            'created_at' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         $user = $request->user();

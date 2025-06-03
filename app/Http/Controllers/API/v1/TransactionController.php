@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -105,8 +105,8 @@ class TransactionController extends ApiController
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601Date],
-            'created_at' => ['nullable', new Iso8601Date],
+            'datetime' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime],
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
@@ -279,14 +279,14 @@ class TransactionController extends ApiController
         $validationResult = $this->validateRequest($request, [
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
-            'datetime' => ['nullable', new Iso8601Date],
+            'datetime' => ['nullable', new Iso8601DateTime],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'nullable|integer|exists:wallets,id',
             'group_id' => 'nullable|integer|exists:groups,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',
-            'updated_at' => ['nullable', new Iso8601Date],
+            'updated_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if (! $validationResult['isValidated']) {

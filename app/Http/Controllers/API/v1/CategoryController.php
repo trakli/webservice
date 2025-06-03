@@ -4,7 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Category;
-use App\Rules\Iso8601Date;
+use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -93,7 +93,7 @@ class CategoryController extends ApiController
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'created_at' => ['nullable', new Iso8601Date],
+            'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if ($validator->fails()) {
