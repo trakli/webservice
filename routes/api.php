@@ -32,15 +32,19 @@ Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function
 });
 
 // Resource routes
-Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function () {
+Route::group(['prefix' => 'v1'], function () {
     Route::group(['middleware' => ['auth:sanctum']], function () {
-        Route::get('/user', [UserController::class, 'show']);
-        Route::apiResource('groups', GroupController::class);
-        Route::apiResource('categories', CategoryController::class);
-        Route::apiResource('parties', PartyController::class);
-        Route::apiResource('wallets', WalletController::class);
+        Route::group(['middleware' => ['request.body.json']], function () {
+            Route::get('/user', [UserController::class, 'show']);
+            Route::apiResource('groups', GroupController::class);
+            Route::apiResource('parties', PartyController::class);
+            Route::apiResource('wallets', WalletController::class);
+            Route::apiResource('transfers', TransferController::class);
+        });
         Route::apiResource('transactions', TransactionController::class);
-        Route::apiResource('transfers', TransferController::class);
+        Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
+        Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+        Route::apiResource('categories', CategoryController::class);
 
     });
 });

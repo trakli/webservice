@@ -5,14 +5,18 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
+use App\Traits\HasIcon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Categories', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
 {
+    use HasIcon;
+
     #[OA\Get(
         path: '/categories',
         summary: 'List all categories',
@@ -52,6 +56,83 @@ class CategoryController extends ApiController
         return $this->success($categories);
     }
 
+    #[OA\Put(
+        path: '/categories/{id}',
+        summary: 'Update a specific category',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
+                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
+                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                ]
+            )
+        ),
+        tags: ['Categories'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the category',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Category updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/Category')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Category not found'
+            ),
+            new OA\Response(
+                response: 400,
+                description: 'Invalid input'
+            ),
+            new OA\Response(
+                response: 500,
+                description: 'Internal server error'
+            ),
+        ]
+    )]
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'sometimes|required|string|in:income,expense',
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'sometimes|string',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->failure('Validation error', 422, $validator->errors()->all());
+        }
+
+        $data = $validator->validated();
+        $user = $request->user();
+
+        $category = $user->categories()->find($id);
+
+        if (! $category) {
+            return $this->failure('Category not found', 404);
+        }
+        DB::transaction(function () use ($data, $request, &$category) {
+
+            $category->update($data);
+            $this->updateIcon($category, $data, $request);
+
+        });
+        $category->refresh();
+
+        return $this->success($category, 'Category updated successfully');
+    }
+
     #[OA\Post(
         path: '/categories',
         summary: 'Create a new category',
@@ -60,11 +141,13 @@ class CategoryController extends ApiController
             content: new OA\JsonContent(
                 required: ['type', 'name'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
                     new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
+                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -93,11 +176,13 @@ class CategoryController extends ApiController
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 400, $validator->errors()->all());
+            return $this->failure('Validation error', 422, $validator->errors()->all());
         }
 
         $data = $validator->validated();
@@ -109,49 +194,57 @@ class CategoryController extends ApiController
         }
 
         try {
-            /** @var Category */
-            $category = $user->categories()->create($data);
+            DB::transaction(function () use ($data, $request, $user, &$category) {
+                /** @var Category $category */
+                $category = $user->categories()->create($data);
 
-            if (isset($request['client_id'])) {
-                $category->setClientGeneratedId($request['client_id']);
-            }
-            $category->markAsSynced();
+                if (isset($request['client_id'])) {
+                    $category->setClientGeneratedId($request['client_id']);
+                }
+                $category->markAsSynced();
+
+                $this->updateIcon($category, $data, $request);
+            });
+            $category->refresh();
+
+            return $this->success($category, 'Category created successfully', 201);
         } catch (\Exception $e) {
-            return $this->failure('Failed to create category', 500, [$e->getMessage()]);
-        }
+            $status_code = intval($e->getCode());
 
-        return $this->success($category, 'Category created successfully', 201);
+            return $this->failure('Failed to create category', $status_code > 100 ? $status_code : 500, [$e->getMessage()]);
+        }
     }
 
-    #[OA\Get(
-        path: '/categories/{id}',
-        summary: 'Get a specific category',
-        tags: ['Categories'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                description: 'ID of the category',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            ),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Successful operation',
-                content: new OA\JsonContent(ref: '#/components/schemas/Category')
-            ),
-            new OA\Response(
-                response: 404,
-                description: 'Category not found'
-            ),
-            new OA\Response(
-                response: 500,
-                description: 'Internal server error'
-            ),
-        ]
-    )]
+    #[
+        OA\Get(
+            path: '/categories/{id}',
+            summary: 'Get a specific category',
+            tags: ['Categories'],
+            parameters: [
+                new OA\Parameter(
+                    name: 'id',
+                    description: 'ID of the category',
+                    in: 'path',
+                    required: true,
+                    schema: new OA\Schema(type: 'integer')
+                ),
+            ],
+            responses: [
+                new OA\Response(
+                    response: 200,
+                    description: 'Successful operation',
+                    content: new OA\JsonContent(ref: '#/components/schemas/Category')
+                ),
+                new OA\Response(
+                    response: 404,
+                    description: 'Category not found'
+                ),
+                new OA\Response(
+                    response: 500,
+                    description: 'Internal server error'
+                ),
+            ]
+        )]
     public function show(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
@@ -164,74 +257,6 @@ class CategoryController extends ApiController
         return $this->success($category);
     }
 
-    #[OA\Put(
-        path: '/categories/{id}',
-        summary: 'Update a specific category',
-        tags: ['Categories'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the category'
-            ),
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: 'name', type: 'string', description: 'Name of the category'),
-                    new OA\Property(property: 'description', type: 'string', description: 'The description of the category'),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Category updated successfully',
-                content: new OA\JsonContent(ref: '#/components/schemas/Category')
-            ),
-            new OA\Response(
-                response: 404,
-                description: 'Category not found'
-            ),
-            new OA\Response(
-                response: 400,
-                description: 'Invalid input'
-            ),
-            new OA\Response(
-                response: 500,
-                description: 'Internal server error'
-            ),
-        ]
-    )]
-    public function update(Request $request, int $id): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'type' => 'sometimes|required|string|in:income,expense',
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'sometimes|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->failure('Validation error', 400, $validator->errors()->all());
-        }
-
-        $data = $validator->validated();
-        $user = $request->user();
-
-        $category = $user->categories()->find($id);
-
-        if (! $category) {
-            return $this->failure('Category not found', 404);
-        }
-
-        $category->update($data);
-
-        return $this->success($category, 'Category updated successfully');
-    }
-
     #[OA\Delete(
         path: '/categories/{id}',
         summary: 'Delete a specific category',
@@ -239,10 +264,10 @@ class CategoryController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'id',
+                description: 'ID of the category',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'integer'),
-                description: 'ID of the category'
+                schema: new OA\Schema(type: 'integer')
             ),
         ],
         responses: [
