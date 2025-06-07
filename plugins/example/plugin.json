@@ -1,0 +1,13 @@
+{
+    "id": "example",
+    "name": "Example Plugin",
+    "description": "An example plugin for the Trakli webservice",
+    "version": "1.0.0",
+    "namespace": "Trakli\\Example\\",
+    "provider": "Trakli\\Example\\ExampleServiceProvider",
+    "enabled": true,
+    "requires": {
+        "php": ">=8.0",
+        "laravel/framework": "^10.0"
+    }
+}
