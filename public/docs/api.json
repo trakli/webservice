@@ -1026,6 +1026,130 @@
                 }
             }
         },
+        "/stats": {
+            "get": {
+                "tags": [
+                    "Statistics"
+                ],
+                "summary": "Get financial statistics",
+                "operationId": "d59457f60fb6de2cb935abbc46d038bb",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "wallet_ids",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "description": "Comma-separated wallet IDs",
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "month",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "preset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "description": "Preset date range (overrides start_date/end_date)",
+                            "type": "string",
+                            "enum": [
+                                "all_time",
+                                "current_week",
+                                "current_month",
+                                "last_3_months"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statistics retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "overview": {
+                                                    "properties": {
+                                                        "total_balance": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "net_worth": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "total_income": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "total_expenses": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "net_cash_flow": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "avg_monthly_income": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "avg_monthly_expenses": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        },
+                                                        "savings_rate": {
+                                                            "type": "number",
+                                                            "format": "float"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/transactions": {
             "get": {
                 "tags": [
@@ -3008,6 +3132,10 @@
         {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
+        },
+        {
+            "name": "Statistics",
+            "description": "Financial statistics and analytics"
         },
         {
             "name": "Transactions",

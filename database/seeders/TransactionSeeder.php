@@ -147,7 +147,7 @@ class TransactionSeeder extends Seeder
         shuffle($allTransactions);
 
         // Sort by date to maintain chronological order
-        usort($allTransactions, fn($a, $b) => $a['date']->timestamp - $b['date']->timestamp);
+        usort($allTransactions, fn ($a, $b) => $a['date']->timestamp - $b['date']->timestamp);
 
         // Create the transactions
         foreach ($allTransactions as $txnData) {
@@ -223,6 +223,7 @@ class TransactionSeeder extends Seeder
                 $weighted[] = $template;
             }
         }
+
         return $weighted[array_rand($weighted)];
     }
 
@@ -230,6 +231,7 @@ class TransactionSeeder extends Seeder
     {
         $diffInSeconds = $end->timestamp - $start->timestamp;
         $randomSeconds = rand(0, max(0, $diffInSeconds));
+
         return $start->copy()->addSeconds($randomSeconds);
     }
 
