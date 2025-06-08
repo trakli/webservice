@@ -125,11 +125,19 @@ class PluginManager
     protected function loadPlugin(string $path): ?array
     {
         $manifestPath = "{$path}/plugin.json";
+        $pluginDir = basename($path);
 
         if (! File::exists($manifestPath)) {
-            Log::warning("Plugin manifest not found: {$manifestPath}");
+            $error = "Plugin manifest not found: {$manifestPath}";
+            Log::error($error);
 
-            return null;
+            return [
+                'id' => $pluginDir,
+                'name' => $pluginDir,
+                'path' => $path,
+                'error' => $error,
+                'enabled' => false,
+            ];
         }
 
         Log::debug("Loading plugin from: {$path}");
@@ -137,37 +145,70 @@ class PluginManager
         try {
             $manifest = $this->readManifest($manifestPath);
             if (! $manifest) {
-                Log::warning("Plugin at {$path} is missing plugin.json");
+                $error = "Plugin at {$path} has an invalid plugin.json file";
+                Log::warning($error);
 
-                return null;
+                return [
+                    'id' => $pluginDir,
+                    'name' => $pluginDir,
+                    'path' => $path,
+                    'error' => $error,
+                    'enabled' => false,
+                ];
             }
 
             if (! isset($manifest['namespace']) || ! isset($manifest['provider'])) {
-                Log::warning("Plugin at {$path} is missing required fields in plugin.json");
+                $error = 'Plugin is missing required fields in plugin.json (namespace and provider are required)';
+                Log::warning("Plugin at {$path}: {$error}");
 
-                return null;
+                return [
+                    'id' => $manifest['id'] ?? $pluginDir,
+                    'name' => $manifest['name'] ?? $pluginDir,
+                    'path' => $path,
+                    'manifest' => $manifest,
+                    'error' => $error,
+                    'enabled' => false,
+                ];
             }
 
             if (! isset($manifest['id'])) {
-                Log::warning("Plugin manifest missing required 'id' field: {$manifestPath}");
+                $error = "Plugin manifest missing required 'id' field";
+                Log::warning("{$manifestPath}: {$error}");
 
-                return null;
+                return [
+                    'id' => $pluginDir,
+                    'name' => $manifest['name'] ?? $pluginDir,
+                    'path' => $path,
+                    'manifest' => $manifest,
+                    'error' => $error,
+                    'enabled' => $manifest['enabled'] ?? false,
+                ];
             }
 
             $providerClass = $manifest['provider'];
-            $namespace = rtrim($manifest['namespace'] ?? basename($path), '\\').'\\';
+            $namespace = rtrim($manifest['namespace'], '\\').'\\';
 
             $this->registerPluginAutoloading($namespace, $path);
 
             if (! class_exists($providerClass)) {
-                Log::warning("Plugin provider class not found: {$providerClass} in {$path}");
+                $error = "Provider class not found: {$providerClass}";
+                Log::warning("Plugin {$manifest['id']}: {$error}");
 
-                return null;
+                return [
+                    'id' => $manifest['id'],
+                    'name' => $manifest['name'] ?? $pluginDir,
+                    'path' => $path,
+                    'namespace' => $namespace,
+                    'manifest' => $manifest,
+                    'provider' => $providerClass,
+                    'error' => $error,
+                    'enabled' => $manifest['enabled'] ?? false,
+                ];
             }
 
             return [
                 'id' => $manifest['id'],
-                'name' => $manifest['name'] ?? basename($path),
+                'name' => $manifest['name'] ?? $pluginDir,
                 'path' => $path,
                 'namespace' => $namespace,
                 'manifest' => $manifest,
@@ -175,9 +216,27 @@ class PluginManager
                 'enabled' => $manifest['enabled'] ?? true,
             ];
         } catch (\JsonException $e) {
-            Log::error("Failed to parse plugin manifest: {$manifestPath} - ".$e->getMessage());
+            $error = 'Failed to parse plugin manifest: '.$e->getMessage();
+            Log::error("{$manifestPath}: {$error}");
 
-            return null;
+            return [
+                'id' => $pluginDir,
+                'name' => $pluginDir,
+                'path' => $path,
+                'error' => $error,
+                'enabled' => false,
+            ];
+        } catch (\Exception $e) {
+            $error = 'Error loading plugin: '.$e->getMessage();
+            Log::error("{$path}: {$error}");
+
+            return [
+                'id' => $pluginDir,
+                'name' => $pluginDir,
+                'path' => $path,
+                'error' => $error,
+                'enabled' => false,
+            ];
         }
     }
 
@@ -394,7 +453,10 @@ class PluginManager
     }
 
     /**
-     * Check if a plugin is enabled by its ID
+     * Check if a plugin is enabled and valid.
+     *
+     * @param  string  $pluginId  The plugin ID to check
+     * @return bool True if the plugin is enabled and valid, false otherwise
      */
     public function isPluginEnabled(string $pluginId): bool
     {
@@ -403,12 +465,28 @@ class PluginManager
             return false;
         }
 
+        if (isset($plugin['error'])) {
+            return false;
+        }
+
+        // Check if provider exists and is valid
+        if (! isset($plugin['provider']) || empty($plugin['provider'])) {
+            return false;
+        }
+
+        if (! class_exists($plugin['provider'])) {
+            Log::warning("Plugin provider class not found: {$plugin['provider']}");
+
+            return false;
+        }
+
         $manifestPath = $plugin['path'].'/plugin.json';
 
         try {
             $manifest = $this->readManifest($manifestPath);
 
-            return $manifest ? ($manifest['enabled'] ?? true) : false;
+            return $manifest ? (bool) ($manifest['enabled'] ?? true) : false;
+
         } catch (\RuntimeException $e) {
             Log::error('Error reading plugin manifest', [
                 'plugin' => $pluginId,
@@ -429,13 +507,15 @@ class PluginManager
                     Log::debug("Registered plugin service provider: {$plugin['provider']}");
                 } catch (\Exception $e) {
                     Log::error('Failed to register plugin service provider', [
-                        'provider' => $plugin['provider'] ?? 'unknown',
+                        'plugin' => $plugin['id'],
+                        'provider' => $plugin['provider'],
                         'error' => $e->getMessage(),
                     ]);
                     throw $e;
                 }
             } else {
-                Log::debug("Skipping disabled plugin: {$plugin['id']}");
+                $reason = isset($plugin['error']) ? "error: {$plugin['error']}" : 'disabled';
+                Log::debug("Skipping plugin {$plugin['id']}: {$reason}");
             }
         });
     }
