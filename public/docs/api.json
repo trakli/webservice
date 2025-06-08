@@ -342,6 +342,14 @@
                                         "description": "The description of the category",
                                         "type": "string"
                                     },
+                                    "icon": {
+                                        "description": "The icon of the category (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
+                                    },
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
@@ -438,6 +446,14 @@
                                     },
                                     "description": {
                                         "description": "The description of the category",
+                                        "type": "string"
+                                    },
+                                    "icon": {
+                                        "description": "The icon of the category (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
                                     }
                                 },
@@ -1240,6 +1256,14 @@
                                             "description": "Category ID array",
                                             "type": "integer"
                                         }
+                                    },
+                                    "files": {
+                                        "description": "Files to attach to this transaction",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
                                     }
                                 },
                                 "type": "object"
@@ -1250,6 +1274,78 @@
                 "responses": {
                     "201": {
                         "description": "Transaction created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Transaction"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/transactions/{id}/files": {
+            "post": {
+                "tags": [
+                    "Transactions"
+                ],
+                "summary": "Add file to a transaction",
+                "operationId": "c4819a10dcfa436a030128ac45465ae2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "files",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "files": {
+                                        "description": "Files to attach to this transaction",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "binary"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Transaction updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Transaction"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/transactions/{id}/files/{file_id}": {
+            "delete": {
+                "tags": [
+                    "Transactions"
+                ],
+                "summary": "Delete a file from a transaction",
+                "operationId": "b6e7c03ce9a463af5439dd65a5ae28d8",
+                "responses": {
+                    "201": {
+                        "description": "Transaction deleted successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1782,6 +1878,65 @@
                     "type": {
                         "description": "Type of the category (income or expense)",
                         "type": "string"
+                    },
+                    "icon": {
+                        "description": "Category icon",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the icon",
+                                "type": "integer"
+                            },
+                            "path": {
+                                "description": "Image of the icon",
+                                "type": "string"
+                            },
+                            "type": {
+                                "description": "type of icon( image or icon or emoji)",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "sync_state": {
+                        "description": "Sync state",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the sync state",
+                                "type": "integer"
+                            },
+                            "syncable_id": {
+                                "description": "ID of the syncable",
+                                "type": "integer"
+                            },
+                            "client_generated_id": {
+                                "description": "ID from the client",
+                                "type": "integer"
+                            },
+                            "syncable_type": {
+                                "description": "Syncable type",
+                                "type": "string"
+                            },
+                            "source": {
+                                "description": "",
+                                "type": "string"
+                            },
+                            "last_synced_at": {
+                                "description": "Date last synced",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "created_at": {
+                                "description": "Date created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "deleted_at": {
+                                "description": "Date deleted",
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        },
+                        "type": "object"
                     }
                 },
                 "type": "object"
@@ -1825,6 +1980,37 @@
                     "reason": {
                         "description": "The reason why the transaction failed",
                         "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "File": {
+                "properties": {
+                    "id": {
+                        "description": "ID of the file",
+                        "type": "integer"
+                    },
+                    "path": {
+                        "description": "Path or content of the file",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "Type of file (image, icon, emoji, pdf)",
+                        "type": "string",
+                        "enum": [
+                            "image",
+                            "pdf",
+                            "icon",
+                            "emoji"
+                        ]
+                    },
+                    "model": {
+                        "description": "Related model name",
+                        "type": "string"
+                    },
+                    "model_id": {
+                        "description": "ID of the related model",
+                        "type": "integer"
                     }
                 },
                 "type": "object"
@@ -1949,6 +2135,13 @@
                         "description": "Client-generated ID of the associated party",
                         "type": "string",
                         "format": "uuid"
+                    },
+                    "files": {
+                        "description": "Files attached to the transaction",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/File"
+                        }
                     }
                 },
                 "type": "object"

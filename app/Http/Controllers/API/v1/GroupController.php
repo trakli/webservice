@@ -106,7 +106,7 @@ class GroupController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 400, $validator->errors()->all());
+            return $this->failure('Validation error', 422, $validator->errors()->all());
         }
 
         $user = $request->user();
@@ -219,7 +219,7 @@ class GroupController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 400, $validator->errors()->all());
+            return $this->failure('Validation error', 422, $validator->errors()->all());
         }
 
         $user = $request->user();

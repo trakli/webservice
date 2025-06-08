@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class TransactionsTest extends TestCase
@@ -16,19 +17,13 @@ class TransactionsTest extends TestCase
 
     private $user;
 
-    protected function setUp(): void
+    public function test_api_user_can_create_transactions()
     {
-        parent::setUp();
-        $this->wallet = User::factory()->create()->wallets()->create([
-            'name' => 'Wallet',
-            'balance' => 1000,
-        ]);
+        $expense = $this->createTransaction('expense');
+        $income = $this->createTransaction('income');
 
-        $this->party = User::factory()->create()->parties()->create([
-            'name' => 'Party',
-            'type' => 'personal',
-        ]);
-        $this->user = User::factory()->create();
+        $this->assertDatabaseHas('transactions', ['id' => $expense['id']]);
+        $this->assertDatabaseHas('transactions', ['id' => $income['id']]);
     }
 
     private function createTransaction(string $type): array
@@ -59,15 +54,6 @@ class TransactionsTest extends TestCase
         ]);
 
         return $response->json('data');
-    }
-
-    public function test_api_user_can_create_transactions()
-    {
-        $expense = $this->createTransaction('expense');
-        $income = $this->createTransaction('income');
-
-        $this->assertDatabaseHas('transactions', ['id' => $expense['id']]);
-        $this->assertDatabaseHas('transactions', ['id' => $income['id']]);
     }
 
     public function test_transaction_response_includes_client_generated_ids()
@@ -115,6 +101,139 @@ class TransactionsTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('transactions', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_create_transactions_with_files()
+    {
+        // Create a fake image file
+        $imageFile1 = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $imageFile2 = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'files' => [$imageFile1, $imageFile2],
+        ]);
+
+        $response->assertStatus(201);
+
+        $files = $response->json('data.files');
+        $this->assertCount(2, $files);
+        $this->assertEquals('file', $files[0]['type']);
+        $this->assertEquals('App\\Models\\Transaction', $files[0]['fileable_type']);
+
+        $this->assertDatabaseHas('transactions', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_update_transactions_with_files()
+    {
+        // Create a fake image file
+        $imageFile1 = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $imageFile2 = UploadedFile::fake()->createWithContent(
+            'image2.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'files' => [$imageFile1],
+        ]);
+        $response->assertStatus(201);
+
+        $id = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions/'.$id.'/files', [
+            'files' => [$imageFile2],
+        ]);
+
+        $response->assertStatus(200);
+
+        $files = $response->json('data.files');
+        $this->assertCount(2, $files);
+        $this->assertEquals('file', $files[0]['type']);
+        $this->assertEquals('App\\Models\\Transaction', $files[0]['fileable_type']);
+    }
+
+    public function test_api_user_can_delete_a_file_in_a_transaction()
+    {
+        // Create a fake image file
+        $imageFile1 = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $imageFile2 = UploadedFile::fake()->createWithContent(
+            'image2.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'files' => [$imageFile1, $imageFile2],
+        ]);
+        $response->assertStatus(201);
+
+        $id = $response->json('data.id');
+        $files = $response->json('data.files');
+
+        $response = $this->actingAs($this->user)->deleteJson('/api/v1/transactions/'.$id.'/files/'.$files[0]['id'], [
+            'files' => [$imageFile2],
+        ]);
+
+        $response->assertStatus(200);
+
+        $files = $response->json('data.files');
+        $this->assertCount(1, $files);
+        $this->assertEquals('file', $files[0]['type']);
+        $this->assertEquals('App\\Models\\Transaction', $files[0]['fileable_type']);
+    }
+
+    public function test_api_user_cannot_create_transactions_with_invalid_file()
+    {
+        // Create a fake CSV file
+        $csvFile = UploadedFile::fake()->createWithContent(
+            'test.csv',
+            $content ?? "amount,currency,type,party,wallet,category,description,date\n".
+        "100,USD,expense,John Doe,Wallet1,Food,Lunch,2023-01-01\n".
+        '200,USD,income,Jane Doe,Wallet2,Salary,Monthly Salary,2023-01-02'
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'files' => [$csvFile],
+        ]);
+
+        $response->assertStatus(422);
     }
 
     public function test_api_user_can_get_their_transactions()
@@ -234,5 +353,20 @@ class TransactionsTest extends TestCase
         $this->actingAs($user2)
             ->deleteJson("/api/v1/transactions/{$expense['id']}")
             ->assertStatus(403);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->wallet = User::factory()->create()->wallets()->create([
+            'name' => 'Wallet',
+            'balance' => 1000,
+        ]);
+
+        $this->party = User::factory()->create()->parties()->create([
+            'name' => 'Party',
+            'type' => 'personal',
+        ]);
+        $this->user = User::factory()->create();
     }
 }

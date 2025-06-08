@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -64,6 +65,74 @@ class TransactionController extends ApiController
     }
 
     #[OA\Post(
+        path: '/transactions/{id}/files',
+        summary: 'Add file to a transaction',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['files', 'type'],
+                properties: [
+                    new OA\Property(
+                        property: 'files',
+                        description: 'Files to attach to this transaction',
+                        type: 'array',
+                        items: new OA\Items(type: 'string', format: 'binary')
+                    ),
+                ]
+            )
+        ),
+        tags: ['Transactions'],
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Transaction updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/Transaction')
+            ),
+            new OA\Response(
+                response: 400,
+                description: 'Invalid input'
+            ),
+        ]
+    )]
+    public function uploadFiles(Request $request, $id)
+    {
+        $request->validate([
+            'files' => 'nullable|array',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1024',
+        ]);
+        $transaction = $request->user()->transactions()->find($id);
+
+        if (! $transaction) {
+            return $this->failure('Transaction not found', 404);
+        }
+
+        try {
+            DB::transaction(function () use ($request, $transaction) {
+
+                if ($request->hasFile('files')) {
+                    foreach ($request->file('files') as $file) {
+                        $path = $file->store('transactions');
+                        $transaction->files()->create([
+                            'path' => $path,
+                            'type' => 'file',
+                        ]);
+                    }
+                }
+            });
+
+        } catch (\Throwable $e) {
+            logger()->error('Transaction file upload error: '.$e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return $this->failure('Failed to upload files', 500, [$e->getMessage()]);
+        }
+        $transaction->refresh();
+
+        return $this->success($transaction, statusCode: 200);
+    }
+
+    #[OA\Post(
         path: '/transactions',
         summary: 'Create a new transaction',
         requestBody: new OA\RequestBody(
@@ -71,8 +140,8 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'description', type: 'string'),
@@ -81,8 +150,13 @@ class TransactionController extends ApiController
                     new OA\Property(property: 'party_id', type: 'integer'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
-                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(type: 'integer', description: 'Category ID array')),
-                ]
+                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID array', type: 'integer')),
+                    new OA\Property(
+                        property: 'files',
+                        description: 'Files to attach to this transaction',
+                        type: 'array',
+                        items: new OA\Items(type: 'string', format: 'binary')
+                    )]
             )
         ),
         tags: ['Transactions'],
@@ -112,41 +186,57 @@ class TransactionController extends ApiController
             'wallet_id' => 'nullable|integer|exists:wallets,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',
+            'files' => 'nullable|array',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
         ]);
 
         if (! $validationResult['isValidated']) {
             return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
         }
 
-        $request = $validationResult['data'];
+        $data = $validationResult['data'];
 
-        if (isset($request['datetime'])) {
-            $request['datetime'] = format_iso8601_to_sql($request['datetime']);
+        if (isset($data['datetime'])) {
+            $data['datetime'] = format_iso8601_to_sql($data['datetime']);
         }
 
-        if (isset($request['created_at'])) {
-            $request['created_at'] = format_iso8601_to_sql($request['created_at']);
+        if (isset($data['created_at'])) {
+            $data['created_at'] = format_iso8601_to_sql($data['created_at']);
         }
 
         $categories = [];
-        if (isset($request['categories'])) {
-            $categories = $request['categories'];
-            unset($request['categories']);
+        if (isset($data['categories'])) {
+            $categories = $data['categories'];
+            unset($data['categories']);
         }
 
         try {
-            /** @var Transaction */
-            $transaction = auth()->user()->transactions()->create($request);
+            $transaction = DB::transaction(function () use ($request, $data, $categories) {
+                /** @var Transaction $transaction */
+                $transaction = auth()->user()->transactions()->create($data);
 
-            if (isset($request['client_id'])) {
-                $transaction->setClientGeneratedId($request['client_id']);
-            }
+                if (isset($data['client_id'])) {
+                    $transaction->setClientGeneratedId($data['client_id']);
+                }
 
-            $transaction->markAsSynced();
+                $transaction->markAsSynced();
 
-            if (! empty($categories)) {
-                $transaction->categories()->sync($categories);
-            }
+                if (! empty($categories)) {
+                    $transaction->categories()->sync($categories);
+                }
+
+                if ($request->hasFile('files')) {
+                    foreach ($request->file('files') as $file) {
+                        $path = $file->store('transactions');
+                        $transaction->files()->create([
+                            'path' => $path,
+                            'type' => 'file',
+                        ]);
+                    }
+                }
+
+                return $transaction;
+            });
         } catch (\Throwable $e) {
             logger()->error('Transaction creation error: '.$e->getMessage(), [
                 'exception' => $e,
@@ -158,6 +248,43 @@ class TransactionController extends ApiController
         return $this->success($transaction, statusCode: 201);
     }
 
+    #[OA\Delete(
+        path: '/transactions/{id}/files/{file_id}',
+        summary: 'Delete a file from a transaction',
+        tags: ['Transactions'],
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Transaction deleted successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/Transaction')
+            ),
+            new OA\Response(
+                response: 400,
+                description: 'Invalid input'
+            ),
+        ]
+    )]
+    public function deleteFiles(Request $request, $transaction_id, $file_id): JsonResponse
+    {
+        $transaction = $request->user()->transactions()->find($transaction_id);
+
+        if (! $transaction) {
+            return $this->failure('Transaction not found', 404);
+        }
+
+        $file = $transaction->files()->find($file_id);
+
+        if (! $file) {
+            return $this->failure('File not found', 404);
+        }
+
+        $file->delete();
+
+        $transaction->refresh();
+
+        return $this->success($transaction, statusCode: 200);
+    }
+
     #[OA\Get(
         path: '/transactions/{id}',
         summary: 'Get a specific transaction',
@@ -165,15 +292,15 @@ class TransactionController extends ApiController
         parameters: [
             new OA\Parameter(
                 name: 'id',
-                in: 'path',
                 description: 'ID of the transaction',
+                in: 'path',
                 required: true,
                 schema: new OA\Schema(type: 'integer')
             ),
             new OA\Parameter(
                 name: 'type',
-                in: 'query',
                 description: 'Type of transaction (income/expense)',
+                in: 'query',
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
@@ -225,23 +352,6 @@ class TransactionController extends ApiController
     #[OA\Put(
         path: '/transactions/{id}',
         summary: 'Update a specific transaction',
-        tags: ['Transactions'],
-        parameters: [
-            new OA\Parameter(
-                name: 'id',
-                in: 'path',
-                description: 'ID of the transaction',
-                required: true,
-                schema: new OA\Schema(type: 'integer')
-            ),
-            new OA\Parameter(
-                name: 'type',
-                in: 'query',
-                description: 'Type of transaction (income/expense)',
-                required: true,
-                schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
-            ),
-        ],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -258,6 +368,23 @@ class TransactionController extends ApiController
                 ]
             )
         ),
+        tags: ['Transactions'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transaction',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+            new OA\Parameter(
+                name: 'type',
+                description: 'Type of transaction (income/expense)',
+                in: 'query',
+                required: true,
+                schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
