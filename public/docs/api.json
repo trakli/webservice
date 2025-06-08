@@ -962,6 +962,10 @@
                                         "type": "string",
                                         "example": "John Doe"
                                     },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "company"
+                                    },
                                     "description": {
                                         "type": "string",
                                         "example": "Incomes from John Doe"
@@ -1063,6 +1067,10 @@
                                     "name": {
                                         "type": "string",
                                         "example": "Jane Doe"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "individual"
                                     },
                                     "description": {
                                         "type": "string",
@@ -1883,6 +1891,10 @@
                     },
                     "name": {
                         "description": "Name of the party",
+                        "type": "string"
+                    },
+                    "type": {
+                        "description": "Type of the party",
                         "type": "string"
                     },
                     "description": {
