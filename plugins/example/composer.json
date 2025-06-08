@@ -1,0 +1,19 @@
+{
+    "name": "trakli/example-plugin",
+    "type": "trakli-plugin",
+    "description": "An example plugin for Trakli",
+    "require": {
+        "php": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Trakli\\\\Example\\\\": "src/"
+        }
+    },
+    "extra": {
+        "trakli": {
+            "name": "Example Plugin",
+            "description": "An example plugin demonstrating basic plugin features"
+        }
+    }
+}
