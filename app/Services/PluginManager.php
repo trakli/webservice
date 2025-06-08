@@ -135,10 +135,15 @@ class PluginManager
         Log::debug("Loading plugin from: {$path}");
 
         try {
-            $manifest = json_decode(File::get($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+            $manifest = $this->readManifest($manifestPath);
+            if (! $manifest) {
+                Log::warning("Plugin at {$path} is missing plugin.json");
 
-            if (! isset($manifest['provider'])) {
-                Log::warning("Plugin manifest missing required 'provider' field: {$manifestPath}");
+                return null;
+            }
+
+            if (! isset($manifest['namespace']) || ! isset($manifest['provider'])) {
+                Log::warning("Plugin at {$path} is missing required fields in plugin.json");
 
                 return null;
             }
@@ -314,37 +319,78 @@ class PluginManager
         }
 
         $manifestPath = $plugin['path'].'/plugin.json';
-        $manifest = json_decode(file_get_contents($manifestPath), true);
-        $manifest['enabled'] = false;
+        try {
+            $manifest = $this->readManifest($manifestPath) ?? [];
+            $manifest['enabled'] = false;
 
-        file_put_contents(
-            $manifestPath,
-            json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
+            file_put_contents(
+                $manifestPath,
+                json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            );
 
-        $this->plugins = [];
+            $this->plugins = [];
 
-        if (function_exists('app') && app() instanceof \Illuminate\Contracts\Foundation\Application) {
-            if (app()->routesAreCached()) {
-                app()->forgetRouteCache();
+            if (function_exists('app') && app() instanceof \Illuminate\Contracts\Foundation\Application) {
+                if (app()->routesAreCached()) {
+                    app()->forgetRouteCache();
+                }
+
+                $router = app('router');
+
+                // Clear the router's routes to ensure disabled plugins' routes are removed
+                $reflection = new \ReflectionProperty($router, 'routes');
+                $reflection->setAccessible(true);
+                $reflection->setValue($router, new \Illuminate\Routing\RouteCollection);
+
+                $compiledPath = app()->bootstrapPath('cache/routes-v7.php');
+                if (file_exists($compiledPath)) {
+                    unlink($compiledPath);
+                }
+
+                $this->app->boot();
             }
+        } catch (\Exception $e) {
+            Log::error('Failed to disable plugin', [
+                'plugin' => $pluginId,
+                'error' => $e->getMessage(),
+            ]);
 
-            $router = app('router');
-
-            // Clear the router's routes to ensure disabled plugins' routes are removed
-            $reflection = new \ReflectionProperty($router, 'routes');
-            $reflection->setAccessible(true);
-            $reflection->setValue($router, new \Illuminate\Routing\RouteCollection);
-
-            $compiledPath = app()->bootstrapPath('cache/routes-v7.php');
-            if (file_exists($compiledPath)) {
-                unlink($compiledPath);
-            }
-
-            $this->app->boot();
+            return false;
         }
 
         return true;
+    }
+
+    /**
+     * Read and decode a plugin's manifest file
+     *
+     * @param  string  $manifestPath  Path to the plugin's manifest file
+     * @return array|null Decoded manifest or null if invalid
+     *
+     * @throws \RuntimeException If the manifest file cannot be read or decoded
+     */
+    protected function readManifest(string $manifestPath): ?array
+    {
+        if (! file_exists($manifestPath)) {
+            return null;
+        }
+
+        $contents = @file_get_contents($manifestPath);
+        if ($contents === false) {
+            throw new \RuntimeException(sprintf('Failed to read plugin manifest file: %s', $manifestPath));
+        }
+
+        $manifest = json_decode($contents, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \RuntimeException(sprintf(
+                'Failed to decode plugin manifest: %s. Error: %s',
+                $manifestPath,
+                json_last_error_msg()
+            ));
+        }
+
+        return $manifest;
     }
 
     /**
@@ -358,13 +404,20 @@ class PluginManager
         }
 
         $manifestPath = $plugin['path'].'/plugin.json';
-        if (! file_exists($manifestPath)) {
+
+        try {
+            $manifest = $this->readManifest($manifestPath);
+
+            return $manifest ? ($manifest['enabled'] ?? true) : false;
+        } catch (\RuntimeException $e) {
+            Log::error('Error reading plugin manifest', [
+                'plugin' => $pluginId,
+                'path' => $manifestPath,
+                'error' => $e->getMessage(),
+            ]);
+
             return false;
         }
-
-        $manifest = json_decode(file_get_contents($manifestPath), true);
-
-        return $manifest['enabled'] ?? true;
     }
 
     public function registerPlugins(): void
@@ -375,7 +428,11 @@ class PluginManager
                     $this->app->register($plugin['provider']);
                     Log::debug("Registered plugin service provider: {$plugin['provider']}");
                 } catch (\Exception $e) {
-                    Log::error("Failed to register plugin {$plugin['id']}: ".$e->getMessage());
+                    Log::error('Failed to register plugin service provider', [
+                        'provider' => $plugin['provider'] ?? 'unknown',
+                        'error' => $e->getMessage(),
+                    ]);
+                    throw $e;
                 }
             } else {
                 Log::debug("Skipping disabled plugin: {$plugin['id']}");
