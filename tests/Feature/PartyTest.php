@@ -28,10 +28,23 @@ class PartyTest extends TestCase
                 'name',
                 'description',
                 'user_id',
+                'type',
                 'client_generated_id',
             ],
             'message',
         ]);
+        $this->assertEquals('individual', $response->json('data.type'));
+    }
+
+    private function createParty(): TestResponse
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party',
+            'description' => 'test descriptoin',
+            'type' => 'individual',
+        ]);
+
+        return $response;
     }
 
     public function test_api_user_can_create_parties_with_client_id()
@@ -43,16 +56,6 @@ class PartyTest extends TestCase
         ]);
         $response->assertStatus(201);
         $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
-    }
-
-    private function createParty(): TestResponse
-    {
-        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
-            'name' => 'My Party',
-            'description' => 'test descriptoin',
-        ]);
-
-        return $response;
     }
 
     public function test_api_user_can_not_create_two_parties_with_the_same_name()

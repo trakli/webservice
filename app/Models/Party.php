@@ -10,12 +10,13 @@ use OpenApi\Attributes as OA;
 
 #[OA\Schema(
     schema: 'Party',
-    type: 'object',
     properties: [
-        new OA\Property(property: 'id', type: 'integer', description: 'ID of the party'),
-        new OA\Property(property: 'name', type: 'string', description: 'Name of the party'),
-        new OA\Property(property: 'description', type: 'string', description: 'Description of the party'),
-    ]
+        new OA\Property(property: 'id', description: 'ID of the party', type: 'integer'),
+        new OA\Property(property: 'name', description: 'Name of the party', type: 'string'),
+        new OA\Property(property: 'type', description: 'Type of the party', type: 'string'),
+        new OA\Property(property: 'description', description: 'Description of the party', type: 'string'),
+    ],
+    type: 'object'
 )]
 class Party extends Model
 {
@@ -30,6 +31,7 @@ class Party extends Model
         'name',
         'description',
         'user_id',
+        'type',
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id'];

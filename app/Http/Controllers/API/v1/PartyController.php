@@ -19,8 +19,8 @@ class PartyController extends ApiController
         summary: 'List all parties',
         tags: ['Party'],
         parameters: [
-            new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                description: 'Unique identifier for your local client'),
+            new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                format: 'uuid'),
             new OA\Parameter(
                 name: 'limit',
                 description: 'Number of items per page',
@@ -69,9 +69,10 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                    new OA\Property(property: 'type', type: 'string', example: 'company'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
 
@@ -105,6 +106,7 @@ class PartyController extends ApiController
             'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
+            'type' => 'sometimes|string',
             'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
@@ -180,6 +182,7 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
+                    new OA\Property(property: 'type', type: 'string', example: 'individual'),
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
                 ]
             )
@@ -222,6 +225,7 @@ class PartyController extends ApiController
         $validatedData = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
+            'type' => 'sometimes|string',
         ]);
 
         $user = $request->user();
