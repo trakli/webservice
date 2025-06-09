@@ -19,6 +19,8 @@ class UserSeeder extends Seeder
                 'username' => "user{$index}",
             ]);
 
+            auth()->login($user);
+
             Party::factory(5)->create([
                 'user_id' => $user->id,
             ]);
