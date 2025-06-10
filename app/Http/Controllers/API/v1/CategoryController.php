@@ -5,22 +5,21 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
-use App\Traits\HasIcon;
+use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
-#[OA\Tag(name: 'Categories', description: 'Endpoints for managing transaction categories')]
+#[OA\Tag(name: 'Category', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
 {
-    use HasIcon;
-
     #[OA\Get(
         path: '/categories',
         summary: 'List all categories',
-        tags: ['Categories'],
+        tags: ['Category'],
         parameters: [
             new OA\Parameter(
                 name: 'type',
@@ -70,7 +69,7 @@ class CategoryController extends ApiController
                 ]
             )
         ),
-        tags: ['Categories'],
+        tags: ['Category'],
         parameters: [
             new OA\Parameter(
                 name: 'id',
@@ -122,15 +121,20 @@ class CategoryController extends ApiController
         if (! $category) {
             return $this->failure('Category not found', 404);
         }
-        DB::transaction(function () use ($data, $request, &$category) {
+        try {
+            DB::transaction(function () use ($data, $request, &$category) {
+                $category->update($data);
+                FileService::updateIcon($category, $data, $request);
+            });
 
-            $category->update($data);
-            $this->updateIcon($category, $data, $request);
+            $category->refresh();
 
-        });
-        $category->refresh();
-
-        return $this->success($category, 'Category updated successfully');
+            return $this->success($category, 'Category updated successfully');
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->failure('Failed to update category', 500, [$e->getMessage()]);
+        }
     }
 
     #[OA\Post(
@@ -152,7 +156,7 @@ class CategoryController extends ApiController
                 ]
             )
         ),
-        tags: ['Categories'],
+        tags: ['Category'],
         responses: [
             new OA\Response(
                 response: 201,
@@ -194,7 +198,7 @@ class CategoryController extends ApiController
         }
 
         try {
-            DB::transaction(function () use ($data, $request, $user, &$category) {
+            $category = DB::transaction(function () use ($data, $request, $user) {
                 /** @var Category $category */
                 $category = $user->categories()->create($data);
 
@@ -203,15 +207,18 @@ class CategoryController extends ApiController
                 }
                 $category->markAsSynced();
 
-                $this->updateIcon($category, $data, $request);
+                FileService::updateIcon($category, $data, $request);
+
+                return $category;
             });
+
             $category->refresh();
 
             return $this->success($category, 'Category created successfully', 201);
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
         } catch (\Exception $e) {
-            $status_code = intval($e->getCode());
-
-            return $this->failure('Failed to create category', $status_code > 100 ? $status_code : 500, [$e->getMessage()]);
+            return $this->failure('Failed to create category', 500, [$e->getMessage()]);
         }
     }
 
@@ -219,7 +226,7 @@ class CategoryController extends ApiController
         OA\Get(
             path: '/categories/{id}',
             summary: 'Get a specific category',
-            tags: ['Categories'],
+            tags: ['Category'],
             parameters: [
                 new OA\Parameter(
                     name: 'id',
@@ -260,7 +267,7 @@ class CategoryController extends ApiController
     #[OA\Delete(
         path: '/categories/{id}',
         summary: 'Delete a specific category',
-        tags: ['Categories'],
+        tags: ['Category'],
         parameters: [
             new OA\Parameter(
                 name: 'id',

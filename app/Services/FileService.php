@@ -1,14 +1,27 @@
 <?php
 
-namespace App\Traits;
+namespace App\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-trait HasIcon
+class FileService
 {
-    private function updateIcon(Model $model, array $data, Request $request)
+    public static function uploadFiles(Model $model, Request $request, string $key, string $folder)
+    {
+        if ($request->hasFile($key)) {
+            foreach ($request->file($key) as $file) {
+                $path = $file->store($folder);
+                $model->files()->create([
+                    'path' => $path,
+                    'type' => 'file',
+                ]);
+            }
+        }
+    }
+
+    public static function updateIcon(Model $model, array $data, Request $request, string $folder = 'icons')
     {
         // file upload
         if ($request->has('icon')) {
@@ -25,7 +38,7 @@ trait HasIcon
                 ]);
 
                 $type = $request->file('icon')->getClientOriginalExtension();
-                $path = $request->file('icon')->store('categories');
+                $path = $request->file('icon')->store($folder);
                 $current_image = $icon->image;
                 if (is_null($current_image)) {
                     $icon->image()->create([

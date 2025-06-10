@@ -5,8 +5,11 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Party;
 use App\Rules\Iso8601DateTime;
+use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 /**
@@ -69,10 +72,12 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
+                    new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
 
                 ]
@@ -105,28 +110,41 @@ class PartyController extends ApiController
             'client_id' => 'nullable|uuid',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
-        $party = $user->parties()->where('name', $validatedData['name'])->first();
-        if ($party) {
+        $existing_party = $user->parties()->where('name', $validatedData['name'])->first();
+        if ($existing_party) {
             return $this->failure('Party already exists', 400);
         }
 
         try {
-            /** @var Party */
-            $party = $user->parties()->create($validatedData);
-            if (! empty($validatedData['client_id'])) {
-                $party->setClientGeneratedId($validatedData['client_id']);
-            }
-            $party->markAsSynced();
+            $party = DB::transaction(function () use ($validatedData, $request, $user) {
+                /** @var Party $party */
+                $party = $user->parties()->create($validatedData);
+                if (! empty($validatedData['client_id'])) {
+                    $party->setClientGeneratedId($validatedData['client_id']);
+                }
+                $party->markAsSynced();
+                FileService::updateIcon($party, $validatedData, $request);
+
+                return $party;
+            });
+
+            $party->refresh();
+
+            return $this->success($party, 'Party created successfully', 201);
+
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
         } catch (\Exception $e) {
             return $this->failure('Failed to create party', 500, [$e->getMessage()]);
         }
 
-        return $this->success($party, 'Party created successfully', 201);
     }
 
     #[OA\Get(
@@ -181,6 +199,8 @@ class PartyController extends ApiController
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
+                    new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
                 ]
             )
         ),
@@ -222,6 +242,8 @@ class PartyController extends ApiController
         $validatedData = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
         ]);
 
         $user = $request->user();
@@ -230,10 +252,20 @@ class PartyController extends ApiController
         if (! $party) {
             return $this->failure('Party not found', 404);
         }
+        try {
+            DB::transaction(function () use ($validatedData, $request, &$party) {
+                $party->update($validatedData);
+                FileService::updateIcon($party, $validatedData, $request);
+            });
 
-        $party->update($validatedData);
+            $party->refresh();
 
-        return $this->success($party, 'Party updated successfully');
+            return $this->success($party, 'Party updated successfully');
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->failure('Failed to update party', 500, [$e->getMessage()]);
+        }
     }
 
     #[OA\Delete(

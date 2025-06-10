@@ -178,7 +178,7 @@ class CategoriesTest extends TestCase
             'icon_type' => 'image',
         ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(422);
     }
 
     public function test_api_user_can_create_a_category_with_an_image()

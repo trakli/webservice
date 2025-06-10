@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
+use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -108,16 +109,7 @@ class TransactionController extends ApiController
 
         try {
             DB::transaction(function () use ($request, $transaction) {
-
-                if ($request->hasFile('files')) {
-                    foreach ($request->file('files') as $file) {
-                        $path = $file->store('transactions');
-                        $transaction->files()->create([
-                            'path' => $path,
-                            'type' => 'file',
-                        ]);
-                    }
-                }
+                FileService::uploadFiles($transaction, $request, 'files', 'transactions');
             });
 
         } catch (\Throwable $e) {
