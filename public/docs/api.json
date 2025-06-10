@@ -267,7 +267,7 @@
         "/categories": {
             "get": {
                 "tags": [
-                    "Categories"
+                    "Category"
                 ],
                 "summary": "List all categories",
                 "operationId": "c27321a68b19607a6a072dd9002ae37e",
@@ -307,7 +307,7 @@
             },
             "post": {
                 "tags": [
-                    "Categories"
+                    "Category"
                 ],
                 "summary": "Create a new category",
                 "operationId": "d33322a954bf87d41863b999cd03741c",
@@ -383,7 +383,7 @@
         "/categories/{id}": {
             "get": {
                 "tags": [
-                    "Categories"
+                    "Category"
                 ],
                 "summary": "Get a specific category",
                 "operationId": "61a71bfaaf4769be14a5c2f6c16f280c",
@@ -419,7 +419,7 @@
             },
             "put": {
                 "tags": [
-                    "Categories"
+                    "Category"
                 ],
                 "summary": "Update a specific category",
                 "operationId": "ce943d529a546d35c3e2d835c44b84bf",
@@ -486,7 +486,7 @@
             },
             "delete": {
                 "tags": [
-                    "Categories"
+                    "Category"
                 ],
                 "summary": "Delete a specific category",
                 "operationId": "781e51577249dadbecb542f20c66a360",
@@ -583,6 +583,14 @@
                                         "description": "Description of the group",
                                         "type": "string"
                                     },
+                                    "icon": {
+                                        "description": "The icon of the group (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
+                                    },
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
@@ -675,6 +683,14 @@
                                 "properties": {
                                     "name": {
                                         "description": "Name of the group",
+                                        "type": "string"
+                                    },
+                                    "icon": {
+                                        "description": "The icon of the group (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
                                     }
                                 },
@@ -982,6 +998,14 @@
                                         "type": "string",
                                         "example": "Incomes from John Doe"
                                     },
+                                    "icon": {
+                                        "description": "The icon of the party (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
+                                    },
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
@@ -1083,6 +1107,14 @@
                                     "description": {
                                         "type": "string",
                                         "example": "income from John Doe"
+                                    },
+                                    "icon": {
+                                        "description": "The icon of the party (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -1688,6 +1720,14 @@
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
+                                    },
+                                    "icon": {
+                                        "description": "The icon of the wallet (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -1794,6 +1834,14 @@
                                     "description": {
                                         "type": "string",
                                         "example": "Updated wallet description"
+                                    },
+                                    "icon": {
+                                        "description": "The icon of the wallet (file or icon string)",
+                                        "type": "string"
+                                    },
+                                    "icon_type": {
+                                        "description": "The type of the icon (icon or emoji or  image)",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -2057,6 +2105,65 @@
                     "description": {
                         "description": "Description of the group",
                         "type": "string"
+                    },
+                    "icon": {
+                        "description": "Category icon",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the icon",
+                                "type": "integer"
+                            },
+                            "path": {
+                                "description": "Image of the icon",
+                                "type": "string"
+                            },
+                            "type": {
+                                "description": "type of icon( image or icon or emoji)",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "sync_state": {
+                        "description": "Sync state",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the sync state",
+                                "type": "integer"
+                            },
+                            "syncable_id": {
+                                "description": "ID of the syncable",
+                                "type": "integer"
+                            },
+                            "client_generated_id": {
+                                "description": "ID from the client",
+                                "type": "integer"
+                            },
+                            "syncable_type": {
+                                "description": "Syncable type",
+                                "type": "string"
+                            },
+                            "source": {
+                                "description": "",
+                                "type": "string"
+                            },
+                            "last_synced_at": {
+                                "description": "Date last synced",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "created_at": {
+                                "description": "Date created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "deleted_at": {
+                                "description": "Date deleted",
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        },
+                        "type": "object"
                     }
                 },
                 "type": "object"
@@ -2074,6 +2181,24 @@
                     "description": {
                         "description": "Description of the party",
                         "type": "string"
+                    },
+                    "icon": {
+                        "description": "Party icon",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the icon",
+                                "type": "integer"
+                            },
+                            "path": {
+                                "description": "Image of the icon",
+                                "type": "string"
+                            },
+                            "type": {
+                                "description": "type of icon( image or icon or emoji)",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
                     }
                 },
                 "type": "object"
@@ -2210,6 +2335,24 @@
                         "type": "number",
                         "format": "float"
                     },
+                    "icon": {
+                        "description": "Wallet icon",
+                        "properties": {
+                            "id": {
+                                "description": "ID of the icon",
+                                "type": "integer"
+                            },
+                            "path": {
+                                "description": "Image of the icon",
+                                "type": "string"
+                            },
+                            "type": {
+                                "description": "type of icon( image or icon or emoji)",
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
                     "stats": {
                         "properties": {
                             "total_income": {
@@ -2246,7 +2389,7 @@
             "description": "Endpoints for password reset"
         },
         {
-            "name": "Categories",
+            "name": "Category",
             "description": "Endpoints for managing transaction categories"
         },
         {

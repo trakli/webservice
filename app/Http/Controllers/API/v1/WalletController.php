@@ -5,8 +5,11 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
+use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 /**
@@ -65,14 +68,16 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type', 'currency'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
-                    new OA\Property(property: 'currency', type: 'string', example: 'XAF', pattern: '^[A-Z]{3}$'),
+                    new OA\Property(property: 'currency', type: 'string', pattern: '^[A-Z]{3}$', example: 'XAF'),
                     new OA\Property(property: 'balance', type: 'number', format: 'float', example: 12.00),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                    new OA\Property(property: 'icon', description: 'The icon of the wallet (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
 
                 ]
             )
@@ -107,23 +112,36 @@ class WalletController extends ApiController
             'description' => 'sometimes|string',
             'currency' => 'required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
         try {
-            /** @var Wallet */
-            $wallet = $user->wallets()->create($validatedData);
-            if (isset($request['client_id'])) {
-                $wallet->setClientGeneratedId($request['client_id']);
-            }
-            $wallet->markAsSynced();
-        } catch (\Exception $e) {
-            return $this->failure('Wallet already exists', 400);
-        }
+            $wallet = DB::transaction(function () use ($validatedData, $request, $user) {
 
-        return $this->success($wallet, 'Wallet created successfully', 201);
+                /** @var Wallet $wallet */
+                $wallet = $user->wallets()->create($validatedData);
+                if (isset($request['client_id'])) {
+                    $wallet->setClientGeneratedId($request['client_id']);
+                }
+                $wallet->markAsSynced();
+
+                FileService::updateIcon($wallet, $validatedData, $request);
+
+                return $wallet;
+            });
+            $wallet->refresh();
+
+            return $this->success($wallet, 'Wallet created successfully', 201);
+
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create wallet', 500, [$e->getMessage()]);
+        }
     }
 
     #[OA\Get(
@@ -181,6 +199,8 @@ class WalletController extends ApiController
                     new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
                     new OA\Property(property: 'type', type: 'string', example: 'bank'),
                     new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
+                    new OA\Property(property: 'icon', description: 'The icon of the wallet (file or icon string)', type: 'string'),
+                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
                 ]
             )
         ),
@@ -225,6 +245,8 @@ class WalletController extends ApiController
             'description' => 'sometimes|string',
             'currency' => 'sometimes|required|string|size:3',
             'balance' => 'sometimes|numeric|decimal:0,4',
+            'icon' => 'nullable',
+            'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
         ]);
         $user = $request->user();
 
@@ -233,10 +255,20 @@ class WalletController extends ApiController
         if (! $wallet) {
             return $this->failure('Wallet not found', 404);
         }
+        try {
+            DB::transaction(function () use ($validatedData, $request, &$wallet) {
+                $wallet->update($validatedData);
+                FileService::updateIcon($wallet, $validatedData, $request);
+            });
 
-        $wallet->update($validatedData);
+            $wallet->refresh();
 
-        return $this->success($wallet, 'Wallet updated successfully');
+            return $this->success($wallet, 'Wallet updated successfully');
+        } catch (ValidationException $e) {
+            return $this->failure('Validation error', 422, $e->errors());
+        } catch (\Exception $e) {
+            return $this->failure('Failed to update wallet', 500, [$e->getMessage()]);
+        }
     }
 
     #[OA\Delete(

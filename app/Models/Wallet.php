@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Casts\FloatCast;
 use App\Traits\HasClientCreatedAt;
+use App\Traits\Iconable;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,20 +19,25 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'description', description: 'Description of the wallet', type: 'string'),
         new OA\Property(property: 'currency', description: 'Currency of the wallet', type: 'string'),
         new OA\Property(property: 'balance', description: 'Balance of the wallet', type: 'number', format: 'float'),
+        new OA\Property(property: 'icon', description: 'Wallet icon', properties: [
+            new OA\Property(property: 'id', description: 'ID of the icon', type: 'integer'),
+            new OA\Property(property: 'path', description: 'Image of the icon', type: 'string'),
+            new OA\Property(property: 'type', description: 'type of icon( image or icon or emoji)', type: 'string'),
+        ], type: 'object'),
         new OA\Property(
             property: 'stats',
-            type: 'object',
             properties: [
                 new OA\Property(property: 'total_income', type: 'number', format: 'float'),
                 new OA\Property(property: 'total_expense', type: 'number', format: 'float'),
-            ]
+            ],
+            type: 'object'
         ),
     ],
     type: 'object'
 )]
 class Wallet extends Model
 {
-    use HasClientCreatedAt, HasFactory, Syncable;
+    use HasClientCreatedAt, HasFactory, Iconable, Syncable;
 
     protected $fillable = [
         'name',
@@ -42,12 +48,16 @@ class Wallet extends Model
         'balance',
     ];
 
-    protected $appends = ['last_synced_at', 'client_generated_id', 'stats'];
+    protected $appends = ['last_synced_at', 'client_generated_id', 'icon', 'stats'];
 
-    public function transactions()
-    {
-        return $this->hasMany(Transaction::class);
-    }
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'balance' => FloatCast::class,
+    ];
 
     public function getStatsAttribute()
     {
@@ -64,12 +74,8 @@ class Wallet extends Model
         ];
     }
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'balance' => FloatCast::class,
-    ];
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
 }

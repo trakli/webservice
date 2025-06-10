@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -34,6 +35,16 @@ class PartyTest extends TestCase
         ]);
     }
 
+    private function createParty(): TestResponse
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party',
+            'description' => 'test descriptoin',
+        ]);
+
+        return $response;
+    }
+
     public function test_api_user_can_create_parties_with_client_id()
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
@@ -45,14 +56,143 @@ class PartyTest extends TestCase
         $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
     }
 
-    private function createParty(): TestResponse
+    public function test_api_user_can_create_a_party_with_an_emoji()
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
-            'name' => 'My Party',
+            'name' => 'My Party (with client id)',
             'description' => 'test descriptoin',
+            'icon' => '👆',
+            'icon_type' => 'emoji',
+        ]);
+        $response->assertStatus(201)->assertJsonStructure([
+            'success',
+            'data' => [
+                'icon' => [
+                    'type',
+                    'content',
+                ],
+            ],
+        ]);
+        $this->assertEquals('👆', $response->json('data.icon.content'));
+        $this->assertEquals('emoji', $response->json('data.icon.type'));
+        $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_update_a_party_emoji()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => '👆',
+            'icon_type' => 'emoji',
+        ]);
+        $response->assertStatus(201);
+        $id = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/parties/'.$id, [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => '✅',
+            'icon_type' => 'emoji',
         ]);
 
-        return $response;
+        $response->assertStatus(200)->assertJsonStructure([
+            'success',
+            'data' => [
+                'icon' => [
+                    'type',
+                    'content',
+                ],
+            ],
+        ]);
+        $this->assertEquals('✅', $response->json('data.icon.content'));
+        $this->assertEquals('emoji', $response->json('data.icon.type'));
+
+        $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_create_a_party_with_an_image()
+    {
+        $imageFile = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => $imageFile,
+            'icon_type' => 'image',
+        ]);
+        $response->assertStatus(201)->assertJsonStructure([
+            'success',
+            'data' => [
+                'icon' => [
+                    'type',
+                    'content',
+                ],
+            ],
+        ]);
+        $this->assertEquals('image', $response->json('data.icon.type'));
+
+        $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_update_a_party_image()
+    {
+        $imageFile = UploadedFile::fake()->createWithContent(
+            'image.png',
+            'data:image/png;base64,someEncodedImagePNGImageHereYII='
+        );
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => '👆',
+            'icon_type' => 'emoji',
+        ]);
+        $response->assertStatus(201);
+        $id = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/parties/'.$id, [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => $imageFile,
+            'icon_type' => 'image',
+        ]);
+
+        $response->assertStatus(200)->assertJsonStructure([
+            'success',
+            'data' => [
+                'icon' => [
+                    'type',
+                    'content',
+                ],
+            ],
+        ]);
+
+        $this->assertNotNull($response->json('data.icon.image'));
+        $this->assertEquals('png', $response->json('data.icon.image.type'));
+
+        $this->assertDatabaseHas('parties', ['id' => $response->json('data.id')]);
+    }
+
+    public function test_api_user_can_not_create_a_party_with_a_non_image_file()
+    {
+        $csvFile = UploadedFile::fake()->createWithContent(
+            'test.csv',
+            $content ?? "amount,currency,type,party,wallet,category,description,date\n".
+        "100,USD,expense,John Doe,Wallet1,Food,Lunch,2023-01-01\n".
+        '200,USD,income,Jane Doe,Wallet2,Salary,Monthly Salary,2023-01-02'
+        );
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'My Party (with client id)',
+            'description' => 'test descriptoin',
+            'icon' => $csvFile,
+            'icon_type' => 'image',
+        ]);
+        $response->assertStatus(422);
+
     }
 
     public function test_api_user_can_not_create_two_parties_with_the_same_name()
