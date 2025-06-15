@@ -29,10 +29,12 @@ class PartyTest extends TestCase
                 'name',
                 'description',
                 'user_id',
+                'type',
                 'client_generated_id',
             ],
             'message',
         ]);
+        $this->assertEquals('individual', $response->json('data.type'));
     }
 
     private function createParty(): TestResponse
@@ -40,6 +42,7 @@ class PartyTest extends TestCase
         $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
             'name' => 'My Party',
             'description' => 'test descriptoin',
+            'type' => 'individual',
         ]);
 
         return $response;
