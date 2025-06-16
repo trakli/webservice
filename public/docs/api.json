@@ -994,6 +994,10 @@
                                         "type": "string",
                                         "example": "John Doe"
                                     },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
+                                    },
                                     "description": {
                                         "type": "string",
                                         "example": "Incomes from John Doe"
@@ -1103,6 +1107,10 @@
                                     "name": {
                                         "type": "string",
                                         "example": "Jane Doe"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
                                     },
                                     "description": {
                                         "type": "string",
@@ -2173,6 +2181,10 @@
                     "id": {
                         "description": "ID of the party",
                         "type": "integer"
+                    },
+                    "type": {
+                        "description": "Type of the party",
+                        "type": "string"
                     },
                     "name": {
                         "description": "Name of the party",

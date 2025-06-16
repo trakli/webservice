@@ -22,8 +22,8 @@ class PartyController extends ApiController
         summary: 'List all parties',
         tags: ['Party'],
         parameters: [
-            new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                description: 'Unique identifier for your local client'),
+            new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                format: 'uuid'),
             new OA\Parameter(
                 name: 'limit',
                 description: 'Number of items per page',
@@ -75,6 +75,7 @@ class PartyController extends ApiController
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
                         format: 'uuid'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
+                    new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
                     new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
@@ -112,6 +113,7 @@ class PartyController extends ApiController
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
             'created_at' => ['nullable', new Iso8601DateTime],
         ]);
 
@@ -198,6 +200,7 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
+                    new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
                     new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
@@ -244,6 +247,7 @@ class PartyController extends ApiController
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
         ]);
 
         $user = $request->user();
