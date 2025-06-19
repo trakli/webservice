@@ -17,5 +17,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
-plugins
-!plugins/example
+/dev
+/plugins
+
