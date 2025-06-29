@@ -55,29 +55,23 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "johndoe@trakli.app"
+                                        "format": "email"
                                     },
                                     "first_name": {
-                                        "type": "string",
-                                        "example": "John"
+                                        "type": "string"
                                     },
                                     "last_name": {
-                                        "type": "string",
-                                        "example": "Doe"
+                                        "type": "string"
                                     },
                                     "username": {
-                                        "type": "string",
-                                        "example": "johndoe"
+                                        "type": "string"
                                     },
                                     "phone": {
-                                        "type": "string",
-                                        "example": "+1234567890"
+                                        "type": "string"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "format": "password",
-                                        "example": "password123"
+                                        "format": "password"
                                     }
                                 },
                                 "type": "object"
@@ -114,20 +108,17 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "user1@trakli.app"
+                                        "format": "email"
                                     },
                                     "phone": {
                                         "type": "string"
                                     },
                                     "username": {
-                                        "type": "string",
-                                        "example": "user1"
+                                        "type": "string"
                                     },
                                     "password": {
                                         "type": "string",
-                                        "format": "password",
-                                        "example": "password123"
+                                        "format": "password"
                                     }
                                 },
                                 "type": "object"
@@ -147,6 +138,31 @@
                     }
                 },
                 "security": []
+            }
+        },
+        "/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User logout",
+                "operationId": "c33bd08d9370329a1abd7dde4bf98f2e",
+                "responses": {
+                    "200": {
+                        "description": "User successfully logged out"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/password/reset-code": {
@@ -229,6 +245,10 @@
                                     },
                                     "new_password": {
                                         "description": "The new password for the user",
+                                        "type": "string"
+                                    },
+                                    "new_password_confirmation": {
+                                        "description": "Confirmation of the new password",
                                         "type": "string"
                                     }
                                 },

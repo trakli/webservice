@@ -3,7 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use WhileSmart\LaravelPluginEngine\Providers\PluginServiceProvider;
+
+// use WhileSmart\LaravelPluginEngine\Providers\PluginServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->register(PluginServiceProvider::class);
+        //        $this->app->register(PluginServiceProvider::class);
     }
 
     /**

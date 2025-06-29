@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\API\v1\Auth\AuthController;
-use App\Http\Controllers\API\v1\Auth\PasswordResetController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
@@ -25,10 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 // Auth routes
 Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/password/reset-code', [PasswordResetController::class, 'sendPasswordResetCode']);
-    Route::post('/password/reset', [PasswordResetController::class, 'resetPasswordWithCode']);
+    require 'user-authentication.php';
 });
 
 // Resource routes

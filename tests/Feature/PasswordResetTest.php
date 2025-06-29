@@ -28,7 +28,7 @@ class PasswordResetTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Password reset code sent successfully.',
+                'message' => 'If this email matches a record, a password reset code has been sent.',
             ]);
 
         Mail::assertQueued(GenericMail::class, function ($mail) {
@@ -58,7 +58,7 @@ class PasswordResetTest extends TestCase
         VerificationCode::create([
             'contact' => 'user@example.com',
             'purpose' => 'password_reset',
-            'code' => 123456,
+            'code' => Hash::make('123456'),
             'expires_at' => now()->addMinutes(15),
         ]);
 
@@ -68,6 +68,7 @@ class PasswordResetTest extends TestCase
             'email' => 'user@example.com',
             'code' => 123456,
             'new_password' => 'newpassword123',
+            'new_password_confirmation' => 'newpassword123',
         ]);
 
         $response->assertStatus(200)
@@ -89,7 +90,7 @@ class PasswordResetTest extends TestCase
         VerificationCode::create([
             'contact' => 'user@example.com',
             'purpose' => 'password_reset',
-            'code' => 123456,
+            'code' => Hash::make('123456'),
             'expires_at' => now()->addMinutes(15),
         ]);
 
@@ -99,6 +100,7 @@ class PasswordResetTest extends TestCase
             'email' => 'user@example.com',
             'code' => 654321,
             'new_password' => 'newpassword123',
+            'new_password_confirmation' => 'newpassword123',
         ]);
 
         $response->assertStatus(400)
