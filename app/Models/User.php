@@ -27,6 +27,8 @@ class User extends Authenticatable
         'password',
     ];
 
+    protected $appends = ['configurations'];
+
     /**
      * The attributes that should be hidden for serialization.
      *
@@ -75,5 +77,15 @@ class User extends Authenticatable
     public function fileImports(): HasMany
     {
         return $this->hasMany(FileImport::class);
+    }
+
+    public function getConfigurationsAttribute()
+    {
+        return $this->configurations()->get();
+    }
+
+    public function configurations(): HasMany
+    {
+        return $this->hasMany(UserConfiguration::class);
     }
 }

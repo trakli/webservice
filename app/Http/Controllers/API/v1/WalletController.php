@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +28,13 @@ class WalletController extends ApiController
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'integer')
+            ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
             ),
         ],
         responses: [
@@ -50,14 +58,25 @@ class WalletController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
         $user = $request->user();
         $limit = 20;
         if ($request->has('limit')) {
             $limit = $request->limit;
         }
-        $wallets = $user->wallets()->paginate($limit);
+        $wallets = $user->wallets();
 
-        return $this->success($wallets);
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $wallets = $wallets->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
+        $wallets = $wallets->paginate($limit);
+
+        return $this->success($wallets, last_synced: $last_synced);
     }
 
     #[OA\Post(

@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,20 @@ class CategoryController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
+            new OA\Parameter(
+                name: 'limit',
+                description: 'Number of items per page',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: 20)
+            ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
@@ -43,16 +58,29 @@ class CategoryController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
         $user = $request->user();
         $categories = $user->categories();
+        $limit = 20;
+        if ($request->has('limit')) {
+            $limit = $request->limit;
+        }
         if ($request->has('type') && $request->type == 'income') {
             $categories = $categories->where('type', 'income');
         } elseif ($request->has('type') && $request->type == 'expense') {
             $categories = $categories->where('type', 'expense');
         }
-        $categories = $categories->paginate(20);
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $categories = $categories->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
+        $categories = $categories->paginate($limit);
 
-        return $this->success($categories);
+        return $this->success($categories, last_synced: $last_synced);
     }
 
     #[OA\Put(

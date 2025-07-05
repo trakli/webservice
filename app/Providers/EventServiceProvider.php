@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Events\UserRegisteredEvent;
 use App\Listeners\PasswordResetCodeGeneratedListener;
 use App\Listeners\PasswordResetCompleteListener;
+use App\Listeners\UserRegistered;
 use App\Models\Transaction;
 use App\Observers\TransactionObserver;
 use Illuminate\Auth\Events\Registered;
@@ -23,6 +25,10 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        UserRegisteredEvent::class => [
+            UserRegistered::class,
+        ],
+
         PasswordResetCodeGeneratedEvent::class => [
             PasswordResetCodeGeneratedListener::class,
         ],

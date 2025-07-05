@@ -32,6 +32,7 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'created_at', description: 'Date created', type: 'datetime'),
             new OA\Property(property: 'deleted_at', description: 'Date deleted', type: 'datetime'),
         ], type: 'object'),
+        new OA\Property(property: 'last_synced_at', description: 'The time when the client last synced with the server', type: 'datetime'),
     ],
     type: 'object'
 )]

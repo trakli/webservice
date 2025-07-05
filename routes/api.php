@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\v1\CategoryController;
+use App\Http\Controllers\API\v1\ConfigurationController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\PartyController;
@@ -35,6 +36,7 @@ Route::group(['prefix' => 'v1'], function () {
             Route::apiResource('parties', PartyController::class);
             Route::apiResource('wallets', WalletController::class);
             Route::apiResource('transfers', TransferController::class);
+            Route::apiResource('configurations', ConfigurationController::class);
         });
         Route::apiResource('transactions', TransactionController::class);
         Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);

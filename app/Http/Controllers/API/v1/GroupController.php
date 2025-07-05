@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Group;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +31,13 @@ class GroupController extends ApiController
                 required: false,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
@@ -48,14 +56,25 @@ class GroupController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
         $user = request()->user();
         $limit = 20;
         if ($request->has('limit')) {
             $limit = $request->limit;
         }
-        $groups = $user->groups()->paginate($limit);
+        $groups = $user->groups();
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $groups = $groups->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
 
-        return $this->success($groups);
+        $groups = $groups->paginate($limit);
+
+        return $this->success($groups, last_synced: $last_synced);
     }
 
     #[OA\Post(

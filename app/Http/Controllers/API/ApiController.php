@@ -92,12 +92,13 @@ class ApiController extends BaseController
      *
      * @param  mixed  $data
      */
-    protected function success($data = null, string $message = 'Operation successful', int $statusCode = 200): JsonResponse
+    protected function success($data = null, string $message = 'Operation successful', int $statusCode = 200, ?string $last_synced = null): JsonResponse
     {
         return response()->json([
             'success' => true,
             'message' => $message,
             'data' => $data,
+            'last_synced' => $last_synced,
         ], $statusCode);
     }
 

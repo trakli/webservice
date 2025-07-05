@@ -304,6 +304,25 @@
                                 "expense"
                             ]
                         }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -537,6 +556,204 @@
                 }
             }
         },
+        "/configurations": {
+            "get": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Get all configurations for the current user",
+                "operationId": "db0db1fab9ce153c41c4fae669d123bd",
+                "responses": {
+                    "200": {
+                        "description": "List of all user configurations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Configurations retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "user_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "key": {
+                                                        "type": "string",
+                                                        "example": "theme_preference"
+                                                    },
+                                                    "value": {
+                                                        "type": "object",
+                                                        "example": "{\"theme\": \"dark\", \"color\": \"#333333\"}"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Add a new user configuration",
+                "operationId": "c9555b8a19cb7c222f10a7811d30bbf0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "value"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string",
+                                        "example": "theme_preference"
+                                    },
+                                    "value": {
+                                        "type": "object",
+                                        "example": "{\"theme\": \"dark\", \"color\": \"#333333\"}"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Configuration added successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/configurations/{key}": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Update an existing user configuration",
+                "operationId": "6d2027ed7394ff29a53e511c0462c5fc",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Configuration key",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "value"
+                                ],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "example": "{\"theme\": \"light\", \"color\": \"#ffffff\"}"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Configuration updated successfully"
+                    },
+                    "404": {
+                        "description": "Configuration not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Delete a user configuration",
+                "operationId": "3068fb16c4336a8408b27f38f74b0520",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Configuration key",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuration deleted successfully"
+                    },
+                    "404": {
+                        "description": "Configuration not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/groups": {
             "get": {
                 "tags": [
@@ -553,6 +770,15 @@
                         "schema": {
                             "type": "integer",
                             "default": 20
+                        }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -966,6 +1192,15 @@
                             "type": "integer",
                             "default": 20
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -1236,6 +1471,15 @@
                         "schema": {
                             "type": "integer",
                             "default": 20
+                        }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -1677,6 +1921,15 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -2013,6 +2266,11 @@
                             }
                         },
                         "type": "object"
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -2192,6 +2450,11 @@
                             }
                         },
                         "type": "object"
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -2231,6 +2494,11 @@
                             }
                         },
                         "type": "object"
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -2299,6 +2567,11 @@
                         "items": {
                             "$ref": "#/components/schemas/File"
                         }
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -2385,6 +2658,11 @@
                         },
                         "type": "object"
                     },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "stats": {
                         "properties": {
                             "total_income": {
@@ -2431,6 +2709,10 @@
         {
             "name": "Transfers",
             "description": "Endpoints for managing transfers"
+        },
+        {
+            "name": "Configuration",
+            "description": "Configuration"
         },
         {
             "name": "Groups",

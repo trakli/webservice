@@ -4,8 +4,10 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
+use App\Models\UserConfiguration;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +36,13 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
@@ -49,6 +58,8 @@ class TransactionController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
+
         $type = $request->query('type');
         $limit = $request->query('limit', 20);
 
@@ -60,9 +71,18 @@ class TransactionController extends ApiController
         if (! empty($type)) {
             $query->where('type', $type);
         }
+
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $query = $query->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
         $transactions = $query->paginate($limit);
 
-        return $this->success($transactions);
+        return $this->success($transactions, last_synced: $last_synced);
     }
 
     #[OA\Post(
@@ -204,6 +224,14 @@ class TransactionController extends ApiController
 
         try {
             $transaction = DB::transaction(function () use ($request, $data, $categories) {
+                if (is_null($data['wallet_id'])) {
+                    // check if there is a default wallet
+                    $default_wallet = UserConfiguration::getValue('default_wallet_id', $request->user()->id);
+                    if (! is_null($default_wallet)) {
+                        $data['wallet_id'] = $default_wallet;
+                    }
+                }
+
                 /** @var Transaction $transaction */
                 $transaction = auth()->user()->transactions()->create($data);
 

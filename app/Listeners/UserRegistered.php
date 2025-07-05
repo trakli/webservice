@@ -2,7 +2,9 @@
 
 namespace App\Listeners;
 
+use App\Enums\ConfigValueType;
 use App\Events\UserRegisteredEvent;
+use App\Models\UserConfiguration;
 
 class UserRegistered
 {
@@ -36,5 +38,17 @@ class UserRegistered
                 'description' => "Default group for $group",
             ]);
         }
+
+        // set the default group
+        UserConfiguration::setValue('default_group_id', $user->groups()->first()->id, $user->id, ConfigValueType::Integer);
+
+        // create a default wallet
+        $default_wallet = $user->wallets()->create([
+            'name' => 'General',
+            'type' => 'mobile',
+        ]);
+
+        UserConfiguration::setValue('default_wallet_id', $default_wallet->id, $user->id, ConfigValueType::Integer);
+
     }
 }

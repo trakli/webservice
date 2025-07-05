@@ -24,6 +24,7 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'path', description: 'Image of the icon', type: 'string'),
             new OA\Property(property: 'type', description: 'type of icon( image or icon or emoji)', type: 'string'),
         ], type: 'object'),
+        new OA\Property(property: 'last_synced_at', description: 'The time when the client last synced with the server', type: 'datetime'),
         new OA\Property(
             property: 'stats',
             properties: [
