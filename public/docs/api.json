@@ -304,6 +304,25 @@
                                 "expense"
                             ]
                         }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -312,10 +331,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Category"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Category"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -554,6 +582,15 @@
                             "type": "integer",
                             "default": 20
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -562,10 +599,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Group"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Group"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -966,6 +1012,15 @@
                             "type": "integer",
                             "default": 20
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -974,10 +1029,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Party"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Party"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -1237,6 +1301,15 @@
                             "type": "integer",
                             "default": 20
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -1245,10 +1318,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Transaction"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -1401,7 +1483,7 @@
                 "tags": [
                     "Transactions"
                 ],
-                "summary": "Delete a file from a transaction",
+                "summary": "Removes a file from a transaction",
                 "operationId": "b6e7c03ce9a463af5439dd65a5ae28d8",
                 "responses": {
                     "201": {
@@ -1677,6 +1759,15 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "sync_from",
+                        "in": "query",
+                        "description": "Get recent changes after this date",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -1685,10 +1776,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Wallet"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Wallet"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -2299,6 +2399,11 @@
                         "items": {
                             "$ref": "#/components/schemas/File"
                         }
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"

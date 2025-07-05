@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Party;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,15 +32,28 @@ class PartyController extends ApiController
                 required: false,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
-
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful response',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/Party')
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Party')
+                        ),
+                    ],
+                    type: 'object'
                 )
             ),
             new OA\Response(
@@ -54,14 +68,33 @@ class PartyController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
         $user = request()->user();
         $limit = 20;
         if ($request->has('limit')) {
             $limit = $request->limit;
         }
-        $parties = $user->parties()->paginate($limit);
+        $parties = $user->parties();
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $parties = $parties->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
+        $parties = $parties->paginate($limit);
 
-        return $this->success($parties);
+        $data = [
+            'data' => $parties->items(),
+            'last_sync' => $last_synced,
+            'current_page' => $parties->currentPage(),
+            'total' => $parties->total(),
+            'per_page' => $parties->perPage(),
+            'last_page' => $parties->lastPage(),
+        ];
+
+        return $this->success($data);
     }
 
     #[OA\Post(

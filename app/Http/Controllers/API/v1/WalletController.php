@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,14 +29,28 @@ class WalletController extends ApiController
                 required: false,
                 schema: new OA\Schema(type: 'integer')
             ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful response',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/Wallet')
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Wallet')
+                        ),
+                    ],
+                    type: 'object'
                 )
             ),
             new OA\Response(
@@ -50,14 +65,34 @@ class WalletController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
         $user = $request->user();
         $limit = 20;
         if ($request->has('limit')) {
             $limit = $request->limit;
         }
-        $wallets = $user->wallets()->paginate($limit);
+        $wallets = $user->wallets();
 
-        return $this->success($wallets);
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $wallets = $wallets->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
+        $wallets = $wallets->paginate($limit);
+
+        $data = [
+            'data' => $wallets->items(),
+            'last_sync' => $last_synced,
+            'current_page' => $wallets->currentPage(),
+            'total' => $wallets->total(),
+            'per_page' => $wallets->perPage(),
+            'last_page' => $wallets->lastPage(),
+        ];
+
+        return $this->success($data);
     }
 
     #[OA\Post(

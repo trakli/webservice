@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,12 +35,29 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
+            new OA\Parameter(
+                name: 'sync_from',
+                description: 'Get recent changes after this date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Transaction'))
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Transaction')
+                        ),
+                    ],
+                    type: 'object'
+                )
             ),
             new OA\Response(
                 response: 400,
@@ -49,6 +67,8 @@ class TransactionController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
+        $last_synced = now();
+
         $type = $request->query('type');
         $limit = $request->query('limit', 20);
 
@@ -60,9 +80,26 @@ class TransactionController extends ApiController
         if (! empty($type)) {
             $query->where('type', $type);
         }
-        $transactions = $query->paginate($limit);
 
-        return $this->success($transactions);
+        if ($request->has('sync_from')) {
+            try {
+                $date = Carbon::parse($request->sync_from);
+                $query = $query->where('updated_at', '>=', $date);
+            } catch (\Exception $exception) {
+                return $this->failure('Invalid date', 422);
+            }
+        }
+        $transactions = $query->paginate($limit);
+        $data = [
+            'data' => $transactions->items(),
+            'last_sync' => $last_synced,
+            'current_page' => $transactions->currentPage(),
+            'total' => $transactions->total(),
+            'per_page' => $transactions->perPage(),
+            'last_page' => $transactions->lastPage(),
+        ];
+
+        return $this->success($data);
     }
 
     #[OA\Post(
@@ -242,7 +279,7 @@ class TransactionController extends ApiController
 
     #[OA\Delete(
         path: '/transactions/{id}/files/{file_id}',
-        summary: 'Delete a file from a transaction',
+        summary: 'Removes a file from a transaction',
         tags: ['Transactions'],
         responses: [
             new OA\Response(
