@@ -2,25 +2,29 @@
 
 namespace App\Http\Controllers\API\v1\Auth;
 
-use App\Http\Controllers\API\ApiController;
-use App\Models\User;
-use App\Models\VerificationCode;
-use App\Services\NotificationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use OpenApi\Attributes as OA;
+use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCodeGeneratedEvent;
+use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCompleteEvent;
+use Whilesmart\LaravelUserAuthentication\Models\User;
+use Whilesmart\LaravelUserAuthentication\Models\VerificationCode;
+use Whilesmart\LaravelUserAuthentication\Traits\ApiResponse;
+use Whilesmart\LaravelUserAuthentication\Traits\Loggable;
 
 #[OA\Tag(name: 'Authentication', description: 'Endpoints for password reset')]
-class PasswordResetController extends ApiController
+class PasswordResetController extends Controller
 {
-    public function __construct(private NotificationService $notificationService) {}
+    use ApiResponse, Loggable;
 
     #[OA\Post(
         path: '/password/reset-code',
-        tags: ['Authentication'],
-        security: [],
         summary: 'Send password reset code',
+        security: [],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -28,13 +32,14 @@ class PasswordResetController extends ApiController
                 properties: [
                     new OA\Property(
                         property: 'email',
+                        description: 'The email address of the user',
                         type: 'string',
-                        format: 'email',
-                        description: 'The email address of the user'
+                        format: 'email'
                     ),
                 ]
             )
         ),
+        tags: ['Authentication'],
         responses: [
             new OA\Response(
                 response: 200,
@@ -55,39 +60,46 @@ class PasswordResetController extends ApiController
             ),
         ]
     )]
-    public function sendPasswordResetCode(Request $request)
+    public function sendPasswordResetCode(Request $request): JsonResponse
     {
+        // Rate limiting
+        if (RateLimiter::tooManyAttempts('password-reset:'.$request->ip(), 5)) {
+            return $this->failure('Too many attempts, please try again later.', 429);
+        }
+
+        RateLimiter::hit('password-reset:'.$request->ip(), 300);
+
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ]);
 
         if ($validator->fails()) {
             return $this->failure('Validation failed.', 422, [$validator->errors()]);
         }
 
-        $email = $request->email;
-        $verificationCode = random_int(100000, 999999);
-        $expiresAt = now()->addMinutes(15);
+        if (User::where('email', $request->email)->first() == null) {
+            $this->error("Email $request->email does not exist in our records");
+        } else {
+            $email = $request->email;
+            $verificationCode = random_int(100000, 999999);
+            $expiresAt = now()->addMinutes(15);
+            $this->error("Email $request->email does exist in our records");
 
-        VerificationCode::updateOrCreate(
-            ['contact' => $email, 'purpose' => 'password_reset'],
-            ['code' => $verificationCode, 'expires_at' => $expiresAt]
-        );
+            VerificationCode::updateOrCreate(
+                ['contact' => $email, 'purpose' => 'password_reset'],
+                ['code' => Hash::make($verificationCode), 'expires_at' => $expiresAt]
+            );
 
-        $this->notificationService->sendEmailNotification([
-            'to' => $email,
-            'subject' => __('Password Reset Code'),
-            'body' => __('Your password reset code for Trakli is: ').$verificationCode,
-        ]);
+            PasswordResetCodeGeneratedEvent::dispatch($email, $verificationCode);
+        }
 
-        return $this->success([], 'Password reset code sent successfully.');
+        return $this->success([], 'If this email matches a record, a password reset code has been sent.');
     }
 
     #[OA\Post(
         path: '/password/reset',
-        tags: ['Authentication'],
-        security: [],
         summary: 'Reset password using verification code',
+        security: [],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -95,23 +107,29 @@ class PasswordResetController extends ApiController
                 properties: [
                     new OA\Property(
                         property: 'email',
+                        description: 'The email address of the user',
                         type: 'string',
-                        format: 'email',
-                        description: 'The email address of the user'
+                        format: 'email'
                     ),
                     new OA\Property(
                         property: 'code',
-                        type: 'integer',
-                        description: 'The verification code sent to the user'
+                        description: 'The verification code sent to the user',
+                        type: 'integer'
                     ),
                     new OA\Property(
                         property: 'new_password',
-                        type: 'string',
-                        description: 'The new password for the user'
+                        description: 'The new password for the user',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'new_password_confirmation',
+                        description: 'Confirmation of the new password',
+                        type: 'string'
                     ),
                 ]
             )
         ),
+        tags: ['Authentication'],
         responses: [
             new OA\Response(
                 response: 200,
@@ -136,23 +154,33 @@ class PasswordResetController extends ApiController
             ),
         ]
     )]
-    public function resetPasswordWithCode(Request $request)
+    public function resetPasswordWithCode(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
             'code' => 'required|integer',
-            'new_password' => 'required|string|min:8',
+            'new_password' => 'required|string|min:8|confirmed',
+            'new_password_confirmation' => 'required',
         ]);
 
         if ($validator->fails()) {
             return $this->failure('Validation failed.', 422, [$validator->errors()]);
         }
 
+        if (User::where('email', $request->email)->first() == null) {
+            $this->error("Email $request->email does not exist in our records");
+
+            return $this->failure('Invalid or expired code.', 400);
+        }
         $codeEntry = VerificationCode::where('contact', $request->email)
             ->where('purpose', 'password_reset')
             ->first();
 
-        if (! $codeEntry || $codeEntry->code != $request->code || $codeEntry->isExpired()) {
+        if (! $codeEntry) {
+            return $this->failure('Invalid or expired code.', 400);
+        }
+
+        if (! Hash::check($request->code, $codeEntry->code) || $codeEntry->isExpired()) {
             return $this->failure('Invalid or expired code.', 400);
         }
 
@@ -160,11 +188,7 @@ class PasswordResetController extends ApiController
         $user->password = Hash::make($request->new_password);
         $user->save();
 
-        $this->notificationService->sendEmailNotification([
-            'to' => $request->email,
-            'subject' => __('Your password was changed'),
-            'body' => __('Password has been reset successfully. If you did nt make this change, please contact us.'),
-        ]);
+        PasswordResetCompleteEvent::dispatch($user);
 
         $codeEntry->delete();
 

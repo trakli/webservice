@@ -28,6 +28,7 @@ class NotificationService
 
         try {
             $queue ? Mail::to($recipientEmail)->queue($mailable) : Mail::to($recipientEmail)->send($mailable);
+            Log::info("Email to {$recipientEmail} sent: ");
 
             return true;
         } catch (\Exception $e) {

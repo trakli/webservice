@@ -47,27 +47,27 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    public function categories()
+    public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
     }
 
-    public function groups()
+    public function groups(): HasMany
     {
         return $this->hasMany(Group::class);
     }
 
-    public function parties()
+    public function parties(): HasMany
     {
         return $this->hasMany(Party::class);
     }
 
-    public function wallets()
+    public function wallets(): HasMany
     {
         return $this->hasMany(Wallet::class);
     }
 
-    public function transactions()
+    public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
     }

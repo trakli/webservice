@@ -19,4 +19,6 @@ yarn-error.log
 /.vscode
 /dev
 /plugins
+.DS_Store
+**/.DS_Store
 
