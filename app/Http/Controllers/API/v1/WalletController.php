@@ -25,19 +25,8 @@ class WalletController extends ApiController
         summary: 'List all wallets',
         tags: ['Wallet'],
         parameters: [
-            new OA\Parameter(
-                name: 'limit',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer')
-            ),
-            new OA\Parameter(
-                name: 'sync_from',
-                description: 'Get recent changes after this date',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(

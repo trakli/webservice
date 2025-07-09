@@ -30,20 +30,8 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
-            new OA\Parameter(
-                name: 'limit',
-                description: 'Number of transactions to fetch',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'integer', default: 20)
-            ),
-            new OA\Parameter(
-                name: 'sync_from',
-                description: 'Get recent changes after this date',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(

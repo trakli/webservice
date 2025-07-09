@@ -26,20 +26,8 @@ class GroupController extends ApiController
         summary: 'List all groups',
         tags: ['Groups'],
         parameters: [
-            new OA\Parameter(
-                name: 'limit',
-                description: 'Number of items per page',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: 20)
-            ),
-            new OA\Parameter(
-                name: 'sync_from',
-                description: 'Get recent changes after this date',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(

@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
         ['bearerAuth' => []],
     ]
 )]
-#[OA\Info(title: 'Trakli API', version: '1.0.0')]
+#[OA\Info(version: '1.0.0', title: 'Trakli API')]
 #[OA\Server(url: 'http://localhost:8000/api/v1', description: 'Local server')]
 #[OA\Server(url: 'https://api.dev.trakli.app/api/v1', description: 'Development server')]
 #[OA\Server(
@@ -30,8 +30,8 @@ use OpenApi\Attributes as OA;
         new OA\SecurityScheme(
             securityScheme: 'bearerAuth',
             type: 'http',
-            scheme: 'bearer',
-            description: 'Bearer token authentication'
+            description: 'Bearer token authentication',
+            scheme: 'bearer'
         ),
     ]
 )]

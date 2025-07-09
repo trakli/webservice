@@ -25,22 +25,8 @@ class PartyController extends ApiController
         summary: 'List all parties',
         tags: ['Party'],
         parameters: [
-            new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                format: 'uuid'),
-            new OA\Parameter(
-                name: 'limit',
-                description: 'Number of items per page',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: 20)
-            ),
-            new OA\Parameter(
-                name: 'sync_from',
-                description: 'Get recent changes after this date',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'string')
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(
