@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Party;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
@@ -17,29 +18,30 @@ use OpenApi\Attributes as OA;
  */
 class PartyController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/parties',
         summary: 'List all parties',
         tags: ['Party'],
         parameters: [
-            new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                format: 'uuid'),
-            new OA\Parameter(
-                name: 'limit',
-                description: 'Number of items per page',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer', default: 20)
-            ),
-
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful response',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/Party')
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Party')
+                        ),
+                    ],
+                    type: 'object'
                 )
             ),
             new OA\Response(
@@ -54,14 +56,16 @@ class PartyController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $user = request()->user();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
-        }
-        $parties = $user->parties()->paginate($limit);
+        $user = $request->user();
+        $partiesQuery = $user->parties();
 
-        return $this->success($parties);
+        try {
+            $data = $this->applyApiQuery($request, $partiesQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Post(

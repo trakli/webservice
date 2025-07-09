@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1\Auth;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -11,7 +12,6 @@ use OpenApi\Attributes as OA;
 use Whilesmart\LaravelUserAuthentication\Events\UserLoggedInEvent;
 use Whilesmart\LaravelUserAuthentication\Events\UserLoggedOutEvent;
 use Whilesmart\LaravelUserAuthentication\Events\UserRegisteredEvent;
-use Whilesmart\LaravelUserAuthentication\Models\User;
 use Whilesmart\LaravelUserAuthentication\Traits\ApiResponse;
 use Whilesmart\LaravelUserAuthentication\Traits\Loggable;
 

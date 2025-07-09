@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
@@ -17,25 +18,30 @@ use OpenApi\Attributes as OA;
  */
 class WalletController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/wallets',
         summary: 'List all wallets',
         tags: ['Wallet'],
         parameters: [
-            new OA\Parameter(
-                name: 'limit',
-                in: 'query',
-                required: false,
-                schema: new OA\Schema(type: 'integer')
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful response',
                 content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/Wallet')
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Wallet')
+                        ),
+                    ],
+                    type: 'object'
                 )
             ),
             new OA\Response(
@@ -51,13 +57,15 @@ class WalletController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
-        }
-        $wallets = $user->wallets()->paginate($limit);
+        $walletsQuery = $user->wallets();
 
-        return $this->success($wallets);
+        try {
+            $data = $this->applyApiQuery($request, $walletsQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Post(

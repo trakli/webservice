@@ -28,8 +28,8 @@ class TransferController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
-                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid',
-                        description: 'Unique identifier for your local client'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'uuid'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'from_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'to_wallet_id', type: 'integer', example: 1),

@@ -304,6 +304,12 @@
                                 "expense"
                             ]
                         }
+                    },
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
                     }
                 ],
                 "responses": {
@@ -312,10 +318,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Category"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Category"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -546,14 +561,10 @@
                 "operationId": "daa5413644106e29d00c095c57c8bb63",
                 "parameters": [
                     {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Number of items per page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20
-                        }
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
                     }
                 ],
                 "responses": {
@@ -562,10 +573,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Group"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Group"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -958,14 +978,10 @@
                 "operationId": "fc4d9004084d5830ee271a716f7e1b47",
                 "parameters": [
                     {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Number of items per page",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20
-                        }
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
                     }
                 ],
                 "responses": {
@@ -974,10 +990,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Party"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Party"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -1229,14 +1254,10 @@
                         }
                     },
                     {
-                        "name": "limit",
-                        "in": "query",
-                        "description": "Number of transactions to fetch",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20
-                        }
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
                     }
                 ],
                 "responses": {
@@ -1245,10 +1266,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Transaction"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -1401,7 +1431,7 @@
                 "tags": [
                     "Transactions"
                 ],
-                "summary": "Delete a file from a transaction",
+                "summary": "Removes a file from a transaction",
                 "operationId": "b6e7c03ce9a463af5439dd65a5ae28d8",
                 "responses": {
                     "201": {
@@ -1671,12 +1701,10 @@
                 "operationId": "205aac6c13391b324341f371573a6650",
                 "parameters": [
                     {
-                        "name": "limit",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
-                        }
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
                     }
                 ],
                 "responses": {
@@ -1685,10 +1713,19 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Wallet"
-                                    }
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Wallet"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -2299,6 +2336,11 @@
                         "items": {
                             "$ref": "#/components/schemas/File"
                         }
+                    },
+                    "last_synced_at": {
+                        "description": "The time when the client last synced with the server",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -2400,6 +2442,28 @@
                     }
                 },
                 "type": "object"
+            }
+        },
+        "parameters": {
+            "limitParam": {
+                "name": "limit",
+                "in": "query",
+                "description": "Number of items to return per page",
+                "required": false,
+                "schema": {
+                    "type": "integer",
+                    "default": 20
+                }
+            },
+            "syncedSinceParam": {
+                "name": "synced_since",
+                "in": "query",
+                "description": "Get recent changes after this date",
+                "required": false,
+                "schema": {
+                    "type": "string",
+                    "format": "date-time"
+                }
             }
         },
         "securitySchemes": {

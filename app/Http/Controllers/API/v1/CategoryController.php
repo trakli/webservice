@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
@@ -16,6 +17,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Category', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/categories',
         summary: 'List all categories',
@@ -28,12 +31,24 @@ class CategoryController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Category'))
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Category')
+                        ),
+                    ],
+                    type: 'object'
+                )
             ),
             new OA\Response(
                 response: 500,
@@ -44,15 +59,21 @@ class CategoryController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $categories = $user->categories();
-        if ($request->has('type') && $request->type == 'income') {
-            $categories = $categories->where('type', 'income');
-        } elseif ($request->has('type') && $request->type == 'expense') {
-            $categories = $categories->where('type', 'expense');
-        }
-        $categories = $categories->paginate(20);
+        $categoriesQuery = $user->categories();
 
-        return $this->success($categories);
+        if ($request->has('type') && $request->type == 'income') {
+            $categoriesQuery->where('type', 'income');
+        } elseif ($request->has('type') && $request->type == 'expense') {
+            $categoriesQuery->where('type', 'expense');
+        }
+
+        try {
+            $data = $this->applyApiQuery($request, $categoriesQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Put(

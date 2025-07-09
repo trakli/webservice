@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
@@ -15,6 +16,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 class TransactionController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/transactions',
         summary: 'List all transactions',
@@ -27,19 +30,24 @@ class TransactionController extends ApiController
                 required: true,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
             ),
-            new OA\Parameter(
-                name: 'limit',
-                description: 'Number of transactions to fetch',
-                in: 'query',
-                required: true,
-                schema: new OA\Schema(type: 'integer', default: 20)
-            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
         ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Successful operation',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Transaction'))
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Transaction')
+                        ),
+                    ],
+                    type: 'object'
+                )
             ),
             new OA\Response(
                 response: 400,
@@ -50,19 +58,25 @@ class TransactionController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $type = $request->query('type');
-        $limit = $request->query('limit', 20);
 
         if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        $query = auth()->user()->transactions();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $query = $user->transactions();
         if (! empty($type)) {
             $query->where('type', $type);
         }
-        $transactions = $query->paginate($limit);
 
-        return $this->success($transactions);
+        try {
+            $data = $this->applyApiQuery($request, $query);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Post(
@@ -242,7 +256,7 @@ class TransactionController extends ApiController
 
     #[OA\Delete(
         path: '/transactions/{id}/files/{file_id}',
-        summary: 'Delete a file from a transaction',
+        summary: 'Removes a file from a transaction',
         tags: ['Transactions'],
         responses: [
             new OA\Response(
