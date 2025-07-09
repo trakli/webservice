@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +17,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Category', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/categories',
         summary: 'List all categories',
@@ -68,38 +70,22 @@ class CategoryController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $last_synced = now();
         $user = $request->user();
-        $categories = $user->categories();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
-        }
+        $categoriesQuery = $user->categories();
+
         if ($request->has('type') && $request->type == 'income') {
-            $categories = $categories->where('type', 'income');
+            $categoriesQuery->where('type', 'income');
         } elseif ($request->has('type') && $request->type == 'expense') {
-            $categories = $categories->where('type', 'expense');
+            $categoriesQuery->where('type', 'expense');
         }
-        if ($request->has('sync_from')) {
-            try {
-                $date = Carbon::parse($request->sync_from);
-                $categories = $categories->where('updated_at', '>=', $date);
-            } catch (\Exception $exception) {
-                return $this->failure('Invalid date', 422);
-            }
+
+        try {
+            $data = $this->applyApiQuery($request, $categoriesQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
         }
-        $categories = $categories->paginate($limit);
-
-        $data = [
-            'data' => $categories->items(),
-            'last_sync' => $last_synced,
-            'current_page' => $categories->currentPage(),
-            'total' => $categories->total(),
-            'per_page' => $categories->perPage(),
-            'last_page' => $categories->lastPage(),
-        ];
-
-        return $this->success($data);
     }
 
     #[OA\Put(

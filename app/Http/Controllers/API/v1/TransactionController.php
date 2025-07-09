@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +16,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 class TransactionController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/transactions',
         summary: 'List all transactions',
@@ -67,39 +69,26 @@ class TransactionController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $last_synced = now();
-
         $type = $request->query('type');
-        $limit = $request->query('limit', 20);
 
         if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
             return $this->failure('Invalid transaction type', 400);
         }
 
-        $query = auth()->user()->transactions();
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $query = $user->transactions();
         if (! empty($type)) {
             $query->where('type', $type);
         }
 
-        if ($request->has('sync_from')) {
-            try {
-                $date = Carbon::parse($request->sync_from);
-                $query = $query->where('updated_at', '>=', $date);
-            } catch (\Exception $exception) {
-                return $this->failure('Invalid date', 422);
-            }
-        }
-        $transactions = $query->paginate($limit);
-        $data = [
-            'data' => $transactions->items(),
-            'last_sync' => $last_synced,
-            'current_page' => $transactions->currentPage(),
-            'total' => $transactions->total(),
-            'per_page' => $transactions->perPage(),
-            'last_page' => $transactions->lastPage(),
-        ];
+        try {
+            $data = $this->applyApiQuery($request, $query);
 
-        return $this->success($data);
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Post(

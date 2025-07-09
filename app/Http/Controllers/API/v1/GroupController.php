@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Group;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +19,8 @@ use OpenApi\Attributes as OA;
  */
 class GroupController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/groups',
         summary: 'List all groups',
@@ -63,34 +65,16 @@ class GroupController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $last_synced = now();
-        $user = request()->user();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
+        $user = $request->user();
+        $groupsQuery = $user->groups();
+
+        try {
+            $data = $this->applyApiQuery($request, $groupsQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
         }
-        $groups = $user->groups();
-        if ($request->has('sync_from')) {
-            try {
-                $date = Carbon::parse($request->sync_from);
-                $groups = $groups->where('updated_at', '>=', $date);
-            } catch (\Exception $exception) {
-                return $this->failure('Invalid date', 422);
-            }
-        }
-
-        $groups = $groups->paginate($limit);
-
-        $data = [
-            'data' => $groups->items(),
-            'last_sync' => $last_synced,
-            'current_page' => $groups->currentPage(),
-            'total' => $groups->total(),
-            'per_page' => $groups->perPage(),
-            'last_page' => $groups->lastPage(),
-        ];
-
-        return $this->success($data);
     }
 
     #[OA\Post(

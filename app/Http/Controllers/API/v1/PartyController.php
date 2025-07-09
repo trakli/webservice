@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Party;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +18,8 @@ use OpenApi\Attributes as OA;
  */
 class PartyController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/parties',
         summary: 'List all parties',
@@ -68,33 +70,16 @@ class PartyController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $last_synced = now();
-        $user = request()->user();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
-        }
-        $parties = $user->parties();
-        if ($request->has('sync_from')) {
-            try {
-                $date = Carbon::parse($request->sync_from);
-                $parties = $parties->where('updated_at', '>=', $date);
-            } catch (\Exception $exception) {
-                return $this->failure('Invalid date', 422);
-            }
-        }
-        $parties = $parties->paginate($limit);
+        $user = $request->user();
+        $partiesQuery = $user->parties();
 
-        $data = [
-            'data' => $parties->items(),
-            'last_sync' => $last_synced,
-            'current_page' => $parties->currentPage(),
-            'total' => $parties->total(),
-            'per_page' => $parties->perPage(),
-            'last_page' => $parties->lastPage(),
-        ];
+        try {
+            $data = $this->applyApiQuery($request, $partiesQuery);
 
-        return $this->success($data);
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Post(

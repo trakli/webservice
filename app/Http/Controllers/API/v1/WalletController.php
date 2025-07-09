@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +18,8 @@ use OpenApi\Attributes as OA;
  */
 class WalletController extends ApiController
 {
+    use ApiQueryable;
+
     #[OA\Get(
         path: '/wallets',
         summary: 'List all wallets',
@@ -65,34 +67,16 @@ class WalletController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $last_synced = now();
         $user = $request->user();
-        $limit = 20;
-        if ($request->has('limit')) {
-            $limit = $request->limit;
+        $walletsQuery = $user->wallets();
+
+        try {
+            $data = $this->applyApiQuery($request, $walletsQuery);
+
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
         }
-        $wallets = $user->wallets();
-
-        if ($request->has('sync_from')) {
-            try {
-                $date = Carbon::parse($request->sync_from);
-                $wallets = $wallets->where('updated_at', '>=', $date);
-            } catch (\Exception $exception) {
-                return $this->failure('Invalid date', 422);
-            }
-        }
-        $wallets = $wallets->paginate($limit);
-
-        $data = [
-            'data' => $wallets->items(),
-            'last_sync' => $last_synced,
-            'current_page' => $wallets->currentPage(),
-            'total' => $wallets->total(),
-            'per_page' => $wallets->perPage(),
-            'last_page' => $wallets->lastPage(),
-        ];
-
-        return $this->success($data);
     }
 
     #[OA\Post(
