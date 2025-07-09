@@ -6,6 +6,7 @@ use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use OpenApi\Attributes as OA;
@@ -25,6 +26,7 @@ use OpenApi\Attributes as OA;
             type: 'array',
             items: new OA\Items(description: 'Category ID array', type: 'integer')
         ),
+        new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
         new OA\Property(property: 'user_id', description: 'ID of the user who created the transaction', type: 'integer'),
         new OA\Property(property: 'transfer_id', description: 'ID of the associated transfer, if any', type: 'integer'),
         new OA\Property(property: 'wallet_client_generated_id', description: 'Client-generated ID of the associated wallet', type: 'string', format: 'uuid'),
@@ -34,6 +36,10 @@ use OpenApi\Attributes as OA;
             description: 'Files attached to the transaction',
             type: 'array',
             items: new OA\Items(ref: '#/components/schemas/File')
+        ), new OA\Property(
+            property: 'recurring_rules',
+            ref: '#/components/schemas/RecurringTransactionRule',
+            description: 'Recurring rules attached to the transaction'
         ),
         new OA\Property(property: 'last_synced_at', description: 'The time when the client last synced with the server', type: 'datetime'),
     ],
@@ -70,6 +76,7 @@ class Transaction extends Model
         'wallet_client_generated_id',
         'party_client_generated_id',
         'files',
+        'recurring_rules',
     ];
 
     public function getWalletClientGeneratedIdAttribute()
@@ -128,5 +135,15 @@ class Transaction extends Model
     public function files(): MorphMany
     {
         return $this->morphMany(File::class, 'fileable');
+    }
+
+    public function getRecurringRulesAttribute()
+    {
+        return $this->recurring_transaction_rule()->first();
+    }
+
+    public function recurring_transaction_rule(): HasOne
+    {
+        return $this->hasOne(RecurringTransactionRule::class);
     }
 }
