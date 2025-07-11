@@ -23,6 +23,14 @@ use OpenApi\Attributes as OA;
     required: false,
     schema: new OA\Schema(type: 'string', format: 'date-time')
 )]
+#[OA\Parameter(
+    parameter: 'noClientIdParam',
+    name: 'no_client_id',
+    description: 'Get results with no client id',
+    in: 'query',
+    required: false,
+    schema: new OA\Schema(type: 'boolean')
+)]
 class Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;

@@ -33,6 +33,8 @@ class CategoryController extends ApiController
             ),
             new OA\Parameter(ref: '#/components/parameters/limitParam'),
             new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
+            new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
+
         ],
         responses: [
             new OA\Response(

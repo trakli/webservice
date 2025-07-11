@@ -25,6 +25,11 @@ trait ApiQueryable
                 throw new \InvalidArgumentException('Invalid date format for synced_since parameter.');
             }
         }
+        if ($request->has('no_client_id')) {
+            $query = $query->whereHas('syncState', function ($q) {
+                $q->whereNull('client_generated_id');
+            });
+        }
 
         $paginatedResults = $query->paginate($limit);
         $query_completed_at = now();
