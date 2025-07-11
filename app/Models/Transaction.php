@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -41,13 +42,12 @@ use OpenApi\Attributes as OA;
             ref: '#/components/schemas/RecurringTransactionRule',
             description: 'Recurring rules attached to the transaction'
         ),
-        new OA\Property(property: 'last_synced_at', description: 'The time when the client last synced with the server', type: 'datetime'),
     ],
     type: 'object'
 )]
 class Transaction extends Model
 {
-    use HasClientCreatedAt, HasFactory, Syncable;
+    use HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
 
     /**
      * The attributes that are mass assignable.
@@ -145,5 +145,12 @@ class Transaction extends Model
     public function recurring_transaction_rule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
+    }
+
+    public function delete()
+    {
+        $this->recurring_transaction_rule()->delete();
+
+        return parent::delete();
     }
 }

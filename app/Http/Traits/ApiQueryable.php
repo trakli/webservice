@@ -20,7 +20,7 @@ trait ApiQueryable
         if ($request->has('synced_since')) {
             try {
                 $date = Carbon::parse($request->synced_since);
-                $query->where('updated_at', '>=', $date);
+                $query = $query->where('updated_at', '>=', $date)->withTrashed();
             } catch (\Exception $exception) {
                 throw new \InvalidArgumentException('Invalid date format for synced_since parameter.');
             }
