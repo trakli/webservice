@@ -1340,6 +1340,22 @@
                                     "group_id": {
                                         "type": "integer"
                                     },
+                                    "is_recurring": {
+                                        "description": "Set the transaction as a recurring transaction",
+                                        "type": "boolean"
+                                    },
+                                    "recurrence_period": {
+                                        "description": "Set how often the transaction should repeat",
+                                        "type": "string"
+                                    },
+                                    "recurrence_interval": {
+                                        "description": "Set how often the transaction should repeat",
+                                        "type": "integer"
+                                    },
+                                    "recurrence_ends_at": {
+                                        "description": "When the transaction stops repeating",
+                                        "type": "date-time"
+                                    },
                                     "categories": {
                                         "type": "array",
                                         "items": {
@@ -1566,6 +1582,22 @@
                                     },
                                     "group_id": {
                                         "type": "integer"
+                                    },
+                                    "is_recurring": {
+                                        "description": "Set the transaction as a recurring transaction",
+                                        "type": "boolean"
+                                    },
+                                    "recurrence_period": {
+                                        "description": "Set how often the transaction should repeat",
+                                        "type": "string"
+                                    },
+                                    "recurrence_interval": {
+                                        "description": "Set how often the transaction should repeat",
+                                        "type": "integer"
+                                    },
+                                    "recurrence_ends_at": {
+                                        "description": "When the transaction stops repeating",
+                                        "type": "date-time"
                                     },
                                     "updated_at": {
                                         "type": "string",
@@ -2272,6 +2304,32 @@
                 },
                 "type": "object"
             },
+            "RecurringTransactionRule": {
+                "properties": {
+                    "id": {
+                        "description": "ID of the transaction",
+                        "type": "integer"
+                    },
+                    "transaction_id": {
+                        "description": "ID of the transaction",
+                        "type": "integer"
+                    },
+                    "recurrence_period": {
+                        "description": "Set how often the transaction should repeat",
+                        "type": "string"
+                    },
+                    "recurrence_interval": {
+                        "description": "Set how often the transaction should repeat",
+                        "type": "integer"
+                    },
+                    "recurrence_ends_at": {
+                        "description": "When the transaction stops repeating",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "Transaction": {
                 "required": [
                     "amount",
@@ -2312,6 +2370,10 @@
                             "type": "integer"
                         }
                     },
+                    "is_recurring": {
+                        "description": "Set the transaction as a recurring transaction",
+                        "type": "boolean"
+                    },
                     "user_id": {
                         "description": "ID of the user who created the transaction",
                         "type": "integer"
@@ -2336,6 +2398,9 @@
                         "items": {
                             "$ref": "#/components/schemas/File"
                         }
+                    },
+                    "recurring_rules": {
+                        "$ref": "#/components/schemas/RecurringTransactionRule"
                     },
                     "last_synced_at": {
                         "description": "The time when the client last synced with the server",

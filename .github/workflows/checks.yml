@@ -47,6 +47,7 @@ jobs:
             sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
             sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
             sed -i 's/DB_DATABASE=trakli/DB_DATABASE=trakli/' .env
+            sed -i 's/QUEUE_CONNECTION=sync/QUEUE_CONNECTION=database/' .env
             sed -i 's/DB_USERNAME=trakli/DB_USERNAME=root/' .env
 
       - name: Generate application key

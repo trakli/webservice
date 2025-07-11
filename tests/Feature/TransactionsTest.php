@@ -26,16 +26,25 @@ class TransactionsTest extends TestCase
         $this->assertDatabaseHas('transactions', ['id' => $income['id']]);
     }
 
-    private function createTransaction(string $type): array
+    private function createTransaction(string $type, array $recurrentData = []): array
     {
-        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+        $data = [
             'type' => $type,
             'amount' => 100,
             'description' => 'Test transaction description',
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-        ]);
+        ];
+
+        if (! empty($recurrentData)) {
+            $data['recurrence_period'] = $recurrentData['recurrence_period'] ?? 'daily';
+            $data['recurrence_ends_at'] = $recurrentData['recurrence_ends_at'] ?? null;
+            $data['recurrence_interval'] = $recurrentData['recurrence_interval'] ?? 1;
+            $data['is_recurring'] = true;
+        }
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', $data);
 
         $response->assertStatus(201);
         $response->assertJsonStructure([
@@ -353,6 +362,248 @@ class TransactionsTest extends TestCase
         $this->actingAs($user2)
             ->deleteJson("/api/v1/transactions/{$expense['id']}")
             ->assertStatus(403);
+    }
+
+    public function test_api_user_can_create_a_recurrent_transaction()
+    {
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'daily',
+            //            'recurrence_ends_at' => now()->addMonth()->format("Y-m-dTH:i:s"),
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $transaction['recurring_rules']['recurrence_interval']);
+        $this->assertEquals($transaction['id'], $transaction['recurring_rules']['transaction_id']);
+
+    }
+
+    public function test_api_user_can_update_the_recurring_rule_of_a_transaction()
+    {
+        $expense = $this->createTransaction('expense');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
+            'recurrence_period' => 'daily',
+            'recurrence_interval' => 2,
+            'is_recurring' => true,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $transaction = $response->json('data');
+        $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(2, $transaction['recurring_rules']['recurrence_interval']);
+        $this->assertEquals($transaction['id'], $transaction['recurring_rules']['transaction_id']);
+    }
+
+    public function test_api_user_can_create_recurring_transactions_with_different_periods()
+    {
+        // Test weekly recurrence
+        $weekly_transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'weekly',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $weekly_transaction['id']]);
+        $this->assertEquals('weekly', $weekly_transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $weekly_transaction['recurring_rules']['recurrence_interval']);
+
+        // Test monthly recurrence
+        $monthly_transaction = $this->createTransaction('income', [
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 2,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $monthly_transaction['id']]);
+        $this->assertEquals('monthly', $monthly_transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(2, $monthly_transaction['recurring_rules']['recurrence_interval']);
+
+        // Test yearly recurrence
+        $yearly_transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'yearly',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $yearly_transaction['id']]);
+        $this->assertEquals('yearly', $yearly_transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $yearly_transaction['recurring_rules']['recurrence_interval']);
+    }
+
+    public function test_api_user_can_create_recurring_transactions_with_end_date()
+    {
+        $end_date = now()->addMonths(3)->format('Y-m-d\TH:i:s.v\Z');
+
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 1,
+            'recurrence_ends_at' => $end_date,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertEquals('monthly', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $transaction['recurring_rules']['recurrence_interval']);
+
+        // The date format might be different in the response, so we'll just check that it's not null
+        $this->assertNotNull($transaction['recurring_rules']['recurrence_ends_at']);
+    }
+
+    public function test_api_validates_recurring_transaction_parameters()
+    {
+        // Test missing recurrence_period when is_recurring is true
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => true,
+            // Missing recurrence_period
+        ]);
+
+        $response->assertStatus(422);
+
+        // Test invalid recurrence_period
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => true,
+            'recurrence_period' => 'invalid_period',
+        ]);
+
+        $response->assertStatus(422);
+
+        // Test invalid recurrence_interval
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => true,
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 0, // Should be at least 1
+        ]);
+
+        $response->assertStatus(422);
+
+        // Test past recurrence_ends_at date
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => true,
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 1,
+            'recurrence_ends_at' => '2020-01-01T00:00:00.000Z', // Past date
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_api_user_can_delete_recurring_transaction()
+    {
+        // Create a recurring transaction
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertDatabaseHas('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
+
+        // Delete the transaction
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/transactions/{$transaction['id']}");
+
+        $response->assertStatus(200);
+
+        // Verify that both the transaction and its recurring rule are deleted
+        $this->assertDatabaseMissing('transactions', ['id' => $transaction['id']]);
+        $this->assertDatabaseMissing('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
+    }
+
+    public function test_api_user_can_modify_recurring_transaction_period()
+    {
+        // Create a recurring transaction with daily period
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'daily',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
+
+        // Update to weekly period
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'recurrence_period' => 'weekly',
+            'recurrence_interval' => 2,
+            'is_recurring' => true,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(200);
+        $updated_transaction = $response->json('data');
+
+        // Verify the period was updated
+        $this->assertEquals('weekly', $updated_transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(2, $updated_transaction['recurring_rules']['recurrence_interval']);
+        $this->assertEquals($transaction['id'], $updated_transaction['recurring_rules']['transaction_id']);
+    }
+
+    public function test_api_user_can_add_recurrence_to_non_recurring_transaction()
+    {
+        // Create a non-recurring transaction
+        $transaction = $this->createTransaction('expense');
+
+        // Verify it doesn't have recurring rules
+        $this->assertNull($transaction['recurring_rules']);
+
+        // Add recurrence
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 1,
+            'is_recurring' => true,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(200);
+        $updated_transaction = $response->json('data');
+
+        // Verify recurrence was added
+        $this->assertArrayHasKey('recurring_rules', $updated_transaction);
+        $this->assertEquals('monthly', $updated_transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $updated_transaction['recurring_rules']['recurrence_interval']);
+        $this->assertEquals($transaction['id'], $updated_transaction['recurring_rules']['transaction_id']);
+    }
+
+    public function test_api_user_can_remove_recurrence_from_recurring_transaction()
+    {
+        // Create a recurring transaction
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => 1,
+        ]);
+
+        // Verify it has recurring rules
+        $this->assertArrayHasKey('recurring_rules', $transaction);
+        $this->assertDatabaseHas('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
+
+        // Remove recurrence by setting is_recurring to false
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'is_recurring' => false,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(200);
+        $updated_transaction = $response->json('data');
+
+        // Verify recurrence was removed
+        $this->assertNull($updated_transaction['recurring_rules']);
+        $this->assertDatabaseMissing('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
     }
 
     protected function setUp(): void
