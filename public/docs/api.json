@@ -310,6 +310,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     }
                 ],
                 "responses": {
@@ -565,6 +568,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     }
                 ],
                 "responses": {
@@ -982,6 +988,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     }
                 ],
                 "responses": {
@@ -1258,6 +1267,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     }
                 ],
                 "responses": {
@@ -1705,6 +1717,9 @@
                     },
                     {
                         "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     }
                 ],
                 "responses": {
@@ -2463,6 +2478,15 @@
                 "schema": {
                     "type": "string",
                     "format": "date-time"
+                }
+            },
+            "noClientIdParam": {
+                "name": "no_client_id",
+                "in": "query",
+                "description": "Get results with no client id",
+                "required": false,
+                "schema": {
+                    "type": "boolean"
                 }
             }
         },
