@@ -8,6 +8,7 @@ use App\Traits\Syncable;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -49,7 +50,7 @@ class Group extends Model
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
 
-    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, Syncable;
+    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
 
     /**
      * Return the sluggable configuration array for this model.

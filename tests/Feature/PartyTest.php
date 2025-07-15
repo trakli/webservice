@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Party;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -238,7 +239,8 @@ class PartyTest extends TestCase
         $response = $this->actingAs($this->user)->deleteJson('/api/v1/parties/'.$id);
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('parties', ['id' => $id]);
+        $party = Party::find($id);
+        $this->assertNull($party);
     }
 
     public function test_api_user_cannot_delete_another_users_party()

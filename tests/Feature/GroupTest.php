@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Group;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -222,7 +223,8 @@ class GroupTest extends TestCase
         $response = $this->actingAs($this->user)->deleteJson('/api/v1/groups/'.$id);
         $response->assertStatus(204);
 
-        $this->assertDatabaseMissing('groups', ['id' => $id]);
+        $group = Group::find($id);
+        $this->assertNull($group);
     }
 
     public function test_api_user_cannot_delete_another_users_group()

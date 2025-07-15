@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -336,7 +337,8 @@ class TransactionsTest extends TestCase
         $response = $this->actingAs($this->user)->deleteJson("/api/v1/transactions/{$expense['id']}");
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('transactions', ['id' => $expense['id']]);
+        $transaction = Transaction::find($expense['id']);
+        $this->assertNull($transaction);
     }
 
     public function test_api_user_cannot_delete_non_existent_transaction()
@@ -522,7 +524,7 @@ class TransactionsTest extends TestCase
         $response->assertStatus(200);
 
         // Verify that both the transaction and its recurring rule are deleted
-        $this->assertDatabaseMissing('transactions', ['id' => $transaction['id']]);
+        $this->assertSoftDeleted('transactions', ['id' => $transaction['id']]);
         $this->assertDatabaseMissing('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
     }
 

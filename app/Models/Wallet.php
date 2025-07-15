@@ -8,6 +8,7 @@ use App\Traits\Iconable;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -37,7 +38,7 @@ use OpenApi\Attributes as OA;
 )]
 class Wallet extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, Syncable;
+    use HasClientCreatedAt, HasFactory, Iconable, SoftDeletes, Syncable;
 
     protected $fillable = [
         'name',

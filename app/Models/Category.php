@@ -8,6 +8,7 @@ use App\Traits\Syncable;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -37,7 +38,7 @@ use OpenApi\Attributes as OA;
 )]
 class Category extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, Syncable;
+    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
 
     public const TYPE_INCOME = 'income';
 

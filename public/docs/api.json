@@ -2416,11 +2416,6 @@
                     },
                     "recurring_rules": {
                         "$ref": "#/components/schemas/RecurringTransactionRule"
-                    },
-                    "last_synced_at": {
-                        "description": "The time when the client last synced with the server",
-                        "type": "string",
-                        "format": "date-time"
                     }
                 },
                 "type": "object"

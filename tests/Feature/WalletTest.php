@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Testing\TestResponse;
@@ -338,7 +339,8 @@ class WalletTest extends TestCase
         $response = $this->actingAs($this->user)->deleteJson('/api/v1/wallets/'.$id);
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('wallets', ['id' => $id]);
+        $wallet = Wallet::find($id);
+        $this->assertNull($wallet);
     }
 
     public function test_wallet_balance_has_consistent_type()
