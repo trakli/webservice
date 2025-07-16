@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "97e207c4c0746fc0246b913d8bf26f26",
+    "content-hash": "4c781171abab223386702524c2395421",
     "packages": [
         {
             "name": "brick/math",
@@ -6066,13 +6066,13 @@
             "version": "dev-main",
             "source": {
                 "type": "git",
-                "url": "https://github.com/whilesmart/laravel-plugin-engine.git",
-                "reference": "8d73bb188909a309593bccbaa1bc30881863a59e"
+                "url": "https://github.com/whilesmartphp/laravel-plugin-engine.git",
+                "reference": "de419fa43ef969dd371facaf082b633cf3cd9372"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmart/laravel-plugin-engine/zipball/8d73bb188909a309593bccbaa1bc30881863a59e",
-                "reference": "8d73bb188909a309593bccbaa1bc30881863a59e",
+                "url": "https://api.github.com/repos/whilesmartphp/laravel-plugin-engine/zipball/de419fa43ef969dd371facaf082b633cf3cd9372",
+                "reference": "de419fa43ef969dd371facaf082b633cf3cd9372",
                 "shasum": ""
             },
             "require": {
@@ -6103,42 +6103,7 @@
                     "WhileSmart\\LaravelPluginEngine\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "WhileSmart\\LaravelPluginEngine\\Tests\\": "tests/",
-                    "WhileSmart\\LaravelPluginEngine\\Tests\\Stubs\\": "tests/stubs/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "testbench package:test"
-                ],
-                "test:coverage": [
-                    "XDEBUG_MODE=coverage testbench package:test --coverage-html coverage"
-                ],
-                "test:ci": [
-                    "testbench package:test --coverage-clover=coverage.xml"
-                ],
-                "test:debug": [
-                    "testbench package:test --debug"
-                ],
-                "pint": [
-                    "vendor/bin/pint"
-                ],
-                "pint:test": [
-                    "vendor/bin/pint --test"
-                ],
-                "pint:fix": [
-                    "vendor/bin/pint"
-                ],
-                "cs": [
-                    "@pint:test",
-                    "@test"
-                ],
-                "cs:fix": [
-                    "@pint:fix"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "proprietary"
             ],
@@ -6150,10 +6115,10 @@
             ],
             "description": "Laravel plugin engine for WhileSmart applications",
             "support": {
-                "source": "https://github.com/whilesmart/laravel-plugin-engine/tree/main",
-                "issues": "https://github.com/whilesmart/laravel-plugin-engine/issues"
+                "issues": "https://github.com/whilesmartphp/laravel-plugin-engine/issues",
+                "source": "https://github.com/whilesmartphp/laravel-plugin-engine/tree/main"
             },
-            "time": "2025-06-30T12:29:57+00:00"
+            "time": "2025-07-16T00:00:28+00:00"
         },
         {
             "name": "whilesmart/laravel-user-authentication",
@@ -8786,14 +8751,14 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "whilesmart/laravel-plugin-engine": 20,
-        "whilesmart/laravel-user-authentication": 20
+        "whilesmart/laravel-user-authentication": 20,
+        "whilesmart/laravel-plugin-engine": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "plugin-api-version": "2.6.0"
 }
