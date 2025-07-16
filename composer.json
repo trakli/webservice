@@ -4,16 +4,6 @@
     "description": "Trakli Webservice",
     "keywords": ["trakli", "api", "backend"],
     "license": "proprietary",
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/whilesmart/laravel-plugin-engine"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/whilesmart/laravel-user-authentication"
-        }
-    ],
     "require": {
         "php": "^8.2",
         "cviebrock/eloquent-sluggable": "^11.0",
@@ -22,8 +12,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
         "zircote/swagger-php": "^5.0",
-        "whilesmart/laravel-user-authentication": "main-dev",
-        "whilesmart/laravel-plugin-engine": "@dev"
+        "whilesmart/laravel-user-authentication": "dev-main",
+        "whilesmart/laravel-plugin-engine": "dev-main"
      },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
@@ -71,9 +61,6 @@
         ],
         "openapi": [
             "./vendor/bin/openapi app --debug --output public/docs/api.json"
-        ],
-        "openapi:plugins": [
-            "./vendor/bin/openapi app plugins --debug --output public/docs/api.json"
         ],
         "openapi:test": [
             "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
