@@ -78,8 +78,7 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type', 'currency'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
@@ -116,7 +115,7 @@ class WalletController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string',
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',

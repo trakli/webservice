@@ -77,8 +77,7 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
@@ -113,7 +112,7 @@ class PartyController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',

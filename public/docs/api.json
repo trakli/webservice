@@ -361,8 +361,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "type": {
                                         "description": "Type of the category",
@@ -618,8 +617,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "name": {
                                         "description": "Name of the group",
@@ -1041,8 +1039,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "name": {
                                         "type": "string",
@@ -1318,8 +1315,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "amount": {
                                         "type": "number",
@@ -1689,8 +1685,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "amount": {
                                         "type": "number",
@@ -1804,8 +1799,7 @@
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string",
-                                        "format": "uuid"
+                                        "type": "string"
                                     },
                                     "name": {
                                         "type": "string",

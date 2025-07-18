@@ -150,8 +150,7 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'description', type: 'string'),
@@ -189,7 +188,7 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string',
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
