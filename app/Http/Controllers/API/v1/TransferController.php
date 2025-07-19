@@ -55,7 +55,7 @@ class TransferController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string|min:64|max:64',
             'amount' => 'required|numeric|min:0.01',
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->morphs('syncable');
             $table->string('source')->nullable();
-            $table->uuid('client_generated_id')->index()->nullable();
+            $table->string('client_generated_id')->index()->nullable();
             $table->timestamp('last_synced_at');
             $table->timestamps();
         });

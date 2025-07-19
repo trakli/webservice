@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Http\Traits\ApiQueryable;
 use App\Models\Group;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use App\Traits\ApiQueryable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -112,7 +112,7 @@ class GroupController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string|min:64|max:64',
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string|max:255',
             'icon' => 'nullable',
@@ -201,6 +201,7 @@ class GroupController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(
                         property: 'name',
                         description: 'Name of the group',
@@ -244,6 +245,7 @@ class GroupController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => 'nullable|string|min:64|max:64',
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string|max:255',
             'icon' => 'nullable',
@@ -263,8 +265,7 @@ class GroupController extends ApiController
         }
         try {
             DB::transaction(function () use ($data, $request, &$group) {
-                $group->update($data);
-                FileService::updateIcon($group, $data, $request);
+                $this->updateModel($group, $data, $request);
             });
 
             $group->refresh();

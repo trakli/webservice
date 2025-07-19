@@ -54,7 +54,7 @@ class WalletTest extends TestCase
             'currency' => 'XAF',
             'balance' => 0,
             'description' => 'test descriptoin',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
         ]);
 
         $response->assertStatus(201);
@@ -411,6 +411,24 @@ class WalletTest extends TestCase
         ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_api_user_can_update_their_wallet_with_client_id()
+    {
+        $response = $this->createWallet('bank');
+        $wallet = $response->json('data');
+        $id = $wallet['id'];
+        $clientId = hash('sha256', 'some random string');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/wallets/'.$wallet['id'], [
+            'name' => 'new name',
+            'description' => 'new description',
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(200);
+        $wallet = Wallet::find($wallet['id']);
+        $this->assertEquals($wallet->syncState->client_generated_id, $clientId);
     }
 
     protected function setUp(): void
