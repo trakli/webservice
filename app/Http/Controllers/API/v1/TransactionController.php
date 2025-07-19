@@ -7,6 +7,7 @@ use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -151,7 +152,7 @@ class TransactionController extends ApiController
                 required: ['amount', 'type'],
                 properties: [
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'description', type: 'string'),
@@ -189,7 +190,7 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => 'nullable|uuid',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
@@ -256,8 +257,9 @@ class TransactionController extends ApiController
                 /** @var Transaction $transaction */
                 $transaction = auth()->user()->transactions()->create($data);
 
+                $user = $request->user();
                 if (isset($data['client_id'])) {
-                    $transaction->setClientGeneratedId($data['client_id']);
+                    $transaction->setClientGeneratedId($data['client_id'], $user);
                 }
 
                 $transaction->markAsSynced();
@@ -410,6 +412,7 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'updated_at'],
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
@@ -461,6 +464,7 @@ class TransactionController extends ApiController
     public function update(Request $request, $id): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
             'datetime' => ['nullable', new Iso8601DateTime],
@@ -528,13 +532,18 @@ class TransactionController extends ApiController
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
         try {
-            $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data) {
+            $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
                 $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
                 $transaction->markAsSynced();
 
                 if (isset($validatedData['categories'])) {
                     $transaction->categories()->sync($validatedData['categories']);
+                }
+
+                $user = $request->user();
+                if (isset($request['client_id']) && ! $transaction->client_id) {
+                    $transaction->setClientGeneratedId($request['client_id'], $user);
                 }
 
                 $recurring_transaction = $transaction->recurring_transaction_rule()->first();

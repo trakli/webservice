@@ -13,6 +13,7 @@ class ModelSyncState extends Model
         'source',
         'client_generated_id',
         'last_synced_at',
+        'device_id',
     ];
 
     public function syncable()
