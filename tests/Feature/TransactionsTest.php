@@ -106,7 +106,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
         ]);
 
         $response->assertStatus(201);
@@ -132,7 +132,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
             'files' => [$imageFile1, $imageFile2],
         ]);
 
@@ -165,7 +165,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
             'files' => [$imageFile1],
         ]);
         $response->assertStatus(201);
@@ -203,7 +203,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
             'files' => [$imageFile1, $imageFile2],
         ]);
         $response->assertStatus(201);
@@ -606,6 +606,33 @@ class TransactionsTest extends TestCase
         // Verify recurrence was removed
         $this->assertNull($updated_transaction['recurring_rules']);
         $this->assertDatabaseMissing('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
+    }
+
+    public function test_api_user_can_update_their_transactions_with_client_id()
+    {
+        $expense = $this->createTransaction('expense');
+        $clientId = hash('sha256', 'some random string');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
+            'amount' => 200,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'amount',
+                    'wallet_id',
+                    'party_id',
+                    'datetime',
+                ],
+                'message',
+            ]);
+
+        $transaction = Transaction::find($expense['id']);
+        $this->assertEquals($transaction->syncState->client_generated_id, $clientId);
     }
 
     protected function setUp(): void

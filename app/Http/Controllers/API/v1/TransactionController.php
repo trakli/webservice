@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use App\Traits\ApiQueryable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -189,7 +189,7 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string|min:64|max:64',
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
@@ -410,6 +410,7 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'updated_at'],
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
@@ -461,6 +462,7 @@ class TransactionController extends ApiController
     public function update(Request $request, $id): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
+            'client_id' => 'nullable|string|min:64|max:64',
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
             'datetime' => ['nullable', new Iso8601DateTime],
@@ -528,13 +530,17 @@ class TransactionController extends ApiController
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
         try {
-            $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data) {
+            $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
                 $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
                 $transaction->markAsSynced();
 
                 if (isset($validatedData['categories'])) {
                     $transaction->categories()->sync($validatedData['categories']);
+                }
+
+                if (isset($request['client_id']) && ! $transaction->client_id) {
+                    $transaction->setClientGeneratedId($request['client_id']);
                 }
 
                 $recurring_transaction = $transaction->recurring_transaction_rule()->first();

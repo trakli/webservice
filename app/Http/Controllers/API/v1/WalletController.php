@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
-use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Services\FileService;
+use App\Traits\ApiQueryable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +116,7 @@ class WalletController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => 'nullable|uuid',
+            'client_id' => 'nullable|string|min:64|max:64',
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',
@@ -206,6 +206,7 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type'],
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
                     new OA\Property(property: 'type', type: 'string', example: 'bank'),
                     new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
@@ -250,6 +251,7 @@ class WalletController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
+            'client_id' => 'nullable|string|min:64|max:64',
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string',
             'description' => 'sometimes|string',
@@ -267,8 +269,7 @@ class WalletController extends ApiController
         }
         try {
             DB::transaction(function () use ($validatedData, $request, &$wallet) {
-                $wallet->update($validatedData);
-                FileService::updateIcon($wallet, $validatedData, $request);
+                $this->updateModel($wallet, $validatedData, $request);
             });
 
             $wallet->refresh();

@@ -48,7 +48,7 @@ class GroupTest extends TestCase
         $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
             'name' => 'My Group (with client id)',
             'description' => 'test descriptoin',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
         ]);
 
         $response->assertStatus(201);
@@ -255,6 +255,28 @@ class GroupTest extends TestCase
         ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_api_user_can_update_their_groups_with_client_id()
+    {
+        $response = $this->createGroup();
+        $response->assertStatus(201);
+
+        $group = $response->json('data');
+        $id = $group['id'];
+        $clientId = hash('sha256', 'some random string');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/groups/'.$id, [
+            'name' => 'new name',
+            'description' => 'new description',
+            'client_id' => $clientId,
+        ]);
+
+        $data = $response->json('data');
+        $this->assertEquals('new name', $data['name']);
+        $this->assertEquals('new description', $data['description']);
+        $group = Group::find($group['id']);
+        $this->assertEquals($group->syncState->client_generated_id, $clientId);
     }
 
     protected function setUp(): void

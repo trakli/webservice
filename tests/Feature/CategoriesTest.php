@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -225,7 +226,7 @@ class CategoriesTest extends TestCase
             'type' => 'expense',
             'name' => 'Expense Category (with client id)',
             'description' => 'description',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => hash('sha256', 'some random string'),
         ]);
 
         $response->assertStatus(201)
@@ -409,5 +410,33 @@ class CategoriesTest extends TestCase
         ]);
 
         $response->assertStatus(400);
+    }
+
+    public function test_api_user_can_update_their_expense_categories_with_client_id()
+    {
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->postJson('/api/v1/categories', [
+            'type' => 'expense',
+            'name' => 'Expense Category',
+            'description' => 'description',
+        ]);
+        $response->assertStatus(201);
+
+        $clientId = hash('sha256', 'some random string');
+
+        $id = $response->json('data.id');
+        $response = $this->actingAs($user)->putJson('/api/v1/categories/'.$response->json('data.id'), [
+            'name' => 'Updated Expense Category',
+            'description' => 'Updated description',
+            'client_id' => $clientId,
+        ]);
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals('Updated Expense Category', $data['name']);
+        $this->assertEquals('Updated description', $data['description']);
+
+        $category = Category::find($id);
+        $this->assertEquals($category->syncState->client_generated_id, $clientId);
     }
 }
