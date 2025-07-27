@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Group;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -75,7 +76,7 @@ class GroupController extends ApiController
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(
                         property: 'name',
                         description: 'Name of the group',
@@ -112,7 +113,7 @@ class GroupController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => 'nullable|uuid',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string|max:255',
             'icon' => 'nullable',
@@ -132,7 +133,7 @@ class GroupController extends ApiController
                 $group = $user->groups()->create($data);
 
                 if (isset($request['client_id'])) {
-                    $group->setClientGeneratedId($request['client_id']);
+                    $group->setClientGeneratedId($request['client_id'], $user);
                 }
                 $group->markAsSynced();
 
@@ -201,6 +202,8 @@ class GroupController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(
                         property: 'name',
                         description: 'Name of the group',
@@ -244,6 +247,7 @@ class GroupController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string|max:255',
             'icon' => 'nullable',
@@ -263,8 +267,7 @@ class GroupController extends ApiController
         }
         try {
             DB::transaction(function () use ($data, $request, &$group) {
-                $group->update($data);
-                FileService::updateIcon($group, $data, $request);
+                $this->updateModel($group, $data, $request);
             });
 
             $group->refresh();

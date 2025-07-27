@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Party;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,7 +79,7 @@ class PartyController extends ApiController
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
@@ -113,7 +114,7 @@ class PartyController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => 'nullable|uuid',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
@@ -134,7 +135,7 @@ class PartyController extends ApiController
                 /** @var Party $party */
                 $party = $user->parties()->create($validatedData);
                 if (! empty($validatedData['client_id'])) {
-                    $party->setClientGeneratedId($validatedData['client_id']);
+                    $party->setClientGeneratedId($validatedData['client_id'], $user);
                 }
                 $party->markAsSynced();
                 FileService::updateIcon($party, $validatedData, $request);
@@ -204,6 +205,7 @@ class PartyController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
                     new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
@@ -248,6 +250,7 @@ class PartyController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
@@ -263,8 +266,7 @@ class PartyController extends ApiController
         }
         try {
             DB::transaction(function () use ($validatedData, $request, &$party) {
-                $party->update($validatedData);
-                FileService::updateIcon($party, $validatedData, $request);
+                $this->updateModel($party, $validatedData, $request);
             });
 
             $party->refresh();

@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class WalletController extends ApiController
                 required: ['name', 'type', 'currency'],
                 properties: [
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
@@ -116,7 +117,7 @@ class WalletController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => 'nullable|uuid',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',
@@ -135,7 +136,7 @@ class WalletController extends ApiController
                 /** @var Wallet $wallet */
                 $wallet = $user->wallets()->create($validatedData);
                 if (isset($request['client_id'])) {
-                    $wallet->setClientGeneratedId($request['client_id']);
+                    $wallet->setClientGeneratedId($request['client_id'], $user);
                 }
                 $wallet->markAsSynced();
 
@@ -206,6 +207,7 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type'],
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
                     new OA\Property(property: 'type', type: 'string', example: 'bank'),
                     new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
@@ -250,6 +252,7 @@ class WalletController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string',
             'description' => 'sometimes|string',
@@ -267,8 +270,7 @@ class WalletController extends ApiController
         }
         try {
             DB::transaction(function () use ($validatedData, $request, &$wallet) {
-                $wallet->update($validatedData);
-                FileService::updateIcon($wallet, $validatedData, $request);
+                $this->updateModel($wallet, $validatedData, $request);
             });
 
             $wallet->refresh();

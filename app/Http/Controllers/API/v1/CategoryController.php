@@ -6,6 +6,7 @@ use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -85,6 +86,7 @@ class CategoryController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                     new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
                     new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
                     new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
@@ -125,6 +127,7 @@ class CategoryController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'type' => 'sometimes|required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
@@ -146,8 +149,7 @@ class CategoryController extends ApiController
         }
         try {
             DB::transaction(function () use ($data, $request, &$category) {
-                $category->update($data);
-                FileService::updateIcon($category, $data, $request);
+                $this->updateModel($category, $data, $request);
             });
 
             $category->refresh();
@@ -169,7 +171,7 @@ class CategoryController extends ApiController
                 required: ['type', 'name'],
                 properties: [
                     new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'uuid'),
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                     new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
                     new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
@@ -199,7 +201,7 @@ class CategoryController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => 'nullable|uuid',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -226,7 +228,7 @@ class CategoryController extends ApiController
                 $category = $user->categories()->create($data);
 
                 if (isset($request['client_id'])) {
-                    $category->setClientGeneratedId($request['client_id']);
+                    $category->setClientGeneratedId($request['client_id'], $user);
                 }
                 $category->markAsSynced();
 

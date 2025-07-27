@@ -54,7 +54,7 @@ class WalletTest extends TestCase
             'currency' => 'XAF',
             'balance' => 0,
             'description' => 'test descriptoin',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
         ]);
 
         $response->assertStatus(201);
@@ -411,6 +411,117 @@ class WalletTest extends TestCase
         ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_api_user_can_update_their_wallet_with_client_id()
+    {
+        $response = $this->createWallet('bank');
+        $wallet = $response->json('data');
+        $id = $wallet['id'];
+
+        $device_id = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $clientId = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/wallets/'.$id, [
+            'name' => 'new name',
+            'description' => 'new description',
+            'client_id' => "$device_id:$clientId",
+        ]);
+
+        $response->assertStatus(200);
+        $wallet = Wallet::find($id);
+        $this->assertEquals($wallet->syncState->client_generated_id, $clientId);
+    }
+
+    public function test_api_user_cannot_create_wallet_with_invalid_client_id_format()
+    {
+        // Test with client_id that has no colon
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'My Wallet (with invalid client id)',
+            'type' => 'bank',
+            'currency' => 'XAF',
+            'balance' => 0,
+            'description' => 'test description',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('must be in the format', $response->json('errors.client_id.0'));
+
+        // Test with client_id that has invalid UUID
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'My Wallet (with invalid UUID)',
+            'type' => 'bank',
+            'currency' => 'XAF',
+            'balance' => 0,
+            'description' => 'test description',
+            'client_id' => 'invalid-uuid:245cb3df-df3a-428b-a908-e5f74b8d58a4',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('not a valid UUID', $response->json('errors.client_id.0'));
+
+        // Test with client_id that has more than one colon
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'My Wallet (with too many colons)',
+            'type' => 'bank',
+            'currency' => 'XAF',
+            'balance' => 0,
+            'description' => 'test description',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4:extra',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('must be in the format', $response->json('errors.client_id.0'));
+    }
+
+    public function test_api_user_device_creation_with_client_id()
+    {
+        $deviceToken = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $clientId = '245cb3df-df3a-428b-a908-e5f74b8d58a3';
+
+        // Create first wallet with client_id
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'First Wallet with client id',
+            'type' => 'bank',
+            'currency' => 'XAF',
+            'balance' => 0,
+            'description' => 'test description',
+            'client_id' => "$deviceToken:$clientId",
+        ]);
+
+        $response->assertStatus(201);
+        $firstWallet = Wallet::find($response->json('data.id'));
+
+        // Verify device was created
+        $this->assertDatabaseHas('devices', ['deviceable_id' => $this->user->id, 'token' => $deviceToken, 'deviceable_type' => 'App\Models\User']);
+        $device = $this->user->devices()->where('token', $deviceToken)->first();
+        $this->assertNotNull($device);
+
+        // Verify sync state has correct device_id and client_generated_id
+        $this->assertEquals($clientId, $firstWallet->syncState->client_generated_id);
+        $this->assertEquals($device->id, $firstWallet->syncState->device_id);
+
+        // Create second wallet with same device_id but different client_id
+        $secondClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a5';
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Second Wallet with same device',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 100,
+            'description' => 'test description',
+            'client_id' => "$deviceToken:$secondClientId",
+        ]);
+
+        $response->assertStatus(201);
+        $secondWallet = Wallet::find($response->json('data.id'));
+
+        // Verify same device was used
+        $this->assertEquals(1, $this->user->devices()->where('token', $deviceToken)->count());
+
+        // Verify second wallet has correct client_generated_id but same device_id
+        $this->assertEquals($secondClientId, $secondWallet->syncState->client_generated_id);
+        $this->assertEquals($device->id, $secondWallet->syncState->device_id);
     }
 
     protected function setUp(): void

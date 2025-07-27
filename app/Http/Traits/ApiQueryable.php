@@ -2,8 +2,10 @@
 
 namespace App\Http\Traits;
 
+use App\Services\FileService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Whilesmart\LaravelUserAuthentication\Traits\ApiResponse;
@@ -48,5 +50,15 @@ trait ApiQueryable
             'per_page' => $paginatedResults->perPage(),
             'last_page' => $paginatedResults->lastPage(),
         ];
+    }
+
+    private function updateModel(Model $model, array $validatedData, Request $request): void
+    {
+        $model->update($validatedData);
+        $user = $request->user();
+        if (isset($request['client_id']) && ! $model->client_generated_id) {
+            $model->setClientGeneratedId($request['client_id'], $user);
+        }
+        FileService::updateIcon($model, $validatedData, $request);
     }
 }

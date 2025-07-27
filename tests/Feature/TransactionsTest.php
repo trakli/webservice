@@ -68,8 +68,8 @@ class TransactionsTest extends TestCase
 
     public function test_transaction_response_includes_client_generated_ids()
     {
-        $this->wallet->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000');
-        $this->party->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440001');
+        $this->wallet->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440000', $this->user);
+        $this->party->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440001', $this->user);
 
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'type' => 'expense',
@@ -106,7 +106,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
         ]);
 
         $response->assertStatus(201);
@@ -132,7 +132,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
             'files' => [$imageFile1, $imageFile2],
         ]);
 
@@ -165,7 +165,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
             'files' => [$imageFile1],
         ]);
         $response->assertStatus(201);
@@ -203,7 +203,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
             'files' => [$imageFile1, $imageFile2],
         ]);
         $response->assertStatus(201);
@@ -239,7 +239,7 @@ class TransactionsTest extends TestCase
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
-            'client_id' => '123e4567-e89b-12d3-a456-426614174000',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
             'files' => [$csvFile],
         ]);
 
@@ -606,6 +606,125 @@ class TransactionsTest extends TestCase
         // Verify recurrence was removed
         $this->assertNull($updated_transaction['recurring_rules']);
         $this->assertDatabaseMissing('recurring_transaction_rules', ['transaction_id' => $transaction['id']]);
+    }
+
+    public function test_api_user_can_update_their_transactions_with_client_id()
+    {
+        $expense = $this->createTransaction('expense');
+        $clientId = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $deviceToken = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
+            'amount' => 200,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'client_id' => "$deviceToken:$clientId",
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'amount',
+                    'wallet_id',
+                    'party_id',
+                    'datetime',
+                ],
+                'message',
+            ]);
+
+        $transaction = Transaction::find($expense['id']);
+        $this->assertEquals($transaction->syncState->client_generated_id, $clientId);
+    }
+
+    public function test_api_user_cannot_create_transaction_with_invalid_client_id_format()
+    {
+        // Test with client_id that has no colon
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('must be in the format', $response->json('errors.client_id.0'));
+
+        // Test with client_id that has invalid UUID
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => 'invalid-uuid:245cb3df-df3a-428b-a908-e5f74b8d58a4',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('not a valid UUID', $response->json('errors.client_id.0'));
+
+        // Test with client_id that has more than one colon
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4:extra',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('must be in the format', $response->json('errors.client_id.0'));
+    }
+
+    public function test_api_user_device_creation_with_client_id()
+    {
+        $deviceToken = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $clientId = '245cb3df-df3a-428b-a908-e5f74b8d58a3';
+
+        // Create first transaction with client_id
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => "$deviceToken:$clientId",
+        ]);
+
+        $response->assertStatus(201);
+        $firstTransaction = Transaction::find($response->json('data.id'));
+
+        // Verify device was created
+        $this->assertDatabaseHas('devices', ['deviceable_id' => $this->user->id, 'token' => $deviceToken, 'deviceable_type' => 'App\Models\User']);
+        $device = $this->user->devices()->where('token', $deviceToken)->first();
+        $this->assertNotNull($device);
+
+        // Verify sync state has correct device_id and client_generated_id
+        $this->assertEquals($clientId, $firstTransaction->syncState->client_generated_id);
+        $this->assertEquals($device->id, $firstTransaction->syncState->device_id);
+
+        // Create second transaction with same device_id but different client_id
+        $secondClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a5';
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'amount' => 200,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => "$deviceToken:$secondClientId",
+        ]);
+
+        $response->assertStatus(201);
+        $secondTransaction = Transaction::find($response->json('data.id'));
+
+        // Verify same device was used
+        $this->assertEquals(1, $this->user->devices()->where('token', $deviceToken)->count());
+
+        // Verify second transaction has correct client_generated_id but same device_id
+        $this->assertEquals($secondClientId, $secondTransaction->syncState->client_generated_id);
+        $this->assertEquals($device->id, $secondTransaction->syncState->device_id);
     }
 
     protected function setUp(): void
