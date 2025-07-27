@@ -20,16 +20,6 @@
         "whilesmart/laravel-plugin-engine": "dev-main",
         "whilesmart/laravel-user-devices": "dev-main"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/whilesmartphp/laravel-devices"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/whilesmart/laravel-user-authentication"
-        }
-    ],
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
         "laravel/pint": "^1.16",
