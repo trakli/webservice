@@ -68,8 +68,8 @@ class TransactionsTest extends TestCase
 
     public function test_transaction_response_includes_client_generated_ids()
     {
-        $this->wallet->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440000', $this->user);
-        $this->party->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440001', $this->user);
+        $this->wallet->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440001', $this->user);
+        $this->party->setClientGeneratedId('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440002', $this->user);
 
         $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
             'type' => 'expense',
@@ -92,10 +92,10 @@ class TransactionsTest extends TestCase
             ],
         ]);
 
-        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000', $data['wallet_client_generated_id']);
-        $this->assertEquals('550e8400-e29b-41d4-a716-446655440001', $data['party_client_generated_id']);
-        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000', $data['wallet']['client_generated_id']);
-        $this->assertEquals('550e8400-e29b-41d4-a716-446655440001', $data['party']['client_generated_id']);
+        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440001', $data['wallet_client_generated_id']);
+        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440002', $data['party_client_generated_id']);
+        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440001', $data['wallet']['client_generated_id']);
+        $this->assertEquals('550e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440002', $data['party']['client_generated_id']);
     }
 
     public function test_api_user_can_create_transactions_with_client_id()
