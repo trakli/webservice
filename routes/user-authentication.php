@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\API\v1\Auth\AuthController;
-use App\Http\Controllers\API\v1\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
+use Whilesmart\UserAuthentication\Http\Controllers\Auth\AuthController;
+use Whilesmart\UserAuthentication\Http\Controllers\Auth\PasswordResetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Route;
 // Auth routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/send-verification-code', [AuthController::class, 'sendVerificationCode']);
+Route::post('/verify-code', [AuthController::class, 'verifyCode']);
 Route::post('/password/reset-code', [PasswordResetController::class, 'sendPasswordResetCode']);
 Route::post('/password/reset', [PasswordResetController::class, 'resetPasswordWithCode']);
 

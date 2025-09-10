@@ -165,6 +165,161 @@
                 ]
             }
         },
+        "/oauth/{driver}/login": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get Oauth redirect URI",
+                "operationId": "808273533231a245e8c285fd57808c46",
+                "responses": {
+                    "200": {
+                        "description": "URL generated"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/oauth/{driver}/callback": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Handles Oauth login callback",
+                "operationId": "c5cf9bc3474a3cb88a3ebbbe9b18af80",
+                "responses": {
+                    "200": {
+                        "description": " "
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/send-verification-code": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Send verification code to email or phone",
+                "operationId": "ec38e33eb8277eb8c19a671157479255",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "contact": {
+                                        "description": "Email address or phone number",
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "description": "Type of contact",
+                                        "type": "string",
+                                        "enum": [
+                                            "email",
+                                            "phone"
+                                        ]
+                                    },
+                                    "purpose": {
+                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
+                                        "type": "string",
+                                        "enum": [
+                                            "registration",
+                                            "login"
+                                        ],
+                                        "example": "registration"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Verification code sent successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/verify-code": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Verify a code for email or phone",
+                "operationId": "247db2a5dd7f5c9c22b78cbe2a855dda",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact",
+                                    "code",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "contact": {
+                                        "description": "Email address or phone number",
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "description": "Verification code",
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "description": "Type of contact",
+                                        "type": "string",
+                                        "enum": [
+                                            "email",
+                                            "phone"
+                                        ]
+                                    },
+                                    "purpose": {
+                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
+                                        "type": "string",
+                                        "enum": [
+                                            "registration",
+                                            "login"
+                                        ],
+                                        "example": "registration"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Code verified successfully"
+                    },
+                    "400": {
+                        "description": "Invalid or expired code"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": []
+            }
+        },
         "/password/reset-code": {
             "post": {
                 "tags": [

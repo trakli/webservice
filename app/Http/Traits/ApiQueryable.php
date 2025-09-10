@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
-use Whilesmart\LaravelUserAuthentication\Traits\ApiResponse;
+use Whilesmart\UserAuthentication\Traits\ApiResponse;
 
 trait ApiQueryable
 {

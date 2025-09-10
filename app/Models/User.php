@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasDevices, HasFactory, Notifiable;
+    use Configurable, HasApiTokens, HasDevices, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +27,15 @@ class User extends Authenticatable
         'phone',
         'email',
         'password',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'avatar_url',
     ];
 
     /**
@@ -76,5 +86,10 @@ class User extends Authenticatable
     public function fileImports(): HasMany
     {
         return $this->hasMany(FileImport::class);
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->getConfigValue('avatar');
     }
 }

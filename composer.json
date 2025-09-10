@@ -15,10 +15,12 @@
         "laravel/framework": "^11.45.1",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
-        "zircote/swagger-php": "^5.0",
-        "whilesmart/laravel-user-authentication": "dev-main",
+        "smartpings/php-sdk": "dev-main",
+        "whilesmart/eloquent-model-configuration": "dev-main",
         "whilesmart/laravel-plugin-engine": "dev-main",
-        "whilesmart/laravel-user-devices": "dev-main"
+        "whilesmart/laravel-user-authentication": "dev-main",
+        "whilesmart/laravel-user-devices": "dev-main",
+        "zircote/swagger-php": "^5.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

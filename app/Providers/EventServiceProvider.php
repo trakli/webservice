@@ -4,13 +4,15 @@ namespace App\Providers;
 
 use App\Listeners\PasswordResetCodeGeneratedListener;
 use App\Listeners\PasswordResetCompleteListener;
+use App\Listeners\TestVerificationCodeListener;
 use App\Models\Transaction;
 use App\Observers\TransactionObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCodeGeneratedEvent;
-use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCompleteEvent;
+use Whilesmart\UserAuthentication\Events\PasswordResetCodeGeneratedEvent;
+use Whilesmart\UserAuthentication\Events\PasswordResetCompleteEvent;
+use Whilesmart\UserAuthentication\Events\VerificationCodeGeneratedEvent;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -28,6 +30,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         PasswordResetCompleteEvent::class => [
             PasswordResetCompleteListener::class,
+        ],
+        VerificationCodeGeneratedEvent::class => [
+            TestVerificationCodeListener::class,
         ],
     ];
 
