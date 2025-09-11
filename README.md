@@ -23,16 +23,30 @@ Trakli is a personal income tracking application built using Laravel. The applic
 
 - Docker
 - Docker Compose
+- Make
 
 ### Quick installation guide
 - `git clone git@github.com:whilesmart/trakli-webservice.git`
 - `cd trakli-webservice`
 - `cp .env.example .env`
-- `docker compose up -d app`
-- `docker compose exec app composer install`
-- `docker compose exec app php artisan key:generate`
-- `docker compose exec app php artisan migrate`
-- `docker compose exec app php artisan db:seed`
+- `make setup`
+
+### Development Commands
+- `make up` - Start containers
+- `make down` - Stop containers
+- `make restart` - Restart containers
+- `make test` - Run tests
+- `make lint` - Check code style
+- `make lint-fix` - Fix code style issues
+- `make migrate` - Run database migrations
+- `make migrate-fresh` - Fresh migrations (drops all tables)
+- `make seed` - Run database seeders
+- `make migrate-fresh-seed` - Fresh migrations + seeders
+- `make optimize` - Optimize Laravel application (cache config, routes, views)
+- `make tinker` - Open Laravel Tinker REPL
+- `make bash` - Access container bash shell
+- `make logs` - View application logs
+- `make fix-permissions` - Fix file permission issues
 
 For detailed and explained installation steps see : [INSTALLATION.md](INSTALLATION.md)
 
@@ -46,7 +60,7 @@ For detailed and explained installation steps see : [INSTALLATION.md](INSTALLATI
 To stop the Docker containers, run:
 
 ```bash
-docker compose stop
+make down
 ```
 
 ### LICENSE
