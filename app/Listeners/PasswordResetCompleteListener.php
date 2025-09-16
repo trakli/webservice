@@ -3,7 +3,7 @@
 namespace App\Listeners;
 
 use App\Services\NotificationService;
-use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCompleteEvent;
+use Whilesmart\UserAuthentication\Events\PasswordResetCompleteEvent;
 
 class PasswordResetCompleteListener
 {

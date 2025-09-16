@@ -21,34 +21,25 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Auth routes
-Route::group(['prefix' => 'v1', 'middleware' => ['request.body.json']], function () {
-    require 'user-authentication.php';
-});
+// Stateless public routes are now automatically registered by the user-authentication package
 
-// Resource routes
-Route::group(['prefix' => 'v1'], function () {
-    Route::group(['middleware' => ['auth:sanctum']], function () {
-        Route::group(['middleware' => ['request.body.json']], function () {
-            Route::get('/user', [UserController::class, 'show']);
-            Route::apiResource('groups', GroupController::class);
-            Route::apiResource('parties', PartyController::class);
-            Route::apiResource('wallets', WalletController::class);
-            Route::apiResource('transfers', TransferController::class);
-        });
-        Route::apiResource('transactions', TransactionController::class);
-        Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
-        Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
-        Route::apiResource('categories', CategoryController::class);
-
+// Stateful authenticated routes
+Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
+    Route::group(['middleware' => ['request.body.json']], function () {
+        Route::get('/user', [UserController::class, 'show']);
+        Route::apiResource('groups', GroupController::class);
+        Route::apiResource('parties', PartyController::class);
+        Route::apiResource('wallets', WalletController::class);
+        Route::apiResource('transfers', TransferController::class);
     });
-});
+    Route::apiResource('transactions', TransactionController::class);
+    Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
+    Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::apiResource('categories', CategoryController::class);
 
-Route::group(['prefix' => 'v1'], function () {
-    Route::group(['middleware' => ['auth:sanctum']], function () {
-        Route::post('import', [ImportController::class, 'import']);
-        Route::get('imports', [ImportController::class, 'getImports']);
-        Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);
-        Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
-    });
+    // Import routes
+    Route::post('import', [ImportController::class, 'import']);
+    Route::get('imports', [ImportController::class, 'getImports']);
+    Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);
+    Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
 });

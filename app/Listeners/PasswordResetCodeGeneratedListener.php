@@ -3,7 +3,7 @@
 namespace App\Listeners;
 
 use App\Services\NotificationService;
-use Whilesmart\LaravelUserAuthentication\Events\PasswordResetCodeGeneratedEvent;
+use Whilesmart\UserAuthentication\Events\PasswordResetCodeGeneratedEvent;
 
 class PasswordResetCodeGeneratedListener
 {
