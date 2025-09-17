@@ -285,8 +285,6 @@ class TransactionController extends ApiController
                     $next_date = get_next_transaction_schedule_date($recurring_transaction);
                     RecurrentTransactionJob::dispatch(
                         id: (int) $recurring_transaction->id,
-                        recurrence_period: $recurring_transaction->recurrence_period,
-                        recurrence_interval: $recurring_transaction->recurrence_interval,
                     )->delay($next_date);
                 }
 
@@ -574,9 +572,8 @@ class TransactionController extends ApiController
                         // schedule next task.
                         $next_date = get_next_transaction_schedule_date($recurring_transaction);
                         RecurrentTransactionJob::dispatch(
-                            id: (int) $recurring_transaction->id,
-                            recurrence_period: $recurring_transaction->recurrence_period,
-                            recurrence_interval: $recurring_transaction->recurrence_interval)->delay($next_date);
+                            id: (int) $recurring_transaction->id
+                        )->delay($next_date);
                     }
                 }
 
