@@ -458,6 +458,13 @@ class TransactionsTest extends TestCase
 
         $transactions = Transaction::count();
         $this->assertEquals(2, $transactions);
+
+        // forward the time so that the second transaction should run
+        Carbon::setTestNow(now()->addDay());
+        $this->runQueueWorkerOnce();
+
+        $transactions = Transaction::count();
+        $this->assertEquals(3, $transactions);
     }
 
     private function runQueueWorkerOnce(): void

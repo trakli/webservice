@@ -5,10 +5,12 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
+use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\FileService;
+use App\Services\RecurringTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,13 @@ use Throwable;
 class TransactionController extends ApiController
 {
     use ApiQueryable;
+
+    private RecurringTransactionService $recurring_transaction_service;
+
+    public function __construct(RecurringTransactionService $recurring_transaction_service)
+    {
+        $this->recurring_transaction_service = $recurring_transaction_service;
+    }
 
     #[OA\Get(
         path: '/transactions',
@@ -280,14 +289,15 @@ class TransactionController extends ApiController
 
                 // check if this transaction is recurring
                 if (! empty($recurring_transaction_data)) {
-                    $recurring_transaction = $transaction->recurring_transaction_rule()->create($recurring_transaction_data);
-                    // schedule next task.
-                    $next_date = get_next_transaction_schedule_date($recurring_transaction);
+                    // Create recurring transaction
+                    $recurring_transaction = new RecurringTransactionRule($recurring_transaction_data);
+                    $recurring_transaction->next_scheduled_at = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
+                    $recurring_transaction->transaction_id = $transaction->id;
+                    $recurring_transaction->save();
+
                     RecurrentTransactionJob::dispatch(
-                        id: (int) $recurring_transaction->id,
-                        recurrence_period: $recurring_transaction->recurrence_period,
-                        recurrence_interval: $recurring_transaction->recurrence_interval,
-                    )->delay($next_date);
+                        (int) $recurring_transaction->id
+                    )->delay($recurring_transaction->next_scheduled_at);
                 }
 
                 return $transaction;
@@ -558,25 +568,26 @@ class TransactionController extends ApiController
                     $schedule_job = true;
 
                     if (is_null($recurring_transaction)) {
-                        // create a new recurring transaction
-                        $recurring_transaction = $transaction->recurring_transaction_rule()->create($recurring_transaction_data);
+                        $recurring_transaction = new RecurringTransactionRule($recurring_transaction_data); // create temporay instance from data array
+                        $recurring_transaction->next_scheduled_at = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
+                        $recurring_transaction->transaction_id = $transaction->id;
+                        $recurring_transaction->save();
                     } else {
                         // Check if details have changed. If not, do not reschedule the job
                         if (($recurring_transaction_data['recurrence_period'] == $recurring_transaction->recurrence_period)
                             &&
                             ($recurring_transaction_data['recurrence_interval'] == $recurring_transaction->recurrence_interval)) {
                             $schedule_job = false;
+                        } else {
+                            $recurring_transaction_data['next_scheduled_at'] = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
                         }
                         $recurring_transaction->update($recurring_transaction_data);
 
                     }
                     if ($schedule_job) {
-                        // schedule next task.
-                        $next_date = get_next_transaction_schedule_date($recurring_transaction);
                         RecurrentTransactionJob::dispatch(
-                            id: (int) $recurring_transaction->id,
-                            recurrence_period: $recurring_transaction->recurrence_period,
-                            recurrence_interval: $recurring_transaction->recurrence_interval)->delay($next_date);
+                            (int) $recurring_transaction->id
+                        )->delay($recurring_transaction->next_scheduled_at);
                     }
                 }
 
