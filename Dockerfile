@@ -25,8 +25,18 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Create user and group with host IDs
-RUN groupadd -g ${HOST_GID} www-data || groupmod -g ${HOST_GID} www-data \
-    && useradd -u ${HOST_UID} -g www-data -m -s /bin/bash trakli
+RUN set -eux; \
+    # It's important to remove users before groups.
+    if getent passwd trakli >/dev/null; then userdel trakli; fi; \
+    if getent passwd www-data >/dev/null; then userdel www-data; fi; \
+    \
+    # Delete and recreate www-data group to ensure it has the correct GID.
+    if getent group www-data >/dev/null; then groupdel www-data; fi; \
+    groupadd -o -g ${HOST_GID} www-data; \
+    \
+    # Create trakli user with the correct UID and GID.
+    useradd -u ${HOST_UID} -g www-data -m -s /bin/bash trakli
+
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/sites-available/default
