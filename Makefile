@@ -1,10 +1,12 @@
-.PHONY: setup up down restart composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs
+.DEFAULT_GOAL := help
+
+.PHONY: setup up down stop restart composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs help
 
 # Get current user's UID and GID
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 
-setup:
+setup: ## Build and start the application
 	@echo "Building custom image with HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID)"
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose build app
 	@echo "Starting containers..."
@@ -19,64 +21,72 @@ setup:
 	$(MAKE) migrate-fresh-seed
 	@echo "Setup complete! Application ready at http://localhost:8000"
 
-up:
+up: ## Start the application
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose up -d
 
-down:
+down: ## Stop and remove the application containers
 	docker compose down
 
-restart:
+stop: ## Stop the application containers
+	docker compose stop
+
+restart: ## Restart the application
 	$(MAKE) down
 	$(MAKE) up
 
-composer-install:
+composer-install: ## Install composer dependencies
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer install
 
-composer-update:
+composer-update: ## Update composer dependencies
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer update
 
-test:
+test: ## Run tests
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user trakli app php artisan test
 
-lint:
+lint: ## Lint the code
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer pint:test
 
-lint-fix:
+lint-fix: ## Fix linting errors
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer pint
 
-openapi:
+openapi: ## Generate OpenAPI documentation
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer openapi
 
-openapi-test:
+openapi-test: ## Test OpenAPI documentation
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer openapi:test
 
-clean:
+clean: ## Stop and remove all containers, networks, and volumes
 	docker compose down --rmi all -v
 
-migrate:
+migrate: ## Run database migrations
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate
 
-migrate-fresh:
+migrate-fresh: ## Drop all tables and re-run all migrations
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate:fresh
 
-seed:
+seed: ## Seed the database
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan db:seed
 
-migrate-fresh-seed:
+migrate-fresh-seed: ## Run fresh migrations with seeders
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate:fresh --seed
 
-optimize:
+optimize: ## Optimize the application
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan optimize
 
-tinker:
+tinker: ## Start a tinker session
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan tinker
 
-bash:
+bash: ## Start a bash session in the app container
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app bash
 
-fix-permissions:
+fix-permissions: ## Fix file permissions
 	docker compose exec app bash -c "chown -R trakli:www-data /var/www/html && chmod -R 775 /var/www/html/storage && chmod -R 775 /var/www/html/bootstrap/cache"
 
-logs:
+logs: ## Show application logs
 	docker compose logs -f app
 
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
