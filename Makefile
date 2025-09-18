@@ -16,7 +16,7 @@ setup: ## Build and start the application
 	@echo "Installing composer dependencies..."
 	$(MAKE) composer-install
 	@echo "Generating application key..."
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan key:generate
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan key:generate
 	@echo "Running fresh migrations with seeders..."
 	$(MAKE) migrate-fresh-seed
 	@echo "Setup complete! Application ready at http://localhost:8000"
@@ -35,52 +35,52 @@ restart: ## Restart the application
 	$(MAKE) up
 
 composer-install: ## Install composer dependencies
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer install
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer install
 
 composer-update: ## Update composer dependencies
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer update
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer update
 
 test: ## Run tests
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user trakli app php artisan test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test
 
 lint: ## Lint the code
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer pint:test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint:test
 
 lint-fix: ## Fix linting errors
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer pint
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint
 
 openapi: ## Generate OpenAPI documentation
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer openapi
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer openapi
 
 openapi-test: ## Test OpenAPI documentation
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app composer openapi:test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer openapi:test
 
 clean: ## Stop and remove all containers, networks, and volumes
 	docker compose down --rmi all -v
 
 migrate: ## Run database migrations
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan migrate
 
 migrate-fresh: ## Drop all tables and re-run all migrations
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate:fresh
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan migrate:fresh
 
 seed: ## Seed the database
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan db:seed
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan db:seed
 
 migrate-fresh-seed: ## Run fresh migrations with seeders
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan migrate:fresh --seed
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan migrate:fresh --seed
 
 optimize: ## Optimize the application
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan optimize
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan optimize
 
 tinker: ## Start a tinker session
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app php artisan tinker
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan tinker
 
 bash: ## Start a bash session in the app container
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user trakli app bash
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app bash
 
 fix-permissions: ## Fix file permissions
-	docker compose exec app bash -c "chown -R trakli:www-data /var/www/html && chmod -R 775 /var/www/html/storage && chmod -R 775 /var/www/html/bootstrap/cache"
+	docker compose exec app bash -c "chown -R www-data:www-data /var/www/html && chmod -R 775 /var/www/html/storage && chmod -R 775 /var/www/html/bootstrap/cache"
 
 logs: ## Show application logs
 	docker compose logs -f app
