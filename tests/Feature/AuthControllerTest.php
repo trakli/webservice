@@ -6,7 +6,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Hash;
+use Mockery;
 use Tests\TestCase;
+use Whilesmart\UserAuthentication\Services\SmartPingsVerificationService;
 
 class AuthControllerTest extends TestCase
 {
@@ -14,26 +16,58 @@ class AuthControllerTest extends TestCase
 
     public function test_api_user_can_register_successfully()
     {
-        $response = $this->postJson('/api/v1/register', [
+        $registrationData = [
             'email' => $this->faker->unique()->safeEmail,
             'first_name' => $this->faker->firstName,
             'last_name' => $this->faker->lastName,
             'username' => $this->faker->userName,
             'phone' => $this->faker->phoneNumber,
             'password' => 'password123',
-        ]);
+        ];
 
-        $response->assertStatus(201)
-            ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'user',
-                    'token',
-                ],
-                'message',
-            ]);
+        $mockService = Mockery::mock(SmartPingsVerificationService::class);
+        $mockService->shouldReceive('isEnabled')->andReturn(true);
+        $mockService->shouldReceive('isVerified')->andReturn(false);
+        $this->app->instance(SmartPingsVerificationService::class, $mockService);
 
-        $this->assertDatabaseHas('users', ['email' => $response->json('data.user.email')]);
+        $response = $this->postJson('/api/v1/register', $registrationData);
+
+        $requireEmailVerification = config('user-authentication.verification.require_email_verification', false);
+        $requirePhoneVerification = config('user-authentication.verification.require_phone_verification', false);
+
+        if ($requireEmailVerification || $requirePhoneVerification) {
+            // When verification is required, registration should fail with 422
+            $response->assertStatus(422)
+                ->assertJson([
+                    'success' => false,
+                ]);
+
+            // Check that a verification message is returned
+            // Note: When both email and phone verification are enabled,
+            // the message depends on which verification is checked first
+            $responseContent = $response->getContent();
+            $this->assertTrue(
+                str_contains($responseContent, 'Email verification required') ||
+                str_contains($responseContent, 'Phone verification required'),
+                'Expected verification required message not found in response'
+            );
+
+            // User should not be created in database
+            $this->assertDatabaseMissing('users', ['email' => $registrationData['email']]);
+        } else {
+            // When verification is not required, registration should succeed
+            $response->assertStatus(201)
+                ->assertJsonStructure([
+                    'success',
+                    'data' => [
+                        'user',
+                        'token',
+                    ],
+                    'message',
+                ]);
+
+            $this->assertDatabaseHas('users', ['email' => $response->json('data.user.email')]);
+        }
     }
 
     public function test_api_user_receives_register_validation_error_when_required_fields_are_missing()
