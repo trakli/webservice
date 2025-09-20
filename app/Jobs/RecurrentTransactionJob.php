@@ -28,13 +28,13 @@ class RecurrentTransactionJob implements ShouldQueue
      */
     public function handle(RecurringTransactionService $service): void
     {
-        logger()->info('Handling recurrent transaction for rule ID: ' . $this->ruleId);
+        logger()->info('Handling recurrent transaction for rule ID: '.$this->ruleId);
 
         try {
             // Call the service to do all the work.
             $service->generateNextTransaction($this->ruleId);
         } catch (\Exception $e) {
-            logger()->error('Error processing job for rule ' . $this->ruleId . ': ' . $e->getMessage());
+            logger()->error('Error processing job for rule '.$this->ruleId.': '.$e->getMessage());
         }
     }
 }

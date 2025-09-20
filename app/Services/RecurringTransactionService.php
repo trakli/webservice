@@ -19,14 +19,16 @@ class RecurringTransactionService
         $rule = RecurringTransactionRule::with('transaction')->find($ruleId);
 
         // 2. If the rule doesn't exist, we stop here.
-        if (!$rule) {
-            logger()->info('Recurring transaction rule ' . $ruleId . ' not found.');
+        if (! $rule) {
+            logger()->info('Recurring transaction rule '.$ruleId.' not found.');
+
             return;
         }
 
         // 3. Make sure the rule is still active and hasn't expired.
-        if ($rule->recurrence_ends_at && $rule->recurrence_ends_at < now() ) {
-            logger()->info('Rule ' . $ruleId . ' has expired. Skipping.');
+        if ($rule->recurrence_ends_at && $rule->recurrence_ends_at < now()) {
+            logger()->info('Rule '.$ruleId.' has expired. Skipping.');
+
             return;
         }
 
@@ -39,10 +41,10 @@ class RecurringTransactionService
 
             // 6. Tell Laravel to run the job again at that future date.
             dispatch(new \App\Jobs\RecurrentTransactionJob($rule->id))->delay($nextRunDate);
-            logger()->info('Scheduled next transaction for ' . $rule->id . ' at ' . $nextRunDate);
+            logger()->info('Scheduled next transaction for '.$rule->id.' at '.$nextRunDate);
 
         } catch (\Exception $e) {
-            logger()->error('Error processing rule ' . $ruleId . ': ' . $e->getMessage());
+            logger()->error('Error processing rule '.$ruleId.': '.$e->getMessage());
         }
     }
 
