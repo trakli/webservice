@@ -84,7 +84,6 @@ class RecurringTransactionService
         $newTransaction->save();
         $newTransaction->markAsSynced();
 
-        // Copy over any related data, like categories.
         if ($originalTransaction->categories->isNotEmpty()) {
             $newTransaction->categories()->sync($originalTransaction->categories->pluck('id'));
         }
@@ -98,7 +97,6 @@ class RecurringTransactionService
     private function calculateNextRunDate(RecurringTransactionRule $rule): Carbon
     {
         // Use a function that exists in your project to calculate the next date.
-        // I have assumed it's called get_next_transaction_schedule_date
         return get_next_transaction_schedule_date($rule);
     }
 }
