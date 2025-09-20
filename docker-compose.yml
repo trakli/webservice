@@ -1,11 +1,9 @@
 services:
     app:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            args:
-                HOST_UID: '${HOST_UID}'
-                HOST_GID: '${HOST_GID}'
+        image: shinsenter/laravel:php8.2
+        environment:
+            APP_UID: '${APP_UID:-1001}'
+            APP_GID: '${APP_GID:-1001}'
         ports:
             - '${APP_PORT:-8000}:80'
         tty: true
