@@ -35,410 +35,6 @@
         }
     ],
     "paths": {
-        "/register": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Register a new user",
-                "operationId": "611a305423663b1414e03288a7455c8a",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email",
-                                    "first_name",
-                                    "password"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "first_name": {
-                                        "type": "string"
-                                    },
-                                    "last_name": {
-                                        "type": "string"
-                                    },
-                                    "username": {
-                                        "type": "string"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "User registered successfully"
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    }
-                },
-                "security": []
-            }
-        },
-        "/login": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "User login",
-                "operationId": "43b6ed5a477f197b7055999dc6da9af4",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "password"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "phone": {
-                                        "type": "string"
-                                    },
-                                    "username": {
-                                        "type": "string"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "User successfully logged in"
-                    },
-                    "401": {
-                        "description": "Invalid credentials"
-                    },
-                    "500": {
-                        "description": "Server error"
-                    }
-                },
-                "security": []
-            }
-        },
-        "/logout": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "User logout",
-                "operationId": "c33bd08d9370329a1abd7dde4bf98f2e",
-                "responses": {
-                    "200": {
-                        "description": "User successfully logged out"
-                    },
-                    "401": {
-                        "description": "Invalid credentials"
-                    },
-                    "500": {
-                        "description": "Server error"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/oauth/{driver}/login": {
-            "get": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Get Oauth redirect URI",
-                "operationId": "808273533231a245e8c285fd57808c46",
-                "responses": {
-                    "200": {
-                        "description": "URL generated"
-                    },
-                    "500": {
-                        "description": "Server error"
-                    }
-                }
-            }
-        },
-        "/oauth/{driver}/callback": {
-            "get": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Handles Oauth login callback",
-                "operationId": "c5cf9bc3474a3cb88a3ebbbe9b18af80",
-                "responses": {
-                    "200": {
-                        "description": " "
-                    },
-                    "500": {
-                        "description": "Server error"
-                    }
-                }
-            }
-        },
-        "/send-verification-code": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Send verification code to email or phone",
-                "operationId": "ec38e33eb8277eb8c19a671157479255",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "contact",
-                                    "type"
-                                ],
-                                "properties": {
-                                    "contact": {
-                                        "description": "Email address or phone number",
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "description": "Type of contact",
-                                        "type": "string",
-                                        "enum": [
-                                            "email",
-                                            "phone"
-                                        ]
-                                    },
-                                    "purpose": {
-                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
-                                        "type": "string",
-                                        "enum": [
-                                            "registration",
-                                            "login"
-                                        ],
-                                        "example": "registration"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Verification code sent successfully"
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    },
-                    "429": {
-                        "description": "Too many requests"
-                    }
-                },
-                "security": []
-            }
-        },
-        "/verify-code": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Verify a code for email or phone",
-                "operationId": "247db2a5dd7f5c9c22b78cbe2a855dda",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "contact",
-                                    "code",
-                                    "type"
-                                ],
-                                "properties": {
-                                    "contact": {
-                                        "description": "Email address or phone number",
-                                        "type": "string"
-                                    },
-                                    "code": {
-                                        "description": "Verification code",
-                                        "type": "string"
-                                    },
-                                    "type": {
-                                        "description": "Type of contact",
-                                        "type": "string",
-                                        "enum": [
-                                            "email",
-                                            "phone"
-                                        ]
-                                    },
-                                    "purpose": {
-                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
-                                        "type": "string",
-                                        "enum": [
-                                            "registration",
-                                            "login"
-                                        ],
-                                        "example": "registration"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Code verified successfully"
-                    },
-                    "400": {
-                        "description": "Invalid or expired code"
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    }
-                },
-                "security": []
-            }
-        },
-        "/password/reset-code": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Send password reset code",
-                "operationId": "d7bd4048a078e81fd162df22143d2202",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "description": "The email address of the user",
-                                        "type": "string",
-                                        "format": "email"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Password reset code sent successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Password reset code sent successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    }
-                },
-                "security": []
-            }
-        },
-        "/password/reset": {
-            "post": {
-                "tags": [
-                    "Authentication"
-                ],
-                "summary": "Reset password using verification code",
-                "operationId": "cbf277486c1013312ea1693dc185daa9",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email",
-                                    "code",
-                                    "new_password"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "description": "The email address of the user",
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "code": {
-                                        "description": "The verification code sent to the user",
-                                        "type": "integer"
-                                    },
-                                    "new_password": {
-                                        "description": "The new password for the user",
-                                        "type": "string"
-                                    },
-                                    "new_password_confirmation": {
-                                        "description": "Confirmation of the new password",
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Password reset successful",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Password has been reset successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    },
-                    "400": {
-                        "description": "Invalid or expired code"
-                    }
-                },
-                "security": []
-            }
-        },
         "/categories": {
             "get": {
                 "tags": [
@@ -2200,6 +1796,291 @@
                     }
                 }
             }
+        },
+        "/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Register a new user",
+                "operationId": "49bb9739139edd65051205fe4de62a23",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "first_name",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "first_name": {
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "type": "string"
+                                    },
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User registered successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User login",
+                "operationId": "5498d418bd27b89f6121622fb00eec6e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "username": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User successfully logged in"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "User logout",
+                "operationId": "a24c4bfaa2713e03e04d3ce1b9a745a0",
+                "responses": {
+                    "200": {
+                        "description": "User successfully logged out"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/oauth/{driver}/login": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get Oauth redirect URI",
+                "operationId": "360160f39d8122bd949891b7e637b873",
+                "responses": {
+                    "200": {
+                        "description": "URL generated"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/oauth/{driver}/callback": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Handles Oauth login callback",
+                "operationId": "14c6f36da3d444f70e3c0423bb84cfd1",
+                "responses": {
+                    "200": {
+                        "description": " "
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/send-verification-code": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Send verification code to email or phone",
+                "operationId": "15fb0586c6ee12a7f204c9b90bb455ea",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "contact": {
+                                        "description": "Email address or phone number",
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "description": "Type of contact",
+                                        "type": "string",
+                                        "enum": [
+                                            "email",
+                                            "phone"
+                                        ]
+                                    },
+                                    "purpose": {
+                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
+                                        "type": "string",
+                                        "enum": [
+                                            "registration",
+                                            "login"
+                                        ],
+                                        "example": "registration"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Verification code sent successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "429": {
+                        "description": "Too many requests"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/verify-code": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Verify a code for email or phone",
+                "operationId": "12daf8badabf51ec4d4781481fcfdadc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "contact",
+                                    "code",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "contact": {
+                                        "description": "Email address or phone number",
+                                        "type": "string"
+                                    },
+                                    "code": {
+                                        "description": "Verification code",
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "description": "Type of contact",
+                                        "type": "string",
+                                        "enum": [
+                                            "email",
+                                            "phone"
+                                        ]
+                                    },
+                                    "purpose": {
+                                        "description": "Purpose of verification (optional, defaults to \"registration\")",
+                                        "type": "string",
+                                        "enum": [
+                                            "registration",
+                                            "login"
+                                        ],
+                                        "example": "registration"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Code verified successfully"
+                    },
+                    "400": {
+                        "description": "Invalid or expired code"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": []
+            }
         }
     },
     "components": {
@@ -2748,10 +2629,6 @@
     ],
     "tags": [
         {
-            "name": "Authentication",
-            "description": "Endpoints for password reset"
-        },
-        {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
         },
@@ -2762,6 +2639,10 @@
         {
             "name": "Transfers",
             "description": "Endpoints for managing transfers"
+        },
+        {
+            "name": "Authentication",
+            "description": "Endpoints for user authentication"
         },
         {
             "name": "Groups",
