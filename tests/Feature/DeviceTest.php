@@ -9,7 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
-class PartyTest extends TestCase
+class DeviceTest extends TestCase
 {
     use RefreshDatabase;
 

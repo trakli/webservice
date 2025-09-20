@@ -6,6 +6,7 @@ use App\Models\ModelSyncState;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
+use Whilesmart\UserDevices\Models\Device;
 
 trait Syncable
 {
@@ -43,10 +44,18 @@ trait Syncable
         $random_id = $exploded_value[1];
 
         // check if this device exists
-        $device = $user->devices()->where('token', $device_id)->first();
+        $device = Device::where('token', $device_id)->first();
         if (empty($device)) {
             $device = $user->devices()->create(['token' => $device_id]);
+        } else {
+            // reassign device if it belongs to another user since device tokens are unique to every device
+            if ($device->deviceable_id != $user->id) {
+                // assign device to the new user
+                $device->deviceable_id = $user->id;
+                $device->save();
+            }
         }
+
         $this->syncState()->updateOrCreate([], ['client_generated_id' => $random_id, 'device_id' => $device->id]);
     }
 
