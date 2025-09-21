@@ -3928,12 +3928,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/smartpingshq/php-sdk.git",
-                "reference": "5ae7761654c3901531c259dcecb654b8162a725c"
+                "reference": "fa0e563c369fae77b8c9629ac44b111dae466edb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/smartpingshq/php-sdk/zipball/5ae7761654c3901531c259dcecb654b8162a725c",
-                "reference": "5ae7761654c3901531c259dcecb654b8162a725c",
+                "url": "https://api.github.com/repos/smartpingshq/php-sdk/zipball/fa0e563c369fae77b8c9629ac44b111dae466edb",
+                "reference": "fa0e563c369fae77b8c9629ac44b111dae466edb",
                 "shasum": ""
             },
             "require": {
@@ -3975,7 +3975,7 @@
                 "issues": "https://github.com/smartpingshq/php-sdk/issues",
                 "source": "https://github.com/smartpingshq/php-sdk/tree/main"
             },
-            "time": "2025-09-01T23:08:50+00:00"
+            "time": "2025-09-18T22:46:28+00:00"
         },
         {
             "name": "symfony/clock",
@@ -6762,17 +6762,18 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/laravel-user-authentication.git",
-                "reference": "aa654c5c12a6092c70287f0355de9a3e0efbcffc"
+                "reference": "82b8586ed029fe8c80924517d1dd83e4e57a24c8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/laravel-user-authentication/zipball/aa654c5c12a6092c70287f0355de9a3e0efbcffc",
-                "reference": "aa654c5c12a6092c70287f0355de9a3e0efbcffc",
+                "url": "https://api.github.com/repos/whilesmartphp/laravel-user-authentication/zipball/82b8586ed029fe8c80924517d1dd83e4e57a24c8",
+                "reference": "82b8586ed029fe8c80924517d1dd83e4e57a24c8",
                 "shasum": ""
             },
             "require": {
                 "laravel/sanctum": "^4.1",
-                "laravel/socialite": "^5.23"
+                "laravel/socialite": "^5.23",
+                "smartpings/php-sdk": "dev-main"
             },
             "require-dev": {
                 "fakerphp/faker": "^1.24",
@@ -6810,7 +6811,7 @@
                 "issues": "https://github.com/whilesmartphp/laravel-user-authentication/issues",
                 "source": "https://github.com/whilesmartphp/laravel-user-authentication/tree/main"
             },
-            "time": "2025-09-10T18:05:13+00:00"
+            "time": "2025-09-20T12:32:28+00:00"
         },
         {
             "name": "whilesmart/laravel-user-devices",
