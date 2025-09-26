@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Transaction;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class TransactionsTest extends TestCase
@@ -396,6 +398,76 @@ class TransactionsTest extends TestCase
         $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
         $this->assertEquals(2, $transaction['recurring_rules']['recurrence_interval']);
         $this->assertEquals($transaction['id'], $transaction['recurring_rules']['transaction_id']);
+    }
+
+    public function test_next_scheduled_transaction_should_not_run_if_recurrence_changes()
+    {
+        // Test weekly recurrence
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'daily',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $transaction['recurring_rules']['recurrence_interval']);
+
+        // forward the time so that the first transaction should run
+        Carbon::setTestNow(now()->addDay());
+        $this->runQueueWorkerOnce();
+
+        $transactions = Transaction::count();
+        $this->assertEquals(2, $transactions);
+
+        // Update the recurrence period
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'recurrence_period' => 'weekly',
+            'recurrence_interval' => 2,
+            'is_recurring' => true,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $transaction = $response->json('data');
+        $this->assertEquals('weekly', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(2, $transaction['recurring_rules']['recurrence_interval']);
+        $this->assertEquals($transaction['id'], $transaction['recurring_rules']['transaction_id']);
+
+        // forward the time so that the second transaction should run
+        Carbon::setTestNow(now()->addDay());
+        $this->runQueueWorkerOnce();
+
+        $transactions = Transaction::count();
+        $this->assertEquals(2, $transactions);
+    }
+
+    public function test_recurring_transaction_runs_on_next_scheduled_date()
+    {
+        // Test weekly recurrence
+        $transaction = $this->createTransaction('expense', [
+            'recurrence_period' => 'daily',
+            'recurrence_interval' => 1,
+        ]);
+
+        $this->assertDatabaseHas('transactions', ['id' => $transaction['id']]);
+        $this->assertEquals('daily', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(1, $transaction['recurring_rules']['recurrence_interval']);
+
+        // forward the time so that the first transaction should run
+        Carbon::setTestNow(now()->addDay());
+        $this->runQueueWorkerOnce();
+
+        $transactions = Transaction::count();
+        $this->assertEquals(2, $transactions);
+    }
+
+    private function runQueueWorkerOnce(): void
+    {
+        Artisan::call('queue:work', [
+            'connection' => 'database',
+            '--once' => true,
+            '--sleep' => 0,
+            '--tries' => 1,
+        ]);
     }
 
     public function test_api_user_can_create_recurring_transactions_with_different_periods()
