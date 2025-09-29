@@ -61,4 +61,17 @@ trait ApiQueryable
         }
         FileService::updateIcon($model, $validatedData, $request);
     }
+
+    protected function checkUpdatedAt(Model $model, array &$validatedData): void
+    {
+        if (isset($validatedData['updated_at'])) {
+            // Ensure the updated at is always greater than the created at
+            $created_at = $model->created_at;
+            $updated_at = Carbon::parse($validatedData['updated_at']);
+            if ($updated_at->lt($created_at)) {
+                // Remove the value so that laravel defaults to now();
+                unset($validatedData['updated_at']);
+            }
+        }
+    }
 }

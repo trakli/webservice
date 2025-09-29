@@ -249,6 +249,10 @@
                                     "icon_type": {
                                         "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -501,6 +505,10 @@
                                     "icon_type": {
                                         "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -945,6 +953,10 @@
                                     "icon_type": {
                                         "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
@@ -1740,6 +1752,10 @@
                                     "icon_type": {
                                         "description": "The type of the icon (icon or emoji or  image)",
                                         "type": "string"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
                                     }
                                 },
                                 "type": "object"
