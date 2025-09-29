@@ -18,6 +18,8 @@ class TransactionsTest extends TestCase
 
     private $party;
 
+    private $group;
+
     private $user;
 
     public function test_api_user_can_create_transactions()
@@ -37,6 +39,7 @@ class TransactionsTest extends TestCase
             'description' => 'Test transaction description',
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
+            'group_id' => $this->group->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
         ];
 
@@ -58,6 +61,7 @@ class TransactionsTest extends TestCase
                 'description',
                 'datetime',
                 'party_id',
+                'group_id',
                 'wallet_id',
                 'user_id',
                 'client_generated_id',
@@ -809,6 +813,11 @@ class TransactionsTest extends TestCase
 
         $this->party = User::factory()->create()->parties()->create([
             'name' => 'Party',
+            'type' => 'personal',
+        ]);
+
+        $this->group = User::factory()->create()->groups()->create([
+            'name' => 'Group',
             'type' => 'personal',
         ]);
         $this->user = User::factory()->create();

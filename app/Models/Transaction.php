@@ -61,6 +61,7 @@ class Transaction extends Model
         'type',
         'party_id',
         'wallet_id',
+        'group_id',
         'user_id',
         'transfer_id',
         'updated_at',
@@ -70,6 +71,7 @@ class Transaction extends Model
     protected $appends = [
         'wallet',
         'party',
+        'group',
         'categories',
         'last_synced_at',
         'client_generated_id',
@@ -117,6 +119,16 @@ class Transaction extends Model
     public function party()
     {
         return $this->belongsTo(Party::class);
+    }
+
+    public function getGroupAttribute()
+    {
+        return $this->group()->first();
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
     }
 
     public function user()
