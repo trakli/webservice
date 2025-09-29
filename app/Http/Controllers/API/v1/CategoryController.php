@@ -91,6 +91,7 @@ class CategoryController extends ApiController
                     new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
                     new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -133,6 +134,7 @@ class CategoryController extends ApiController
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            'updated_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if ($validator->fails()) {
@@ -142,12 +144,18 @@ class CategoryController extends ApiController
         $data = $validator->validated();
         $user = $request->user();
 
+        if (isset($data['updated_at'])) {
+            $data['updated_at'] = format_iso8601_to_sql($data['updated_at']);
+        }
+
         $category = $user->categories()->find($id);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
         }
         try {
+            $this->checkUpdatedAt($category, $data);
+
             DB::transaction(function () use ($data, $request, &$category) {
                 $this->updateModel($category, $data, $request);
             });

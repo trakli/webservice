@@ -211,6 +211,7 @@ class PartyController extends ApiController
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
                     new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -256,15 +257,22 @@ class PartyController extends ApiController
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
+            'updated_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         $user = $request->user();
         $party = $user->parties()->find($id);
 
+        if (isset($validatedData['updated_at'])) {
+            $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
+        }
+
         if (! $party) {
             return $this->failure(__('Party not found'), 404);
         }
         try {
+            $this->checkUpdatedAt($party, $validatedData);
+
             DB::transaction(function () use ($validatedData, $request, &$party) {
                 $this->updateModel($party, $validatedData, $request);
             });

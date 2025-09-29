@@ -226,6 +226,7 @@ class GroupController extends ApiController
                     ),
                     new OA\Property(property: 'icon', description: 'The icon of the group (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -267,6 +268,7 @@ class GroupController extends ApiController
             'description' => 'sometimes|string|max:255',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            'updated_at' => ['nullable', new Iso8601DateTime],
         ]);
 
         if ($validator->fails()) {
@@ -277,10 +279,16 @@ class GroupController extends ApiController
         $group = $user->groups()->find($id);
         $data = $validator->validated();
 
+        if (isset($data['updated_at'])) {
+            $data['updated_at'] = format_iso8601_to_sql($data['updated_at']);
+        }
+
         if (! $group) {
             return $this->failure(__('Group not found'), 404);
         }
         try {
+            $this->checkUpdatedAt($group, $data);
+
             DB::transaction(function () use ($data, $request, &$group) {
                 $this->updateModel($group, $data, $request);
             });

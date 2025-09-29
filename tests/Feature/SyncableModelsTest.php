@@ -8,6 +8,7 @@ use App\Models\Party;
 use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -74,5 +75,28 @@ class SyncableModelsTest extends TestCase
         $this->assertNotNull($transfer->syncState);
         $this->assertEquals($transfer->syncState->syncable_type, Transfer::class);
         $this->assertEquals($transfer->syncState->syncable_id, $transfer->id);
+    }
+
+    /** @test */
+    public function use_current_date_as_updated_at_if_the_updated_at_is_less_than_created_at_on_update()
+    {
+        $user = User::factory()->create();
+
+        /** @var Transaction */
+        $transaction = Transaction::factory()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'amount' => 200,
+            'updated_at' => '2020-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(200);
+        $transaction = Transaction::find($transaction['id']);
+        $parsed_date = Carbon::parse('2020-05-01T15:17:54.120Z');
+
+        $this->assertTrue($parsed_date->lt($transaction->updated_at));
+
     }
 }

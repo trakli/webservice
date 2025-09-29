@@ -558,6 +558,7 @@ class TransactionController extends ApiController
         try {
             // Validate ownership of all resources before updating the transaction
             $this->validateResourceOwnership($validatedData, $categories);
+            $this->checkUpdatedAt($transaction, $validatedData);
 
             $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
