@@ -1359,13 +1359,13 @@
                                     "party_id": {
                                         "type": "integer"
                                     },
+                                    "group_id": {
+                                        "type": "integer"
+                                    },
                                     "description": {
                                         "type": "string"
                                     },
                                     "wallet_id": {
-                                        "type": "integer"
-                                    },
-                                    "group_id": {
                                         "type": "integer"
                                     },
                                     "is_recurring": {
@@ -1383,6 +1383,13 @@
                                     "recurrence_ends_at": {
                                         "description": "When the transaction stops repeating",
                                         "type": "date-time"
+                                    },
+                                    "categories": {
+                                        "type": "array",
+                                        "items": {
+                                            "description": "Category ID array",
+                                            "type": "integer"
+                                        }
                                     },
                                     "updated_at": {
                                         "type": "string",

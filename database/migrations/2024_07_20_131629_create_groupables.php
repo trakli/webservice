@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('groupables', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('group_id');
             $table->unsignedBigInteger('groupable_id');
             $table->string('groupable_type');
             $table->timestamps();

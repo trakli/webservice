@@ -18,6 +18,10 @@ class TransactionsTest extends TestCase
 
     private $party;
 
+    private $group;
+
+    private $category;
+
     private $user;
 
     public function test_api_user_can_create_transactions()
@@ -37,6 +41,8 @@ class TransactionsTest extends TestCase
             'description' => 'Test transaction description',
             'wallet_id' => $this->wallet->id,
             'party_id' => $this->party->id,
+            'group_id' => $this->group->id,
+            'categories' => [$this->category->id],
             'datetime' => '2025-04-30T15:17:54.120Z',
         ];
 
@@ -58,6 +64,8 @@ class TransactionsTest extends TestCase
                 'description',
                 'datetime',
                 'party_id',
+                'group',
+                'categories',
                 'wallet_id',
                 'user_id',
                 'client_generated_id',
@@ -440,6 +448,16 @@ class TransactionsTest extends TestCase
         $this->assertEquals(2, $transactions);
     }
 
+    private function runQueueWorkerOnce(): void
+    {
+        Artisan::call('queue:work', [
+            'connection' => 'database',
+            '--once' => true,
+            '--sleep' => 0,
+            '--tries' => 1,
+        ]);
+    }
+
     public function test_recurring_transaction_runs_on_next_scheduled_date()
     {
         // Test weekly recurrence
@@ -458,16 +476,6 @@ class TransactionsTest extends TestCase
 
         $transactions = Transaction::count();
         $this->assertEquals(2, $transactions);
-    }
-
-    private function runQueueWorkerOnce(): void
-    {
-        Artisan::call('queue:work', [
-            'connection' => 'database',
-            '--once' => true,
-            '--sleep' => 0,
-            '--tries' => 1,
-        ]);
     }
 
     public function test_api_user_can_create_recurring_transactions_with_different_periods()
@@ -811,6 +819,17 @@ class TransactionsTest extends TestCase
             'name' => 'Party',
             'type' => 'personal',
         ]);
+
+        $this->group = User::factory()->create()->groups()->create([
+            'name' => 'Group',
+            'type' => 'personal',
+        ]);
+
+        $this->category = User::factory()->create()->categories()->create([
+            'name' => 'Category',
+            'type' => 'income',
+        ]);
+
         $this->user = User::factory()->create();
     }
 }

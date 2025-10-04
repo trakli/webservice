@@ -268,6 +268,10 @@ class TransactionController extends ApiController
                     $transaction->categories()->sync($categories);
                 }
 
+                if (isset($data['group_id'])) {
+                    $transaction->groups()->sync($data['group_id']);
+                }
+
                 if ($request->hasFile('files')) {
                     foreach ($request->file('files') as $file) {
                         $path = $file->store('transactions');
@@ -417,13 +421,14 @@ class TransactionController extends ApiController
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
                     new OA\Property(property: 'party_id', type: 'integer'),
+                    new OA\Property(property: 'group_id', type: 'integer'),
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
-                    new OA\Property(property: 'group_id', type: 'integer'),
                     new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
                     new OA\Property(property: 'recurrence_period', description: 'Set how often the transaction should repeat', type: 'string'),
                     new OA\Property(property: 'recurrence_interval', description: 'Set how often the transaction should repeat', type: 'integer'),
                     new OA\Property(property: 'recurrence_ends_at', description: 'When the transaction stops repeating', type: 'date-time'),
+                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID array', type: 'integer')),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -539,6 +544,10 @@ class TransactionController extends ApiController
 
                 if (isset($validatedData['categories'])) {
                     $transaction->categories()->sync($validatedData['categories']);
+                }
+
+                if (isset($validatedData['group_id'])) {
+                    $transaction->groups()->sync([$validatedData['group_id']]);
                 }
 
                 $user = $request->user();
