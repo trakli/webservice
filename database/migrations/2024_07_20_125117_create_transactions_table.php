@@ -19,7 +19,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->unsignedBigInteger('wallet_id')->nullable();
             $table->unsignedBigInteger('party_id')->nullable();
-            $table->unsignedBigInteger('group_id')->nullable();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('transfer_id')->nullable();
             $table->timestamps();
@@ -28,7 +27,6 @@ return new class extends Migration
             $table->foreign('transfer_id')->references('id')->on('transfers')->onDelete('cascade');
             $table->foreign('wallet_id')->references('id')->on('wallets')->onDelete('cascade');
             $table->foreign('party_id')->references('id')->on('parties')->onDelete('cascade');
-            $table->foreign('group_id')->references('id')->on('groups')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }

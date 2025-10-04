@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Groupable;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,7 +48,7 @@ use OpenApi\Attributes as OA;
 )]
 class Transaction extends Model
 {
-    use HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
+    use Groupable, HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
 
     /**
      * The attributes that are mass assignable.
@@ -61,7 +62,6 @@ class Transaction extends Model
         'type',
         'party_id',
         'wallet_id',
-        'group_id',
         'user_id',
         'transfer_id',
         'updated_at',
@@ -119,16 +119,6 @@ class Transaction extends Model
     public function party()
     {
         return $this->belongsTo(Party::class);
-    }
-
-    public function getGroupAttribute()
-    {
-        return $this->group()->first();
-    }
-
-    public function group()
-    {
-        return $this->belongsTo(Group::class);
     }
 
     public function user()
