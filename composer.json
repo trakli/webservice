@@ -16,10 +16,10 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
         "smartpings/php-sdk": "dev-main",
-        "whilesmart/eloquent-model-configuration": "dev-main",
-        "whilesmart/laravel-plugin-engine": "dev-main",
-        "whilesmart/laravel-user-authentication": "dev-main",
-        "whilesmart/laravel-user-devices": "dev-main",
+        "whilesmart/eloquent-model-configuration": "^1.0.2",
+        "whilesmart/laravel-plugin-engine": "^1.0.0",
+        "whilesmart/laravel-user-authentication": "^1.0.3",
+        "whilesmart/laravel-user-devices": "^1.0.0",
         "zircote/swagger-php": "^5.0"
     },
     "require-dev": {
