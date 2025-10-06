@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fbfb453911fa93b8f84a492f8d80bfee",
+    "content-hash": "0bf8c3eb699097e43f272dba2882f64f",
     "packages": [
         {
             "name": "brick/math",
@@ -6645,16 +6645,16 @@
         },
         {
             "name": "whilesmart/eloquent-model-configuration",
-            "version": "v1.0.2",
+            "version": "v1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-model-configs.git",
-                "reference": "a527d50b37cd859d6cb4a0ca7c6d214c06d30bd6"
+                "reference": "2937bf2f8afb916b21815e4c26e93a6d7703f665"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/a527d50b37cd859d6cb4a0ca7c6d214c06d30bd6",
-                "reference": "a527d50b37cd859d6cb4a0ca7c6d214c06d30bd6",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/2937bf2f8afb916b21815e4c26e93a6d7703f665",
+                "reference": "2937bf2f8afb916b21815e4c26e93a6d7703f665",
                 "shasum": ""
             },
             "require": {
@@ -6693,9 +6693,9 @@
             "description": "Laravel package for managing model-specific configurations with type safety and easy persistence",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-model-configs/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.2"
+                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.3"
             },
-            "time": "2025-10-06T17:27:18+00:00"
+            "time": "2025-10-06T21:28:27+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",

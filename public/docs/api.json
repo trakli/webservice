@@ -1804,6 +1804,231 @@
                 }
             }
         },
+        "/configurations": {
+            "get": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Get all configurations for the current user",
+                "operationId": "6b43348d9d0424e656ef6b6e3f2fdba4",
+                "responses": {
+                    "200": {
+                        "description": "List of all user configurations",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Configurations retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "user_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "key": {
+                                                        "type": "string",
+                                                        "example": "theme_preference"
+                                                    },
+                                                    "value": {
+                                                        "type": "object",
+                                                        "example": "{\"theme\": \"dark\", \"color\": \"#333333\"}"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Add a new  configuration",
+                "operationId": "7a584d8f67c6ddc838a66f61038caf67",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "key",
+                                    "value",
+                                    "type"
+                                ],
+                                "properties": {
+                                    "key": {
+                                        "type": "string",
+                                        "example": "theme_preference"
+                                    },
+                                    "value": {
+                                        "type": "object",
+                                        "example": "{\"theme\": \"dark\", \"color\": \"#333333\"}"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "string",
+                                            "int",
+                                            "float",
+                                            "bool",
+                                            "array",
+                                            "json",
+                                            "date"
+                                        ],
+                                        "example": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Configuration added successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/configurations/{key}": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Update an existing user configuration",
+                "operationId": "4c44b407a3f0c16f3948864037425d20",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Configuration key",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "value"
+                                ],
+                                "properties": {
+                                    "value": {
+                                        "type": "object",
+                                        "example": "{\"theme\": \"light\", \"color\": \"#ffffff\"}"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "string",
+                                            "int",
+                                            "float",
+                                            "bool",
+                                            "array",
+                                            "json",
+                                            "date"
+                                        ],
+                                        "example": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Configuration updated successfully"
+                    },
+                    "404": {
+                        "description": "Configuration not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Delete a user configuration",
+                "operationId": "1ced228f48b902998c6d76eba601d00b",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Configuration key",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuration deleted successfully"
+                    },
+                    "404": {
+                        "description": "Configuration not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/register": {
             "post": {
                 "tags": [
@@ -2666,6 +2891,10 @@
         {
             "name": "Wallet",
             "description": "Wallet"
+        },
+        {
+            "name": "Configuration",
+            "description": "Configuration"
         }
     ]
 }
