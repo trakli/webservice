@@ -17,6 +17,10 @@ return new class extends Migration
             $table->unsignedInteger('recurrence_interval')->default(1); // e.g., every 2 weeks
             $table->datetime('recurrence_ends_at')->nullable(); // when to stop recurring
             $table->unsignedBigInteger('transaction_id')->unique(); // original recurring transaction
+
+            $table->timestamp('next_scheduled_at'); // next scheduled occurrence
+            $table->index('next_scheduled_at'); // index for efficient querying
+
             $table->timestamps();
 
             $table->foreign('transaction_id')->references('id')->on('transactions')->onDelete('cascade');

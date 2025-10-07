@@ -2637,6 +2637,11 @@
                         "description": "When the transaction stops repeating",
                         "type": "string",
                         "format": "date-time"
+                    },
+                    "next_scheduled_at": {
+                        "description": "when next the transaction should happen",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"

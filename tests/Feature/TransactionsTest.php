@@ -476,6 +476,13 @@ class TransactionsTest extends TestCase
 
         $transactions = Transaction::count();
         $this->assertEquals(2, $transactions);
+
+        // forward the time so that the second transaction should run
+        Carbon::setTestNow(now()->addDay());
+        $this->runQueueWorkerOnce();
+
+        $transactions = Transaction::count();
+        $this->assertEquals(3, $transactions);
     }
 
     public function test_api_user_can_create_recurring_transactions_with_different_periods()
