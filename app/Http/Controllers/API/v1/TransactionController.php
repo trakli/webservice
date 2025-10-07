@@ -14,6 +14,7 @@ use App\Services\RecurringTransactionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
@@ -205,15 +206,23 @@ class TransactionController extends ApiController
             'description' => 'nullable|string',
             'datetime' => ['nullable', new Iso8601DateTime],
             'created_at' => ['nullable', new Iso8601DateTime],
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'nullable|integer|exists:wallets,id',
+            'group_id' => ['nullable', 'integer', Rule::exists('groups', 'id')->where(function ($query) {
+                $query->where('user_id', auth()->user()->id);
+            })],
+            'party_id' => ['nullable', 'integer', Rule::exists('parties', 'id')->where(function ($query) {
+                $query->where('user_id', auth()->user()->id);
+            })],
+            'wallet_id' => ['nullable', 'integer', Rule::exists('wallets', 'id')->where(function ($query) {
+                $query->where('user_id', auth()->user()->id);
+            })],
             'categories' => 'nullable|array',
             'is_recurring' => 'nullable|boolean',
             'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
             'recurrence_interval' => 'nullable|integer|min:1',
             'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime],
-            'categories.*' => 'integer|exists:categories,id',
+            'categories.*' => ['integer', Rule::exists('categories', 'id')->where(function ($query) {
+                $query->where('user_id', auth()->user()->id);
+            })],
             'files' => 'nullable|array',
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
         ]);
