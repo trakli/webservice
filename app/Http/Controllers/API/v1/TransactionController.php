@@ -547,6 +547,8 @@ class TransactionController extends ApiController
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
         try {
+            $this->checkUpdatedAt($transaction, $validatedData);
+
             $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
                 $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));

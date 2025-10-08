@@ -213,6 +213,7 @@ class WalletController extends ApiController
                     new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
                     new OA\Property(property: 'icon', description: 'The icon of the wallet (file or icon string)', type: 'string'),
                     new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
         ),
@@ -260,8 +261,13 @@ class WalletController extends ApiController
             'balance' => 'sometimes|numeric|decimal:0,4',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            'updated_at' => ['nullable', new Iso8601DateTime],
         ]);
         $user = $request->user();
+
+        if (isset($validatedData['updated_at'])) {
+            $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
+        }
 
         $wallet = $user->wallets()->find($id);
 
@@ -269,6 +275,8 @@ class WalletController extends ApiController
             return $this->failure('Wallet not found', 404);
         }
         try {
+            $this->checkUpdatedAt($wallet, $validatedData);
+
             DB::transaction(function () use ($validatedData, $request, &$wallet) {
                 $this->updateModel($wallet, $validatedData, $request);
             });
