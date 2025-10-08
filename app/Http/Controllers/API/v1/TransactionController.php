@@ -261,6 +261,32 @@ class TransactionController extends ApiController
             unset($data['categories']);
         }
 
+
+       //ownership checks for authenticated user
+       $user = auth()->user();
+
+       //check for group
+       if (isset($data['group_id']) && $data['group_id']){
+            if (!$user->groups()->where('id', $data['group_id'])->exists()){
+                throw new HttpException(400,'The selected group does not belong to user');
+            }
+       }
+       //check for party
+       if (isset($data['party_id']) && $data['party_id']) {
+            if (!$user->parties()->where('id', $data['party_id'])->exists()){
+                throw new HttpException(400,'The selected party does not belong to user');
+            }
+       }
+
+       //check for categories
+       if (!empty($categories)){
+            $user_category_ids = $user->categories()->pluck('id')->toArray();  //get user category ids
+            $invalid_categories = array_diff($categories, $user_category_ids);  //find any ids not owned by user
+            if (!empty($invalid_categories)){
+                throw new HttpException(400,'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
+            }
+       }
+
         try {
             $transaction = DB::transaction(function () use ($request, $data, $categories, $recurring_transaction_data) {
                 /** @var Transaction $transaction */
@@ -311,6 +337,10 @@ class TransactionController extends ApiController
                 'exception' => $e,
             ]);
 
+            // If an HttpException was thrown earlier (e.g., from ownership check), re-throw it with the correct status code.
+            if ($e instanceof HttpException) {
+                return $this->failure($e->getMessage(), $e->getStatusCode());
+            }
             return $this->failure('Failed to create transaction', 500, [$e->getMessage()]);
         }
 
@@ -546,6 +576,33 @@ class TransactionController extends ApiController
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
+
+        //check ownership of fields passed in request
+        $user = auth()->user();
+
+        //check for group
+        if (isset($validatedData['group_id']) && $validatedData['group_id']){
+            if (!$user->groups()->where('id', $validatedData['group_id'])->exists()){
+                throw new HttpException(400,'The selected group does not belong to user');
+
+            }
+        }
+        //check for party
+        if (isset($validatedData['party_id']) && $validatedData['party_id']) {
+            if (!$user->parties()->where('id', $validatedData['party_id'])->exists()){
+                throw new HttpException(400,'The selected party does not belong to user');
+            }
+        }
+
+        //check for categories
+        if (!empty($categories)){
+            $user_category_ids = $user->categories()->pluck('id')->toArray();  //get user category ids
+            $invalid_categories = array_diff($categories, $user_category_ids);  //find any ids not owned by user
+            if (!empty($invalid_categories)){
+                throw new HttpException(400,'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
+            }
+        }
+
         try {
             $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
