@@ -817,26 +817,30 @@ class TransactionsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->wallet = User::factory()->create()->wallets()->create([
+
+        // create user first because other entities depend on it
+        $this->user = User::factory()->create();
+
+        // create entities owned by the user
+        $this->wallet = $this->user->wallets()->create([
             'name' => 'Wallet',
             'balance' => 1000,
         ]);
 
-        $this->party = User::factory()->create()->parties()->create([
+        $this->party = $this->user->parties()->create([
             'name' => 'Party',
             'type' => 'personal',
         ]);
 
-        $this->group = User::factory()->create()->groups()->create([
+        $this->group = $this->user->groups()->create([
             'name' => 'Group',
             'type' => 'personal',
         ]);
 
-        $this->category = User::factory()->create()->categories()->create([
+        $this->category = $this->user->categories()->create([
             'name' => 'Category',
             'type' => 'income',
         ]);
 
-        $this->user = User::factory()->create();
     }
 }
