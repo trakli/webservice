@@ -2,6 +2,7 @@
 
 namespace App\Http\Documentation;
 
+use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 /**
@@ -14,6 +15,38 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Authentication', description: 'Endpoints for user authentication')]
 class UserAuthOpenApiDocs
 {
+    #[OA\Post(
+        path: '/oauth/firebase/{driver}/callback',
+        summary: 'Handles Firebase Oauth login callback',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'token',
+                        description: 'Firebase token',
+                        type: 'string',
+                    ),
+                ]
+            )
+        ),
+        tags: ['Authentication'],
+        parameters: [
+            new OA\Parameter(
+                name: 'driver',
+                description: 'Oauth provider name',
+                in: 'path',
+                required: true, schema: new OA\Schema(type: 'string')
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Credentials verified'),
+            new OA\Response(response: 500, description: 'Server error'),
+            new OA\Response(response: 400, description: 'Invalid token'),
+        ]
+    )]
+    public function firebaseAuthCallback(Request $request, string $driver) {}
+
     #[OA\Post(
         path: '/register',
         summary: 'Register a new user',
@@ -84,6 +117,14 @@ class UserAuthOpenApiDocs
         path: '/oauth/{driver}/login',
         summary: 'Get Oauth redirect URI',
         tags: ['Authentication'],
+        parameters: [
+            new OA\Parameter(
+                name: 'driver',
+                description: 'Oauth provider name',
+                in: 'path',
+                required: true, schema: new OA\Schema(type: 'string')
+            ),
+        ],
         responses: [
             new OA\Response(response: 200, description: 'URL generated'),
             new OA\Response(response: 500, description: 'Server error'),
@@ -95,6 +136,14 @@ class UserAuthOpenApiDocs
         path: '/oauth/{driver}/callback',
         summary: 'Handles Oauth login callback',
         tags: ['Authentication'],
+        parameters: [
+            new OA\Parameter(
+                name: 'driver',
+                description: 'Oauth provider name',
+                in: 'path',
+                required: true, schema: new OA\Schema(type: 'string')
+            ),
+        ],
         responses: [
             new OA\Response(response: 200, description: ' '),
             new OA\Response(response: 500, description: 'Server error'),
