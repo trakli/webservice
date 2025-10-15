@@ -262,6 +262,9 @@ class TransactionController extends ApiController
         }
 
         try {
+            // Validate ownership of all resources before creating the transaction
+            $this->validateResourceOwnership($data, $categories);
+
             $transaction = DB::transaction(function () use ($request, $data, $categories, $recurring_transaction_data) {
                 /** @var Transaction $transaction */
                 $transaction = auth()->user()->transactions()->create($data);
@@ -306,6 +309,8 @@ class TransactionController extends ApiController
 
                 return $transaction;
             });
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         } catch (Throwable $e) {
             logger()->error('Transaction creation error: '.$e->getMessage(), [
                 'exception' => $e,
@@ -546,7 +551,14 @@ class TransactionController extends ApiController
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
+
+        // Extract categories before validation
+        $categories = $validatedData['categories'] ?? [];
+
         try {
+            // Validate ownership of all resources before updating the transaction
+            $this->validateResourceOwnership($validatedData, $categories);
+
             $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
                 $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
@@ -604,6 +616,8 @@ class TransactionController extends ApiController
             });
 
             return $this->success($transaction, 200);
+        } catch (HttpException $e) {
+            return $this->failure($e->getMessage(), $e->getStatusCode());
         } catch (Throwable $e) {
             logger()->error('Transaction update error: '.$e->getMessage(), [
                 'exception' => $e,
@@ -659,5 +673,42 @@ class TransactionController extends ApiController
         $transaction->delete();
 
         return $this->success(['message' => 'Transaction deleted successfully']);
+    }
+
+    /**
+     * Validate that the authenticated user owns the specified resources.
+     *
+     * @param  array  $data  The validated data containing resource IDs
+     * @param  array  $categories  The category IDs array
+     *
+     * @throws HttpException If any resource does not belong to the user
+     */
+    private function validateResourceOwnership(array $data, array $categories = []): void
+    {
+        $user = auth()->user();
+
+        // Check wallet ownership
+        if (! empty($data['wallet_id']) && ! $user->wallets()->where('id', $data['wallet_id'])->exists()) {
+            throw new HttpException(403, 'The selected wallet does not belong to user');
+        }
+
+        // Check group ownership
+        if (! empty($data['group_id']) && ! $user->groups()->where('id', $data['group_id'])->exists()) {
+            throw new HttpException(403, 'The selected group does not belong to user');
+        }
+
+        // Check party ownership
+        if (! empty($data['party_id']) && ! $user->parties()->where('id', $data['party_id'])->exists()) {
+            throw new HttpException(403, 'The selected party does not belong to user');
+        }
+
+        // Check categories ownership
+        if (! empty($categories)) {
+            $user_category_ids = $user->categories()->pluck('id')->toArray();
+            $invalid_categories = array_diff($categories, $user_category_ids);
+            if (! empty($invalid_categories)) {
+                throw new HttpException(403, 'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
+            }
+        }
     }
 }
