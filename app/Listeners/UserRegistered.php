@@ -2,7 +2,7 @@
 
 namespace App\Listeners;
 
-use App\Events\UserRegisteredEvent;
+use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
 
 class UserRegistered
 {

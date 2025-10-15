@@ -2029,6 +2029,53 @@
                 ]
             }
         },
+        "/oauth/firebase/{driver}/callback": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Handles Firebase Oauth login callback",
+                "operationId": "e7ab93cbdec50d3f97e146e4f00bd6af",
+                "parameters": [
+                    {
+                        "name": "driver",
+                        "in": "path",
+                        "description": "Oauth provider name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "token": {
+                                        "description": "Firebase token",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Credentials verified"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    },
+                    "400": {
+                        "description": "Invalid token"
+                    }
+                }
+            }
+        },
         "/register": {
             "post": {
                 "tags": [
@@ -2166,6 +2213,17 @@
                 ],
                 "summary": "Get Oauth redirect URI",
                 "operationId": "360160f39d8122bd949891b7e637b873",
+                "parameters": [
+                    {
+                        "name": "driver",
+                        "in": "path",
+                        "description": "Oauth provider name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "URL generated"
@@ -2183,6 +2241,17 @@
                 ],
                 "summary": "Handles Oauth login callback",
                 "operationId": "14c6f36da3d444f70e3c0423bb84cfd1",
+                "parameters": [
+                    {
+                        "name": "driver",
+                        "in": "path",
+                        "description": "Oauth provider name",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": " "
