@@ -605,7 +605,7 @@ class TransactionController extends ApiController
         try {
             $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
 
-                $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
+                $transaction->update($validatedData);
                 $transaction->markAsSynced();
 
                 if (isset($validatedData['categories'])) {
