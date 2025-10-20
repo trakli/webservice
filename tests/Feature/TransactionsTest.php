@@ -814,14 +814,195 @@ class TransactionsTest extends TestCase
         $this->assertEquals($device->id, $secondTransaction->syncState->device_id);
     }
 
+    public function test_api_user_cannot_create_transaction_with_another_users_wallet()
+    {
+        $anotherUser = User::factory()->create();
+        $anotherWallet = $anotherUser->wallets()->create([
+            'name' => 'Another Wallet',
+            'balance' => 500,
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $anotherWallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected wallet does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_create_transaction_with_another_users_group()
+    {
+        $anotherUser = User::factory()->create();
+        $anotherGroup = $anotherUser->groups()->create([
+            'name' => 'Another Group',
+            'type' => 'personal',
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'group_id' => $anotherGroup->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected group does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_create_transaction_with_another_users_party()
+    {
+        $anotherUser = User::factory()->create();
+        $anotherParty = $anotherUser->parties()->create([
+            'name' => 'Another Party',
+            'type' => 'personal',
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $anotherParty->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected party does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_create_transaction_with_another_users_categories()
+    {
+        $anotherUser = User::factory()->create();
+        $anotherCategory = $anotherUser->categories()->create([
+            'name' => 'Another Category',
+            'type' => 'expense',
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'categories' => [$anotherCategory->id],
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJsonFragment([
+                'success' => false,
+            ])
+            ->assertJsonFragment([
+                'message' => 'Some of the selected categories do not belong to user. Invalid category IDs: '.$anotherCategory->id,
+            ]);
+    }
+
+    public function test_api_user_cannot_update_transaction_with_another_users_wallet()
+    {
+        $transaction = $this->createTransaction('expense');
+
+        $anotherUser = User::factory()->create();
+        $anotherWallet = $anotherUser->wallets()->create([
+            'name' => 'Another Wallet',
+            'balance' => 500,
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'wallet_id' => $anotherWallet->id,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected wallet does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_update_transaction_with_another_users_group()
+    {
+        $transaction = $this->createTransaction('expense');
+
+        $anotherUser = User::factory()->create();
+        $anotherGroup = $anotherUser->groups()->create([
+            'name' => 'Another Group',
+            'type' => 'personal',
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'group_id' => $anotherGroup->id,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected group does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_update_transaction_with_another_users_party()
+    {
+        $transaction = $this->createTransaction('expense');
+
+        $anotherUser = User::factory()->create();
+        $anotherParty = $anotherUser->parties()->create([
+            'name' => 'Another Party',
+            'type' => 'personal',
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'party_id' => $anotherParty->id,
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJson([
+                'success' => false,
+                'message' => 'The selected party does not belong to user',
+            ]);
+    }
+
+    public function test_api_user_cannot_update_transaction_with_another_users_categories()
+    {
+        $transaction = $this->createTransaction('expense');
+
+        $anotherUser = User::factory()->create();
+        $anotherCategory = $anotherUser->categories()->create([
+            'name' => 'Another Category',
+            'type' => 'expense',
+        ]);
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'categories' => [$anotherCategory->id],
+            'updated_at' => '2025-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(403)
+            ->assertJsonFragment([
+                'success' => false,
+            ])
+            ->assertJsonFragment([
+                'message' => 'Some of the selected categories do not belong to user. Invalid category IDs: '.$anotherCategory->id,
+            ]);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        // create user first because other entities depend on it
         $this->user = User::factory()->create();
 
-        // create entities owned by the user
         $this->wallet = $this->user->wallets()->create([
             'name' => 'Wallet',
             'balance' => 1000,
@@ -841,6 +1022,6 @@ class TransactionsTest extends TestCase
             'name' => 'Category',
             'type' => 'income',
         ]);
-
+        $this->user = User::factory()->create();
     }
 }
