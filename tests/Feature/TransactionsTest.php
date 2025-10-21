@@ -829,7 +829,7 @@ class TransactionsTest extends TestCase
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected wallet does not belong to user',
@@ -852,7 +852,7 @@ class TransactionsTest extends TestCase
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected group does not belong to user',
@@ -875,7 +875,7 @@ class TransactionsTest extends TestCase
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected party does not belong to user',
@@ -898,7 +898,7 @@ class TransactionsTest extends TestCase
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJsonFragment([
                 'success' => false,
             ])
@@ -922,7 +922,7 @@ class TransactionsTest extends TestCase
             'updated_at' => '2025-05-01T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected wallet does not belong to user',
@@ -944,7 +944,7 @@ class TransactionsTest extends TestCase
             'updated_at' => '2025-05-01T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected group does not belong to user',
@@ -966,7 +966,7 @@ class TransactionsTest extends TestCase
             'updated_at' => '2025-05-01T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJson([
                 'success' => false,
                 'message' => 'The selected party does not belong to user',
@@ -988,7 +988,7 @@ class TransactionsTest extends TestCase
             'updated_at' => '2025-05-01T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(403)
+        $response->assertStatus(400)
             ->assertJsonFragment([
                 'success' => false,
             ])
