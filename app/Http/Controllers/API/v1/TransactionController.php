@@ -261,55 +261,31 @@ class TransactionController extends ApiController
             unset($data['categories']);
         }
 
-        // ownership checks for authenticated user
-        $user = auth()->user();
 
-        // check for group
-        if (isset($data['group_id']) && $data['group_id']) {
-            if (! $user->groups()->where('id', $data['group_id'])->exists()) {
-                throw new HttpException(400, 'The selected group does not belong to user');
-            }
-        }
-        // check for party
-        if (isset($data['party_id']) && $data['party_id']) {
-            if (! $user->parties()->where('id', $data['party_id'])->exists()) {
-                throw new HttpException(400, 'The selected party does not belong to user');
-            }
-        }
+        // // ownership checks for authenticated user
+        // $user = auth()->user();
 
-        // check for categories
-        if (! empty($categories)) {
-            $user_category_ids = $user->categories()->pluck('id')->toArray();  // get user category ids
-            $invalid_categories = array_diff($categories, $user_category_ids);  // find any ids not owned by user
-            if (! empty($invalid_categories)) {
-                throw new HttpException(400, 'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
-            }
-        }
+        // // check for group
+        // if (isset($data['group_id']) && $data['group_id']) {
+        //     if (! $user->groups()->where('id', $data['group_id'])->exists()) {
+        //         throw new HttpException(400, 'The selected group does not belong to user');
+        //     }
+        // }
+        // // check for party
+        // if (isset($data['party_id']) && $data['party_id']) {
+        //     if (! $user->parties()->where('id', $data['party_id'])->exists()) {
+        //         throw new HttpException(400, 'The selected party does not belong to user');
+        //     }
+        // }
 
-        // ownership checks for authenticated user
-        $user = auth()->user();
-
-        // check for group
-        if (isset($data['group_id']) && $data['group_id']) {
-            if (! $user->groups()->where('id', $data['group_id'])->exists()) {
-                throw new HttpException(400, 'The selected group does not belong to user');
-            }
-        }
-        // check for party
-        if (isset($data['party_id']) && $data['party_id']) {
-            if (! $user->parties()->where('id', $data['party_id'])->exists()) {
-                throw new HttpException(400, 'The selected party does not belong to user');
-            }
-        }
-
-        // check for categories
-        if (! empty($categories)) {
-            $user_category_ids = $user->categories()->pluck('id')->toArray();  // get user category ids
-            $invalid_categories = array_diff($categories, $user_category_ids);  // find any ids not owned by user
-            if (! empty($invalid_categories)) {
-                throw new HttpException(400, 'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
-            }
-        }
+        // // check for categories
+        // if (! empty($categories)) {
+        //     $user_category_ids = $user->categories()->pluck('id')->toArray();  // get user category ids
+        //     $invalid_categories = array_diff($categories, $user_category_ids);  // find any ids not owned by user
+        //     if (! empty($invalid_categories)) {
+        //         throw new HttpException(400, 'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
+        //     }
+        // }
 
         try {
             // Validate ownership of all resources before creating the transaction
