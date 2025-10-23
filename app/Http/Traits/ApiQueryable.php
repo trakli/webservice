@@ -14,7 +14,7 @@ trait ApiQueryable
 {
     use ApiResponse;
 
-    protected function applyApiQuery(Request $request, Builder|Relation $query): array
+    protected function applyApiQuery(Request $request, Builder|Relation $query, bool $with_deleted = true): array
     {
 
         $limit = $request->query('limit', 20);
@@ -22,7 +22,11 @@ trait ApiQueryable
         if ($request->has('synced_since')) {
             try {
                 $date = Carbon::parse($request->synced_since);
-                $query = $query->where('updated_at', '>', $date)->withTrashed();
+                if ($with_deleted) {
+                    $query = $query->where('updated_at', '>', $date)->withTrashed();
+                } else {
+                    $query = $query->where('updated_at', '>', $date);
+                }
             } catch (\Exception $exception) {
                 throw new \InvalidArgumentException('Invalid date format for synced_since parameter.');
             }

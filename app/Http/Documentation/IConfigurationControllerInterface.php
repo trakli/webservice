@@ -22,6 +22,8 @@ interface IConfigurationControllerInterface
                     new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
                     new OA\Property(property: 'value', type: 'object', example: '{"theme": "dark", "color": "#333333"}'),
                     new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                 ]
             )
         ),
@@ -46,6 +48,7 @@ interface IConfigurationControllerInterface
                 properties: [
                     new OA\Property(property: 'value', type: 'object', example: '{"theme": "light", "color": "#ffffff"}'),
                     new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
                 ]
             )
         ),
@@ -97,6 +100,10 @@ interface IConfigurationControllerInterface
             ['bearerAuth' => []],
         ],
         tags: ['Configuration'],
+        parameters: [
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
+            new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
+        ],
         responses: [
             new OA\Response(
                 response: 200,

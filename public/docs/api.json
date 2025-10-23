@@ -1811,6 +1811,14 @@
                 ],
                 "summary": "Get all configurations for the current user",
                 "operationId": "6b43348d9d0424e656ef6b6e3f2fdba4",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "List of all user configurations",
@@ -1908,6 +1916,12 @@
                                             "date"
                                         ],
                                         "example": "string"
+                                    },
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
                                     }
                                 },
                                 "type": "object"
@@ -1973,6 +1987,10 @@
                                             "date"
                                         ],
                                         "example": "string"
+                                    },
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
