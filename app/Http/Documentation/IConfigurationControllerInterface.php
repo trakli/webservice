@@ -22,6 +22,8 @@ interface IConfigurationControllerInterface
                     new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
                     new OA\Property(property: 'value', type: 'object', example: '{"theme": "dark", "color": "#333333"}'),
                     new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                 ]
             )
         ),
@@ -46,6 +48,7 @@ interface IConfigurationControllerInterface
                 properties: [
                     new OA\Property(property: 'value', type: 'object', example: '{"theme": "light", "color": "#ffffff"}'),
                     new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
+                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string', format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
                 ]
             )
         ),
@@ -91,12 +94,40 @@ interface IConfigurationControllerInterface
     public function destroy(Request $request, $key): JsonResponse;
 
     #[OA\Get(
+        path: '/configurations/{key}',
+        summary: 'Get a single configuration',
+        security: [
+            ['bearerAuth' => []],
+        ],
+        tags: ['Configuration'],
+        parameters: [
+            new OA\Parameter(
+                name: 'key',
+                description: 'Configuration key',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string')
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Configuration loaded successfully'),
+            new OA\Response(response: 404, description: 'Configuration not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function show(Request $request, $key): JsonResponse;
+
+    #[OA\Get(
         path: '/configurations',
         summary: 'Get all configurations for the current user',
         security: [
             ['bearerAuth' => []],
         ],
         tags: ['Configuration'],
+        parameters: [
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
+            new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
