@@ -1945,6 +1945,40 @@
             }
         },
         "/configurations/{key}": {
+            "get": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Get a single configuration",
+                "operationId": "2915d15f6a6064cff18bc8dd26d4d3b1",
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "description": "Configuration key",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuration loaded successfully"
+                    },
+                    "404": {
+                        "description": "Configuration not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Configuration"
@@ -1990,7 +2024,9 @@
                                     },
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
-                                        "type": "string"
+                                        "type": "string",
+                                        "format": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
                                     }
                                 },
                                 "type": "object"

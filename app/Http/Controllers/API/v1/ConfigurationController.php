@@ -43,13 +43,6 @@ class ConfigurationController extends WsConfigController
         return $this->success($config, 'Configuration added successfully', 201);
     }
 
-    private function sanitizeKey($key): string
-    {
-        $formattedKey = strtolower(preg_replace('/\s+/', '_', $key));
-
-        return preg_replace('/[^a-z0-9_]/', '', $formattedKey);
-    }
-
     public function update(Request $request, $key): JsonResponse
     {
         $validator = Validator::make($request->all(), [
