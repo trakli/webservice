@@ -9,6 +9,7 @@ use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
+use App\Http\Controllers\API\VersionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Stateless public routes are now automatically registered by the user-authentication package
+Route::get('info', [VersionController::class, 'getServerInfo']);
 
 // Stateful authenticated routes
 Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {

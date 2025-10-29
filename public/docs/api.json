@@ -35,6 +35,23 @@
         }
     ],
     "paths": {
+        "/info": {
+            "get": {
+                "tags": [
+                    "Info"
+                ],
+                "summary": "Get server info",
+                "operationId": "06a9eec8196d1c6c1526556173c62945",
+                "responses": {
+                    "200": {
+                        "description": "Successful response"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "tags": [
@@ -3003,6 +3020,10 @@
         {
             "name": "Authentication",
             "description": "Endpoints for user authentication"
+        },
+        {
+            "name": "Info",
+            "description": "Info"
         },
         {
             "name": "Groups",
