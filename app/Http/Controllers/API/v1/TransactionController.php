@@ -261,7 +261,6 @@ class TransactionController extends ApiController
             unset($data['categories']);
         }
 
-
         // // ownership checks for authenticated user
         // $user = auth()->user();
 
