@@ -35,6 +35,23 @@
         }
     ],
     "paths": {
+        "/info": {
+            "get": {
+                "tags": [
+                    "Info"
+                ],
+                "summary": "Get server info",
+                "operationId": "06a9eec8196d1c6c1526556173c62945",
+                "responses": {
+                    "200": {
+                        "description": "Successful response"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "tags": [
@@ -1513,26 +1530,6 @@
                     },
                     "400": {
                         "description": "Invalid input"
-                    }
-                }
-            }
-        },
-        "/info": {
-            "get": {
-                "tags": [
-                    "Info"
-                ],
-                "summary": "Get server info",
-                "operationId": "ed7dc7012c6567a24f3bdc821ff17c45",
-                "responses": {
-                    "200": {
-                        "description": "Successful response"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "500": {
-                        "description": "Server error"
                     }
                 }
             }
@@ -3025,6 +3022,10 @@
             "description": "Endpoints for user authentication"
         },
         {
+            "name": "Info",
+            "description": "Info"
+        },
+        {
             "name": "Groups",
             "description": "Groups"
         },
@@ -3035,10 +3036,6 @@
         {
             "name": "Party",
             "description": "Party"
-        },
-        {
-            "name": "Info",
-            "description": "Info"
         },
         {
             "name": "Wallet",
