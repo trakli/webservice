@@ -16,8 +16,9 @@ class ConfigurationController extends WsConfigController
 
     public function store(Request $request): JsonResponse
     {
+        $allowedKeys = config('allowed-config-keys.keys', []);
         $validator = Validator::make($request->all(), [
-            'key' => 'required',
+            'key' => 'required|in:'.implode(',', $allowedKeys),
             'value' => 'required',
             'type' => 'required|in:string,int,float,bool,array,json,date',
             'client_id' => ['nullable', 'string', new ValidateClientId],
@@ -45,6 +46,11 @@ class ConfigurationController extends WsConfigController
 
     public function update(Request $request, $key): JsonResponse
     {
+        $allowedKeys = config('allowed_configs.keys');
+        if (! in_array($key, $allowedKeys)) {
+            return $this->failure('Invalid configuration key.', 422);
+        }
+
         $validator = Validator::make($request->all(), [
             'value' => 'required',
             'type' => 'required|in:string,int,float,bool,array,json,date',
