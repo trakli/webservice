@@ -46,7 +46,7 @@ class ConfigurationController extends WsConfigController
 
     public function update(Request $request, $key): JsonResponse
     {
-        $allowedKeys = config('allowed_configs.keys');
+        $allowedKeys = config('allowed-config-keys.keys');
         if (! in_array($key, $allowedKeys)) {
             return $this->failure('Invalid configuration key.', 422);
         }
