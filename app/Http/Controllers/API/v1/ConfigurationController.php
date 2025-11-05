@@ -14,9 +14,15 @@ class ConfigurationController extends WsConfigController
 {
     use ApiQueryable;
 
+    //retrieve allowed configuration keys
+    private function getAllowedConfigKeys(): array
+    {
+        return config('allowed-config-keys.keys', []);
+    }
+
     public function store(Request $request): JsonResponse
     {
-        $allowedKeys = config('allowed-config-keys.keys', []);
+        $allowedKeys = $this->getAllowedConfigKeys();
         $validator = Validator::make($request->all(), [
             'key' => 'required|in:'.implode(',', $allowedKeys),
             'value' => 'required',
@@ -46,7 +52,7 @@ class ConfigurationController extends WsConfigController
 
     public function update(Request $request, $key): JsonResponse
     {
-        $allowedKeys = config('allowed-config-keys.keys', []);
+        $allowedKeys = $this->getAllowedConfigKeys();
         if (! in_array($key, $allowedKeys)) {
             return $this->failure('Invalid configuration key.', 422);
         }
