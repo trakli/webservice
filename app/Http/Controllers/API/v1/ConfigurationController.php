@@ -14,7 +14,7 @@ class ConfigurationController extends WsConfigController
 {
     use ApiQueryable;
 
-    //retrieve allowed configuration keys
+    // retrieve allowed configuration keys
     private function getAllowedConfigKeys(): array
     {
         return config('allowed-config-keys.keys', []);
