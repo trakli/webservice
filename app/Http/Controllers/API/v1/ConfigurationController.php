@@ -14,15 +14,27 @@ class ConfigurationController extends WsConfigController
 {
     use ApiQueryable;
 
+    // todo: Remove this when the parent controller makes the method protected
+    private function getAllowedConfigKeys(): array
+    {
+        return config('model-configuration.allowed_keys', []);
+
+    }
+
     public function store(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'key' => 'required',
             'value' => 'required',
             'type' => 'required|in:string,int,float,bool,array,json,date',
             'client_id' => ['nullable', 'string', new ValidateClientId],
-        ]);
+        ];
 
+        $allowedKeys = $this->getAllowedConfigKeys();
+        if (! empty($allowedKeys)) {
+            $rules['key'] = 'required|in:'.implode(',', $allowedKeys);
+        }
+        $validator = Validator::make($request->all(), $rules);
         if ($validator->fails()) {
             return $this->failure('Validation failed.', 422, [$validator->errors()]);
         }
@@ -59,6 +71,11 @@ class ConfigurationController extends WsConfigController
         $user = $request->user();
 
         $formattedKey = $this->sanitizeKey($key);
+        $allowedKeys = $this->getAllowedConfigKeys();
+
+        if (! empty($allowedKeys) && ! in_array($formattedKey, $allowedKeys)) {
+            return $this->failure('Invalid configuration key.', 422);
+        }
 
         // Check if the configuration exists
         $configuration = $user->getConfig($formattedKey);
