@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b8bb8bcf08796828f33b04885e825cba",
+    "content-hash": "0f9c4dd05c434ff5e94396f31114d956",
     "packages": [
         {
             "name": "beste/clock",
@@ -8235,16 +8235,16 @@
         },
         {
             "name": "whilesmart/eloquent-model-configuration",
-            "version": "v1.0.5",
+            "version": "v1.0.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-model-configs.git",
-                "reference": "4cb31fd7226d741ffc4af52dd190925619ee84af"
+                "reference": "fb941fc41c4bdfa01e1b9a2b632250b9f5417131"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/4cb31fd7226d741ffc4af52dd190925619ee84af",
-                "reference": "4cb31fd7226d741ffc4af52dd190925619ee84af",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/fb941fc41c4bdfa01e1b9a2b632250b9f5417131",
+                "reference": "fb941fc41c4bdfa01e1b9a2b632250b9f5417131",
                 "shasum": ""
             },
             "require": {
@@ -8283,9 +8283,9 @@
             "description": "Laravel package for managing model-specific configurations with type safety and easy persistence",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-model-configs/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.5"
+                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.6"
             },
-            "time": "2025-11-18T22:47:27+00:00"
+            "time": "2025-11-20T00:52:27+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",

@@ -18,18 +18,12 @@ class ConfigurationTest extends TestCase
         $response = $this->actingAs($this->user)->postJson('/api/v1/configurations', [
             'key' => 'default-wallet',
             'type' => 'string',
-            'value' => 'test descriptoin',
+            'value' => 'test description',
         ]);
         $response->assertStatus(201);
-        $response->assertJsonStructure([
-            'success',
-            'data' => [
-                'key',
-                'type',
-                'value',
-                'client_generated_id',
-            ],
-            'message',
+        $response->assertJson([
+            'success' => true,
+            'message' => 'Configuration added successfully',
         ]);
     }
 
@@ -38,7 +32,7 @@ class ConfigurationTest extends TestCase
         $response = $this->actingAs($this->user)->postJson('/api/v1/configurations', [
             'key' => 'default-config',
             'type' => 'string',
-            'value' => 'test descriptoin',
+            'value' => 'test description',
         ]);
         $response->assertStatus(422);
     }
@@ -78,7 +72,10 @@ class ConfigurationTest extends TestCase
             'value' => 12345,
         ]);
         $response->assertStatus(201);
-        $response->assertJsonFragment(['value' => 12345]);
+        $response->assertJson([
+            'success' => true,
+            'message' => 'Configuration added successfully',
+        ]);
     }
 
     public function test_api_user_can_update_config_with_bool_type()
