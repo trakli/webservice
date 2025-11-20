@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 
-.PHONY: setup up down stop restart composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs help
+.PHONY: setup up down stop restart composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs help prod-build prod-up prod-down
+
 
 # Get current user's UID and GID
 HOST_UID := $(shell id -u)
@@ -84,6 +85,15 @@ fix-permissions: ## Fix file permissions
 
 logs: ## Show application logs
 	docker compose logs -f app
+
+prod-build: ## Build the production image
+	docker compose -f docker-compose.prod.yml build
+
+prod-up: ## Start the production container locally
+	docker compose -f docker-compose.prod.yml up -d
+
+prod-down: ## Stop and remove the production container
+	docker compose -f docker-compose.prod.yml down
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
