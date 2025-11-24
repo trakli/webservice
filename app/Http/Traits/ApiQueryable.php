@@ -28,6 +28,7 @@ trait ApiQueryable
                     $query = $query->where('updated_at', '>', $date);
                 }
             } catch (\Exception $exception) {
+                logger()->error($exception->getMessage());
                 throw new \InvalidArgumentException('Invalid date format for synced_since parameter.');
             }
         }

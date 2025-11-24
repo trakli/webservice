@@ -1,5 +1,7 @@
 <?php
 
+use App\Hooks\ModelConfigurationFilterHook;
+
 return [
     'register_routes' => true,
     'route_prefix' => env('MODEL_CONFIG_ROUTE_PREFIX', 'api/v1'),
@@ -14,4 +16,5 @@ return [
         'theme',
     ],
     'model' => \App\Models\Configuration::class,
+    'hooks' => [ModelConfigurationFilterHook::class],
 ];
