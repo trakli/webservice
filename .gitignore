@@ -21,4 +21,7 @@ yarn-error.log
 /plugins
 .DS_Store
 **/.DS_Store
+bootstrap/cache/*.php
 
+public/docs/cloud.json
+public/docs/plugins.json
