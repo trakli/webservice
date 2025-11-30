@@ -1,3 +1,5 @@
+name: trakli
+
 services:
   app:
     image: ghcr.io/trakli/webservice:latest

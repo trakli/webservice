@@ -1,11 +1,13 @@
+name: trakli
+
 services:
     app:
         build:
             context: .
             dockerfile: Dockerfile
             args:
-                HOST_UID: '${HOST_UID}'
-                HOST_GID: '${HOST_GID}'
+                HOST_UID: '${HOST_UID:-1000}'
+                HOST_GID: '${HOST_GID:-1000}'
         ports:
             - '${APP_PORT:-8000}:80'
         tty: true
