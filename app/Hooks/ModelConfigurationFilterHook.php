@@ -22,6 +22,11 @@ class ModelConfigurationFilterHook implements ModelHookInterface
 
     public function afterQuery(mixed $results, ConfigAction $action, Request $request): mixed
     {
+        if ($action == ConfigAction::UPDATE) {
+            $this->updateClientId($results, $request);
+            $results->refresh();
+        }
+
         return $results;
     }
 }
