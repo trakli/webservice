@@ -60,10 +60,16 @@ trait ApiQueryable
     private function updateModel(Model $model, array $validatedData, Request $request): void
     {
         $model->update($validatedData);
+
+        $this->updateClientId($model, $request);
+        FileService::updateIcon($model, $validatedData, $request);
+    }
+
+    private function updateClientId(Model $model, Request $request): void
+    {
         $user = $request->user();
         if (isset($request['client_id']) && ! $model->client_generated_id) {
             $model->setClientGeneratedId($request['client_id'], $user);
         }
-        FileService::updateIcon($model, $validatedData, $request);
     }
 }
