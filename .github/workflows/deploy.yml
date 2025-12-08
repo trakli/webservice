@@ -37,7 +37,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          dockerfile: docker/prod/Dockerfile
+          file: docker/prod/Dockerfile
           push: true
           tags: ghcr.io/trakli/webservice:${{ github.sha }}
 
@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          dockerfile: docker/prod/Dockerfile
+          file: docker/prod/Dockerfile
           push: true
           tags: |
             ghcr.io/trakli/webservice:latest
