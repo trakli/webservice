@@ -10,6 +10,26 @@ on:
       - main
 
 jobs:
+  docker-build-dev:
+    name: Verify Dev Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build dev Dockerfile
+        run: docker build --build-arg HOST_UID=1000 --build-arg HOST_GID=1000 -t trakli-dev-test .
+
+  docker-build-prod:
+    name: Verify Prod Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build prod Dockerfile
+        run: docker build -f docker/prod/Dockerfile -t trakli-prod-test .
+
   tests:
     name: Run Tests
     runs-on: ubuntu-latest
