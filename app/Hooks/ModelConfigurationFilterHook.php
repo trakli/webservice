@@ -27,6 +27,16 @@ class ModelConfigurationFilterHook implements ModelHookInterface
             $results->refresh();
         }
 
+        if ($action == ConfigAction::STORE) {
+            $user = $request->user();
+            if (isset($request['client_id'])) {
+                $results->setClientGeneratedId($request['client_id'], $user);
+            }
+            $results->markAsSynced();
+
+            $results->refresh();
+        }
+
         return $results;
     }
 }
