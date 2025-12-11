@@ -16,7 +16,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
         "smartpings/php-sdk": "dev-main",
-        "whilesmart/eloquent-model-configuration": "^1.0.8",
+        "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/laravel-plugin-engine": "^1.0.0",
         "whilesmart/laravel-user-authentication": "^1.0.4",
         "whilesmart/laravel-user-devices": "^1.0.0",
