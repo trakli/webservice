@@ -2,11 +2,14 @@
 
 namespace App\Listeners;
 
+use Illuminate\Support\Str;
 use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
 
 class UserRegistered
 {
+    private const SERVER_UUID = '00000000-0000-0000-0000-000000000000';
+
     /**
      * Create the event listener.
      *
@@ -45,9 +48,12 @@ class UserRegistered
         }
 
         if ($generalGroup) {
+            $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+            $generalGroup->setClientGeneratedId($clientId, $user);
+
             $user->setConfigValue(
                 'default-group',
-                (string) $generalGroup->id,
+                $clientId,
                 ConfigValueType::String
             );
         }
