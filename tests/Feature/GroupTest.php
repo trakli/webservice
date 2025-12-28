@@ -356,6 +356,68 @@ class GroupTest extends TestCase
         $this->assertEquals($device->id, $secondGroup->syncState->device_id);
     }
 
+    public function test_api_returns_existing_group_when_creating_duplicate_name()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'Duplicate Group',
+            'description' => 'first creation',
+        ]);
+        $response->assertStatus(201);
+        $firstGroupId = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'Duplicate Group',
+            'description' => 'second creation attempt',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Group already exists']);
+        $this->assertEquals($firstGroupId, $response->json('data.id'));
+    }
+
+    public function test_api_updates_client_id_when_returning_existing_group()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'Sync Test Group',
+            'description' => 'first creation',
+        ]);
+        $response->assertStatus(201);
+        $groupId = $response->json('data.id');
+
+        $newClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a5';
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'Sync Test Group',
+            'description' => 'second creation with client_id',
+            'client_id' => $newClientId,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals($groupId, $response->json('data.id'));
+
+        $group = Group::find($groupId);
+        $this->assertEquals('245cb3df-df3a-428b-a908-e5f74b8d58a5', $group->syncState->client_generated_id);
+    }
+
+    public function test_api_different_users_can_create_groups_with_same_name()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/groups', [
+            'name' => 'Common Group Name',
+            'description' => 'user 1 group',
+        ]);
+        $response->assertStatus(201);
+        $user1GroupId = $response->json('data.id');
+
+        $user2 = User::factory()->create();
+        $response = $this->actingAs($user2)->postJson('/api/v1/groups', [
+            'name' => 'Common Group Name',
+            'description' => 'user 2 group',
+        ]);
+        $response->assertStatus(201);
+        $user2GroupId = $response->json('data.id');
+
+        $this->assertNotEquals($user1GroupId, $user2GroupId);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
