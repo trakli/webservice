@@ -6,6 +6,7 @@ use App\Casts\FloatCast;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Iconable;
 use App\Traits\Syncable;
+use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -38,7 +39,7 @@ use OpenApi\Attributes as OA;
 )]
 class Wallet extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, SoftDeletes, Syncable;
+    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
 
     protected $fillable = [
         'name',
@@ -47,7 +48,17 @@ class Wallet extends Model
         'user_id',
         'currency',
         'balance',
+        'slug',
     ];
+
+    public function sluggable(): array
+    {
+        return [
+            'slug' => [
+                'source' => 'name',
+            ],
+        ];
+    }
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon', 'stats'];
 

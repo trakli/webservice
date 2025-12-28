@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('groups', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('slug')->unique()->index();
+            $table->string('slug')->index();
             $table->string('type')->nullable();
             $table->text('description')->nullable();
             $table->unsignedBigInteger('user_id');
@@ -22,6 +22,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unique(['user_id', 'slug']);
         });
     }
 

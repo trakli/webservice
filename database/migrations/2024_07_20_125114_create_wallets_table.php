@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('wallets', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->index();
             $table->enum('type', ['bank', 'cash', 'credit_card', 'mobile']);
             $table->decimal('balance', 14, 4)->default(0);
             $table->string('currency')->default('USD');
@@ -23,7 +24,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-
+            $table->unique(['user_id', 'slug']);
         });
     }
 

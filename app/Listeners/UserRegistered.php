@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
 
 class UserRegistered
@@ -21,7 +22,7 @@ class UserRegistered
     public function handle(UserRegisteredEvent $event)
     {
         $user = $event->user;
-        // Create default user groups
+
         $defaultGroups = [
             'General',
             'Personal',
@@ -30,11 +31,25 @@ class UserRegistered
             'Work',
         ];
 
-        foreach ($defaultGroups as $group) {
-            $user->groups()->create([
-                'name' => $group,
-                'description' => "Default group for $group",
+        $generalGroup = null;
+
+        foreach ($defaultGroups as $groupName) {
+            $group = $user->groups()->create([
+                'name' => $groupName,
+                'description' => "Default group for $groupName",
             ]);
+
+            if ($groupName === 'General') {
+                $generalGroup = $group;
+            }
+        }
+
+        if ($generalGroup) {
+            $user->setConfigValue(
+                'default-group',
+                (string) $generalGroup->id,
+                ConfigValueType::String
+            );
         }
     }
 }
