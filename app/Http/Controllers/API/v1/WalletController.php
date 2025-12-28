@@ -130,6 +130,22 @@ class WalletController extends ApiController
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
+
+        $existingWallet = Wallet::where('user_id', $user->id)
+            ->where('name', $validatedData['name'])
+            ->where('currency', $validatedData['currency'])
+            ->first();
+
+        if ($existingWallet) {
+            if (isset($request['client_id']) && $existingWallet->client_generated_id !== $request['client_id']) {
+                $existingWallet->setClientGeneratedId($request['client_id'], $user);
+                $existingWallet->markAsSynced();
+            }
+            $existingWallet->refresh();
+
+            return $this->success($existingWallet, 'Wallet already exists', 200);
+        }
+
         try {
             $wallet = DB::transaction(function () use ($validatedData, $request, $user) {
 

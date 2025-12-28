@@ -126,6 +126,21 @@ class GroupController extends ApiController
         }
         $data = $validator->validated();
         $user = $request->user();
+
+        $existingGroup = Group::where('user_id', $user->id)
+            ->where('name', $data['name'])
+            ->first();
+
+        if ($existingGroup) {
+            if (isset($request['client_id']) && $existingGroup->client_generated_id !== $request['client_id']) {
+                $existingGroup->setClientGeneratedId($request['client_id'], $user);
+                $existingGroup->markAsSynced();
+            }
+            $existingGroup->refresh();
+
+            return $this->success($existingGroup, 'Group already exists', 200);
+        }
+
         try {
             $group = DB::transaction(function () use ($data, $request, $user) {
 

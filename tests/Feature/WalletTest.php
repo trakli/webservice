@@ -283,9 +283,9 @@ class WalletTest extends TestCase
 
     public function test_api_user_can_get_their_wallets()
     {
-        $this->createWallet('bank');
-        $this->createWallet('cash');
-        $this->createWallet('credit_card');
+        $this->createWallet('bank', 0, 'USD');
+        $this->createWallet('cash', 0, 'EUR');
+        $this->createWallet('credit_card', 0, 'XAF');
 
         $response = $this->actingAs($this->user)->getJson('/api/v1/wallets');
         $response->assertStatus(200);
@@ -522,6 +522,105 @@ class WalletTest extends TestCase
         // Verify second wallet has correct client_generated_id but same device_id
         $this->assertEquals($secondClientId, $secondWallet->syncState->client_generated_id);
         $this->assertEquals($device->id, $secondWallet->syncState->device_id);
+    }
+
+    public function test_api_returns_existing_wallet_when_creating_duplicate_name_and_currency()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Duplicate Wallet',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 100,
+            'description' => 'first creation',
+        ]);
+        $response->assertStatus(201);
+        $firstWalletId = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Duplicate Wallet',
+            'type' => 'bank',
+            'currency' => 'USD',
+            'balance' => 500,
+            'description' => 'second creation attempt',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Wallet already exists']);
+        $this->assertEquals($firstWalletId, $response->json('data.id'));
+    }
+
+    public function test_api_creates_new_wallet_when_same_name_different_currency()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Multi Currency Wallet',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 100,
+        ]);
+        $response->assertStatus(201);
+        $usdWalletId = $response->json('data.id');
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Multi Currency Wallet',
+            'type' => 'cash',
+            'currency' => 'EUR',
+            'balance' => 100,
+        ]);
+        $response->assertStatus(201);
+        $eurWalletId = $response->json('data.id');
+
+        $this->assertNotEquals($usdWalletId, $eurWalletId);
+    }
+
+    public function test_api_updates_client_id_when_returning_existing_wallet()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Sync Test Wallet',
+            'type' => 'cash',
+            'currency' => 'XAF',
+            'balance' => 0,
+        ]);
+        $response->assertStatus(201);
+        $walletId = $response->json('data.id');
+
+        $newClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a6';
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Sync Test Wallet',
+            'type' => 'bank',
+            'currency' => 'XAF',
+            'balance' => 1000,
+            'client_id' => $newClientId,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals($walletId, $response->json('data.id'));
+
+        $wallet = Wallet::find($walletId);
+        $this->assertEquals('245cb3df-df3a-428b-a908-e5f74b8d58a6', $wallet->syncState->client_generated_id);
+    }
+
+    public function test_api_different_users_can_create_wallets_with_same_name_and_currency()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/wallets', [
+            'name' => 'Common Wallet',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 100,
+        ]);
+        $response->assertStatus(201);
+        $user1WalletId = $response->json('data.id');
+
+        $user2 = User::factory()->create();
+        $response = $this->actingAs($user2)->postJson('/api/v1/wallets', [
+            'name' => 'Common Wallet',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 200,
+        ]);
+        $response->assertStatus(201);
+        $user2WalletId = $response->json('data.id');
+
+        $this->assertNotEquals($user1WalletId, $user2WalletId);
     }
 
     protected function setUp(): void
