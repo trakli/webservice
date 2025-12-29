@@ -9,27 +9,69 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class PartyFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    private array $incomeParties = [
+        'Acme Corporation' => 'Primary employer',
+        'TechStart Inc' => 'Freelance client',
+        'Digital Solutions Ltd' => 'Contract work',
+        'Investment Portfolio' => 'Stock dividends',
+        'Family' => 'Family members',
+    ];
+
+    private array $expenseParties = [
+        'SuperMart' => 'Grocery store',
+        'City Properties' => 'Landlord',
+        'Power Company' => 'Electricity provider',
+        'Water Works' => 'Water utility',
+        'Internet Plus' => 'ISP provider',
+        'Shell Station' => 'Gas station',
+        'Uber' => 'Ride sharing',
+        'Pizza Palace' => 'Restaurant',
+        'Café Express' => 'Coffee shop',
+        'Netflix' => 'Streaming service',
+        'Spotify' => 'Music streaming',
+        'City Pharmacy' => 'Pharmacy',
+        'Fashion Store' => 'Clothing retailer',
+        'Amazon' => 'Online shopping',
+        'Udemy' => 'Online courses',
+        'State Insurance' => 'Insurance provider',
+    ];
+
     public function definition(): array
     {
+        $type = $this->faker->randomElement(['income', 'expense']);
+        $parties = $type === 'income' ? $this->incomeParties : $this->expenseParties;
+        $name = $this->faker->randomElement(array_keys($parties));
+
         return [
-            'name' => $this->faker->randomElement([
-                'John Doe',
-                'University of Buea',
-                'Jane Doe',
-                'Bob',
-                'University of Cambridge',
-                'Harvard University',
-                'Alice',
-                'Filling Station',
-                'Wallibi Park',
-                'Disneyland',
-            ]),
-            'description' => $this->faker->sentence,
+            'name' => $name,
+            'description' => $parties[$name],
+            'type' => $type,
         ];
+    }
+
+    public function income(): static
+    {
+        return $this->state(function (array $attributes) {
+            $name = $this->faker->randomElement(array_keys($this->incomeParties));
+
+            return [
+                'name' => $name,
+                'description' => $this->incomeParties[$name],
+                'type' => 'income',
+            ];
+        });
+    }
+
+    public function expense(): static
+    {
+        return $this->state(function (array $attributes) {
+            $name = $this->faker->randomElement(array_keys($this->expenseParties));
+
+            return [
+                'name' => $name,
+                'description' => $this->expenseParties[$name],
+                'type' => 'expense',
+            ];
+        });
     }
 }

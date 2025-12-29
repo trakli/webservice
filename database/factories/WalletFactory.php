@@ -9,26 +9,59 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class WalletFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    private array $wallets = [
+        ['name' => 'Main Checking', 'description' => 'Primary bank account', 'type' => 'bank'],
+        ['name' => 'Savings Account', 'description' => 'Savings for emergencies', 'type' => 'bank'],
+        ['name' => 'Cash Wallet', 'description' => 'Physical cash on hand', 'type' => 'cash'],
+        ['name' => 'Mobile Money', 'description' => 'Mobile payment account', 'type' => 'mobile'],
+        ['name' => 'Credit Card', 'description' => 'Primary credit card', 'type' => 'credit_card'],
+        ['name' => 'Business Account', 'description' => 'Business banking', 'type' => 'bank'],
+        ['name' => 'Investment Account', 'description' => 'Investment portfolio', 'type' => 'bank'],
+    ];
+
     public function definition(): array
     {
+        $wallet = $this->faker->randomElement($this->wallets);
+
         return [
-            'name' => $this->faker->randomElement([
-                'Ecobank',
-                'Mobile Money',
-                'Orange Money',
-                'United Bank for Africa',
-                'My Cash',
-                'Wells Fargo',
-                'Business Cash',
-                'US Bank',
-            ]),
-            'description' => $this->faker->sentence,
-            'type' => $this->faker->randomElement(['bank', 'cash', 'credit_card', 'mobile']),
+            'name' => $wallet['name'],
+            'description' => $wallet['description'],
+            'type' => $wallet['type'],
         ];
+    }
+
+    public function bank(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => $this->faker->randomElement(['Main Checking', 'Savings Account', 'Business Account']),
+            'type' => 'bank',
+        ]);
+    }
+
+    public function cash(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Cash Wallet',
+            'description' => 'Physical cash on hand',
+            'type' => 'cash',
+        ]);
+    }
+
+    public function mobile(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Mobile Money',
+            'description' => 'Mobile payment account',
+            'type' => 'mobile',
+        ]);
+    }
+
+    public function creditCard(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => 'Credit Card',
+            'description' => 'Primary credit card',
+            'type' => 'credit_card',
+        ]);
     }
 }
