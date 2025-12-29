@@ -15,17 +15,21 @@ class TransactionObserver
 
     public function updated(Transaction $transaction): void
     {
-        if ($transaction->wasChanged(['amount', 'type'])) {
-            $originalTransaction = new Transaction;
-            $originalTransaction->exists = true;
-            $originalTransaction->id = $transaction->id;
-            $originalTransaction->amount = $transaction->getOriginal('amount');
-            $originalTransaction->type = $transaction->getOriginal('type');
-            $originalTransaction->wallet_id = $transaction->getOriginal('wallet_id');
-            $originalTransaction->transfer_id = $transaction->getOriginal('transfer_id');
-            $originalTransaction->setRelation('wallet', $transaction->wallet);
+        if ($transaction->wasChanged(['amount', 'type', 'wallet_id'])) {
+            $originalWalletId = $transaction->getOriginal('wallet_id');
+            $originalAmount = $transaction->getOriginal('amount');
+            $originalType = $transaction->getOriginal('type');
+            $originalTransferId = $transaction->getOriginal('transfer_id');
 
-            $this->revertTransaction($originalTransaction);
+            // Revert original transaction's effect on the original wallet
+            if ($originalWalletId && is_null($originalTransferId)) {
+                $originalWallet = \App\Models\Wallet::find($originalWalletId);
+                if ($originalWallet) {
+                    $originalWallet->balance += ($originalType === 'expense') ? $originalAmount : -$originalAmount;
+                    $originalWallet->save();
+                }
+            }
+
             $this->updateWalletBalance($transaction);
         }
 

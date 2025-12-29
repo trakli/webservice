@@ -163,8 +163,8 @@ class StatsController extends ApiController
                 'total_income' => 0,
                 'total_expenses' => 0,
                 'net_cash_flow' => 0,
-                'avg_monthly_income' => $this->getAverageMonthlyAmount($user, 'income', $walletIds),
-                'avg_monthly_expenses' => $this->getAverageMonthlyAmount($user, 'expense', $walletIds),
+                'avg_monthly_income' => $this->getAverageMonthlyAmount($user, 'income', $walletIds, $startDate, $endDate),
+                'avg_monthly_expenses' => $this->getAverageMonthlyAmount($user, 'expense', $walletIds, $startDate, $endDate),
                 'savings_rate' => 0,
             ];
 
@@ -291,19 +291,22 @@ class StatsController extends ApiController
     }
 
     /**
-     * Calculate average monthly amount for a transaction type.
+     * Calculate average monthly amount for a transaction type within date range.
      *
      * Groups transactions by month and calculates the average of monthly totals.
      *
      * @param  mixed  $user  The authenticated user
      * @param  string  $type  Transaction type: 'income' or 'expense'
      * @param  array  $walletIds  Filter by specific wallet IDs (empty for all)
+     * @param  Carbon  $startDate  Start of the date range
+     * @param  Carbon  $endDate  End of the date range
      * @return float Average monthly amount
      */
-    private function getAverageMonthlyAmount($user, string $type, array $walletIds = []): float
+    private function getAverageMonthlyAmount($user, string $type, array $walletIds, Carbon $startDate, Carbon $endDate): float
     {
         $subQuery = Transaction::where('user_id', $user->id)
             ->where('type', $type)
+            ->whereBetween('datetime', [$startDate, $endDate])
             ->select(
                 DB::raw('YEAR(datetime) as year'),
                 DB::raw('MONTH(datetime) as month'),
