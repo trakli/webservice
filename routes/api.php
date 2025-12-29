@@ -4,6 +4,7 @@ use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\PartyController;
+use App\Http\Controllers\API\v1\StatsController;
 use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
@@ -33,6 +34,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transfers', TransferController::class);
+
+        Route::get('stats', [StatsController::class, 'index']);
     });
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);

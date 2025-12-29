@@ -68,6 +68,16 @@ class Transaction extends Model
         'created_at',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'datetime' => 'datetime',
+        'amount' => 'decimal:2',
+    ];
+
     protected $appends = [
         'wallet',
         'party',
