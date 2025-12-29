@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Http\Controllers\API\v1\StatsController;
 use App\Models\Transaction;
 
 class TransactionObserver
@@ -9,6 +10,7 @@ class TransactionObserver
     public function created(Transaction $transaction): void
     {
         $this->updateWalletBalance($transaction);
+        $this->invalidateStatsCache($transaction);
     }
 
     public function updated(Transaction $transaction): void
@@ -26,11 +28,21 @@ class TransactionObserver
             $this->revertTransaction($originalTransaction);
             $this->updateWalletBalance($transaction);
         }
+
+        $this->invalidateStatsCache($transaction);
     }
 
     public function deleted(Transaction $transaction): void
     {
         $this->revertTransaction($transaction);
+        $this->invalidateStatsCache($transaction);
+    }
+
+    protected function invalidateStatsCache(Transaction $transaction): void
+    {
+        if ($transaction->user_id) {
+            StatsController::invalidateUserCache($transaction->user_id);
+        }
     }
 
     protected function updateWalletBalance(Transaction $transaction): void
