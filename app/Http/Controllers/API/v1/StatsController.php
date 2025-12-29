@@ -193,7 +193,8 @@ class StatsController extends ApiController
                 'category_distribution' => $this->getCategoryDistribution($user, $startDate, $endDate, $walletIds),
                 'period_summary' => $this->getPeriodSummary($user, $startDate, $endDate, $walletIds),
                 'charts' => [
-                    'party_spending' => $this->getPartySpendingData($user, $startDate, $endDate, $walletIds),
+                    'party_spending' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'expense'),
+                    'party_income' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'income'),
                     'category_spending' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'expense'),
                     'income_sources' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'income'),
                     'monthly_cash_flow' => $this->getMonthlyCashFlowData($user, $startDate, $endDate, $walletIds),
@@ -217,7 +218,7 @@ class StatsController extends ApiController
      */
     private function generateCacheKey(int $userId, Carbon $startDate, Carbon $endDate, array $walletIds, string $period): string
     {
-        $version = Cache::get('stats:user:' . $userId . ':version', 1);
+        $version = Cache::get('stats:user:'.$userId.':version', 1);
 
         $params = [
             'start' => $startDate->toDateString(),
@@ -227,7 +228,7 @@ class StatsController extends ApiController
             'v' => $version,
         ];
 
-        return 'stats:user:' . $userId . ':' . md5(json_encode($params));
+        return 'stats:user:'.$userId.':'.md5(json_encode($params));
     }
 
     /**
@@ -240,7 +241,7 @@ class StatsController extends ApiController
      */
     public static function invalidateUserCache(int $userId): void
     {
-        $pattern = 'stats:user:' . $userId . ':*';
+        $pattern = 'stats:user:'.$userId.':*';
 
         if (config('cache.default') === 'redis') {
             $redis = Cache::getRedis();
@@ -252,7 +253,7 @@ class StatsController extends ApiController
         } else {
             // For file/database cache, we can't easily pattern-match
             // Instead, we'll use a version key approach
-            Cache::increment('stats:user:' . $userId . ':version');
+            Cache::increment('stats:user:'.$userId.':version');
         }
     }
 
@@ -612,7 +613,7 @@ class StatsController extends ApiController
 
         $name = strtolower($category->name ?? '');
         $slug = strtolower($category->slug ?? '');
-        $text = $name . ' ' . $slug;
+        $text = $name.' '.$slug;
 
         // Essential: housing, utilities, food, healthcare, transport, insurance
         if (preg_match('/\b(rent|mortgage|hous|utilit|electric|water|gas|grocer|food|meal|health|medic|pharma|doctor|hospital|insur|transport|fuel|petrol|diesel|commut|bus|train|taxi)\b/i', $text)) {
@@ -686,19 +687,20 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get spending grouped by party/merchant for charts.
+     * Get transactions grouped by party/merchant for charts.
      *
      * @param  mixed  $user  The authenticated user
      * @param  Carbon  $startDate  Start of the date range
      * @param  Carbon  $endDate  End of the date range
      * @param  array  $walletIds  Filter by specific wallet IDs
+     * @param  string  $type  Transaction type: 'expense' or 'income'
      * @return array Parties with amounts, percentages, and transaction counts
      */
-    private function getPartySpendingData($user, $startDate, $endDate, array $walletIds = []): array
+    private function getPartyData($user, $startDate, $endDate, array $walletIds = [], string $type = 'expense'): array
     {
         $query = Transaction::with('party')
             ->where('user_id', $user->id)
-            ->where('type', 'expense')
+            ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {

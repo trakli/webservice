@@ -33,30 +33,30 @@ class UserSeeder extends Seeder
     ];
 
     private array $incomeParties = [
-        ['name' => 'Acme Corporation', 'description' => 'Primary employer'],
-        ['name' => 'TechStart Inc', 'description' => 'Freelance client'],
-        ['name' => 'Digital Solutions Ltd', 'description' => 'Contract work'],
-        ['name' => 'Investment Portfolio', 'description' => 'Stock dividends'],
-        ['name' => 'Family', 'description' => 'Family members'],
+        ['name' => 'Acme Corporation', 'description' => 'Primary employer', 'type' => 'business'],
+        ['name' => 'TechStart Inc', 'description' => 'Freelance client', 'type' => 'business'],
+        ['name' => 'Digital Solutions Ltd', 'description' => 'Contract work', 'type' => 'business'],
+        ['name' => 'Investment Portfolio', 'description' => 'Stock dividends', 'type' => 'business'],
+        ['name' => 'Family', 'description' => 'Family members', 'type' => 'individual'],
     ];
 
     private array $expenseParties = [
-        ['name' => 'SuperMart', 'description' => 'Grocery store'],
-        ['name' => 'City Properties', 'description' => 'Landlord'],
-        ['name' => 'Power Company', 'description' => 'Electricity provider'],
-        ['name' => 'Water Works', 'description' => 'Water utility'],
-        ['name' => 'Internet Plus', 'description' => 'ISP provider'],
-        ['name' => 'Shell Station', 'description' => 'Gas station'],
-        ['name' => 'Uber', 'description' => 'Ride sharing'],
-        ['name' => 'Pizza Palace', 'description' => 'Restaurant'],
-        ['name' => 'Café Express', 'description' => 'Coffee shop'],
-        ['name' => 'Netflix', 'description' => 'Streaming service'],
-        ['name' => 'Spotify', 'description' => 'Music streaming'],
-        ['name' => 'City Pharmacy', 'description' => 'Pharmacy'],
-        ['name' => 'Fashion Store', 'description' => 'Clothing retailer'],
-        ['name' => 'Amazon', 'description' => 'Online shopping'],
-        ['name' => 'Udemy', 'description' => 'Online courses'],
-        ['name' => 'State Insurance', 'description' => 'Insurance provider'],
+        ['name' => 'SuperMart', 'description' => 'Grocery store', 'type' => 'business'],
+        ['name' => 'City Properties', 'description' => 'Landlord', 'type' => 'business'],
+        ['name' => 'Power Company', 'description' => 'Electricity provider', 'type' => 'business'],
+        ['name' => 'Water Works', 'description' => 'Water utility', 'type' => 'business'],
+        ['name' => 'Internet Plus', 'description' => 'ISP provider', 'type' => 'business'],
+        ['name' => 'Shell Station', 'description' => 'Gas station', 'type' => 'business'],
+        ['name' => 'Uber', 'description' => 'Ride sharing', 'type' => 'business'],
+        ['name' => 'Pizza Palace', 'description' => 'Restaurant', 'type' => 'business'],
+        ['name' => 'Café Express', 'description' => 'Coffee shop', 'type' => 'business'],
+        ['name' => 'Netflix', 'description' => 'Streaming service', 'type' => 'business'],
+        ['name' => 'Spotify', 'description' => 'Music streaming', 'type' => 'business'],
+        ['name' => 'City Pharmacy', 'description' => 'Pharmacy', 'type' => 'business'],
+        ['name' => 'Fashion Store', 'description' => 'Clothing retailer', 'type' => 'business'],
+        ['name' => 'Amazon', 'description' => 'Online shopping', 'type' => 'business'],
+        ['name' => 'Udemy', 'description' => 'Online courses', 'type' => 'business'],
+        ['name' => 'State Insurance', 'description' => 'Insurance provider', 'type' => 'business'],
     ];
 
     private array $wallets = [
@@ -116,7 +116,7 @@ class UserSeeder extends Seeder
                 'user_id' => $user->id,
                 'name' => $party['name'],
                 'description' => $party['description'],
-                'type' => 'income',
+                'type' => $party['type'],
             ]);
         }
 
@@ -125,7 +125,7 @@ class UserSeeder extends Seeder
                 'user_id' => $user->id,
                 'name' => $party['name'],
                 'description' => $party['description'],
-                'type' => 'expense',
+                'type' => $party['type'],
             ]);
         }
     }

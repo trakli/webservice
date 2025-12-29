@@ -10,42 +10,42 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class PartyFactory extends Factory
 {
     private array $incomeParties = [
-        'Acme Corporation' => 'Primary employer',
-        'TechStart Inc' => 'Freelance client',
-        'Digital Solutions Ltd' => 'Contract work',
-        'Investment Portfolio' => 'Stock dividends',
-        'Family' => 'Family members',
+        'Acme Corporation' => ['description' => 'Primary employer', 'type' => 'business'],
+        'TechStart Inc' => ['description' => 'Freelance client', 'type' => 'business'],
+        'Digital Solutions Ltd' => ['description' => 'Contract work', 'type' => 'business'],
+        'Investment Portfolio' => ['description' => 'Stock dividends', 'type' => 'business'],
+        'Family' => ['description' => 'Family members', 'type' => 'individual'],
     ];
 
     private array $expenseParties = [
-        'SuperMart' => 'Grocery store',
-        'City Properties' => 'Landlord',
-        'Power Company' => 'Electricity provider',
-        'Water Works' => 'Water utility',
-        'Internet Plus' => 'ISP provider',
-        'Shell Station' => 'Gas station',
-        'Uber' => 'Ride sharing',
-        'Pizza Palace' => 'Restaurant',
-        'Café Express' => 'Coffee shop',
-        'Netflix' => 'Streaming service',
-        'Spotify' => 'Music streaming',
-        'City Pharmacy' => 'Pharmacy',
-        'Fashion Store' => 'Clothing retailer',
-        'Amazon' => 'Online shopping',
-        'Udemy' => 'Online courses',
-        'State Insurance' => 'Insurance provider',
+        'SuperMart' => ['description' => 'Grocery store', 'type' => 'business'],
+        'City Properties' => ['description' => 'Landlord', 'type' => 'business'],
+        'Power Company' => ['description' => 'Electricity provider', 'type' => 'business'],
+        'Water Works' => ['description' => 'Water utility', 'type' => 'business'],
+        'Internet Plus' => ['description' => 'ISP provider', 'type' => 'business'],
+        'Shell Station' => ['description' => 'Gas station', 'type' => 'business'],
+        'Uber' => ['description' => 'Ride sharing', 'type' => 'business'],
+        'Pizza Palace' => ['description' => 'Restaurant', 'type' => 'business'],
+        'Café Express' => ['description' => 'Coffee shop', 'type' => 'business'],
+        'Netflix' => ['description' => 'Streaming service', 'type' => 'business'],
+        'Spotify' => ['description' => 'Music streaming', 'type' => 'business'],
+        'City Pharmacy' => ['description' => 'Pharmacy', 'type' => 'business'],
+        'Fashion Store' => ['description' => 'Clothing retailer', 'type' => 'business'],
+        'Amazon' => ['description' => 'Online shopping', 'type' => 'business'],
+        'Udemy' => ['description' => 'Online courses', 'type' => 'business'],
+        'State Insurance' => ['description' => 'Insurance provider', 'type' => 'business'],
     ];
 
     public function definition(): array
     {
-        $type = $this->faker->randomElement(['income', 'expense']);
-        $parties = $type === 'income' ? $this->incomeParties : $this->expenseParties;
-        $name = $this->faker->randomElement(array_keys($parties));
+        $allParties = array_merge($this->incomeParties, $this->expenseParties);
+        $name = $this->faker->randomElement(array_keys($allParties));
+        $partyData = $allParties[$name];
 
         return [
             'name' => $name,
-            'description' => $parties[$name],
-            'type' => $type,
+            'description' => $partyData['description'],
+            'type' => $partyData['type'],
         ];
     }
 
@@ -53,11 +53,12 @@ class PartyFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             $name = $this->faker->randomElement(array_keys($this->incomeParties));
+            $partyData = $this->incomeParties[$name];
 
             return [
                 'name' => $name,
-                'description' => $this->incomeParties[$name],
-                'type' => 'income',
+                'description' => $partyData['description'],
+                'type' => $partyData['type'],
             ];
         });
     }
@@ -66,11 +67,12 @@ class PartyFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             $name = $this->faker->randomElement(array_keys($this->expenseParties));
+            $partyData = $this->expenseParties[$name];
 
             return [
                 'name' => $name,
-                'description' => $this->expenseParties[$name],
-                'type' => 'expense',
+                'description' => $partyData['description'],
+                'type' => $partyData['type'],
             ];
         });
     }
