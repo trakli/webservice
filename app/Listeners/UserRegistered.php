@@ -26,6 +26,12 @@ class UserRegistered
     {
         $user = $event->user;
 
+        $this->createDefaultGroups($user);
+        $this->createDefaultWallet($user);
+    }
+
+    private function createDefaultGroups($user): void
+    {
         $defaultGroups = [
             'General',
             'Personal',
@@ -57,5 +63,25 @@ class UserRegistered
                 ConfigValueType::String
             );
         }
+    }
+
+    private function createDefaultWallet($user): void
+    {
+        $wallet = $user->wallets()->create([
+            'name' => 'Main Wallet',
+            'description' => 'Your primary wallet',
+            'type' => 'cash',
+            'currency' => 'USD',
+            'balance' => 0,
+        ]);
+
+        $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+        $wallet->setClientGeneratedId($clientId, $user);
+
+        $user->setConfigValue(
+            'default-wallet',
+            $clientId,
+            ConfigValueType::String
+        );
     }
 }
