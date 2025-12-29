@@ -334,4 +334,98 @@ class CategoryController extends ApiController
 
         return $this->success(null, 'Category deleted successfully', 204);
     }
+
+    #[OA\Post(
+        path: '/categories/seed-defaults',
+        summary: 'Create default categories for the user',
+        description: 'Creates a set of predefined income and expense categories. Skips categories that already exist.',
+        tags: ['Category'],
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Default categories created successfully',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'message', type: 'string'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'created', type: 'integer'),
+                                new OA\Property(property: 'skipped', type: 'integer'),
+                                new OA\Property(
+                                    property: 'categories',
+                                    type: 'array',
+                                    items: new OA\Items(ref: '#/components/schemas/Category')
+                                ),
+                            ]
+                        ),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 500,
+                description: 'Internal server error'
+            ),
+        ]
+    )]
+    public function seedDefaults(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $defaultCategories = [
+            // Income categories
+            ['type' => 'income', 'name' => 'Salary', 'description' => 'Regular employment income'],
+            ['type' => 'income', 'name' => 'Freelance', 'description' => 'Contract/gig work'],
+            ['type' => 'income', 'name' => 'Investments', 'description' => 'Dividends, interest, capital gains'],
+            ['type' => 'income', 'name' => 'Gifts', 'description' => 'Money received as gifts'],
+            ['type' => 'income', 'name' => 'Refunds', 'description' => 'Returns and reimbursements'],
+            ['type' => 'income', 'name' => 'Other Income', 'description' => 'Miscellaneous income'],
+            // Expense categories
+            ['type' => 'expense', 'name' => 'Food & Dining', 'description' => 'Groceries, restaurants, takeout'],
+            ['type' => 'expense', 'name' => 'Transportation', 'description' => 'Fuel, public transit, ride-share, parking'],
+            ['type' => 'expense', 'name' => 'Housing', 'description' => 'Rent, mortgage, repairs, maintenance'],
+            ['type' => 'expense', 'name' => 'Utilities', 'description' => 'Electric, water, gas, internet, phone'],
+            ['type' => 'expense', 'name' => 'Healthcare', 'description' => 'Medical, dental, pharmacy, insurance'],
+            ['type' => 'expense', 'name' => 'Entertainment', 'description' => 'Movies, games, streaming, hobbies'],
+            ['type' => 'expense', 'name' => 'Shopping', 'description' => 'Clothing, electronics, household items'],
+            ['type' => 'expense', 'name' => 'Personal Care', 'description' => 'Haircuts, cosmetics, gym'],
+            ['type' => 'expense', 'name' => 'Education', 'description' => 'Courses, books, tuition'],
+            ['type' => 'expense', 'name' => 'Subscriptions', 'description' => 'Recurring services, memberships'],
+            ['type' => 'expense', 'name' => 'Insurance', 'description' => 'Auto, home, life (non-health)'],
+            ['type' => 'expense', 'name' => 'Savings', 'description' => 'Transfers to savings/investments'],
+            ['type' => 'expense', 'name' => 'Gifts & Donations', 'description' => 'Charity, presents for others'],
+            ['type' => 'expense', 'name' => 'Travel', 'description' => 'Vacations, hotels, flights'],
+            ['type' => 'expense', 'name' => 'Other Expenses', 'description' => 'Miscellaneous spending'],
+        ];
+
+        $existingNames = $user->categories()->pluck('name')->map(fn ($n) => strtolower($n))->toArray();
+
+        $created = [];
+        $skipped = 0;
+
+        try {
+            DB::transaction(function () use ($user, $defaultCategories, $existingNames, &$created, &$skipped) {
+                foreach ($defaultCategories as $categoryData) {
+                    if (in_array(strtolower($categoryData['name']), $existingNames)) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    $category = $user->categories()->create($categoryData);
+                    $category->markAsSynced();
+                    $created[] = $category;
+                }
+            });
+
+            return $this->success([
+                'created' => count($created),
+                'skipped' => $skipped,
+                'categories' => $created,
+            ], 'Default categories created successfully', 201);
+        } catch (\Exception $e) {
+            return $this->failure('Failed to create default categories', 500, [$e->getMessage()]);
+        }
+    }
 }

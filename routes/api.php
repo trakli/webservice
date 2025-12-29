@@ -40,6 +40,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::post('categories/seed-defaults', [CategoryController::class, 'seedDefaults']);
     Route::apiResource('categories', CategoryController::class);
 
     // Import routes
