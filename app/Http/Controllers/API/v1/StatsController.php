@@ -5,16 +5,45 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
 use App\Models\Wallet;
+use App\Services\ExchangeRateService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Statistics', description: 'Financial statistics and analytics')]
 class StatsController extends ApiController
 {
+    protected ExchangeRateService $exchangeRateService;
+
+    public function __construct(ExchangeRateService $exchangeRateService)
+    {
+        $this->exchangeRateService = $exchangeRateService;
+    }
+
+    /**
+     * Convert amount to target currency, throwing exception on failure.
+     *
+     * @throws \RuntimeException When currency conversion fails
+     */
+    private function convertCurrency(float $amount, string $fromCurrency, string $targetCurrency, $user): float
+    {
+        if ($fromCurrency === $targetCurrency) {
+            return $amount;
+        }
+
+        $converted = $this->exchangeRateService->convert($amount, $fromCurrency, $targetCurrency, $user);
+
+        if ($converted === null) {
+            throw new \RuntimeException(
+                "Failed to convert {$fromCurrency} to {$targetCurrency}. Exchange rate unavailable."
+            );
+        }
+
+        return $converted;
+    }
+
     #[OA\Get(
         path: '/stats',
         summary: 'Get financial statistics',
@@ -66,6 +95,7 @@ class StatsController extends ApiController
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'data', type: 'object', properties: [
+                            new OA\Property(property: 'currency', type: 'string', description: 'Currency used for all amounts'),
                             new OA\Property(property: 'overview', type: 'object', properties: [
                                 new OA\Property(property: 'total_balance', type: 'number', format: 'float'),
                                 new OA\Property(property: 'net_worth', type: 'number', format: 'float'),
@@ -144,61 +174,46 @@ class StatsController extends ApiController
             }
         }
 
+        $defaultCurrency = $user->getConfigValue('default-currency') ?? 'USD';
+
         // Generate cache key based on user, dates, and filters
         $cacheKey = $this->generateCacheKey($user->id, $startDate, $endDate, $walletIds, $request->input('period', 'month'));
 
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($user, $startDate, $endDate, $walletIds, $request) {
-            // Base query for transactions
-            $transactionQuery = Transaction::where('user_id', $user->id)
-                ->whereBetween('datetime', [$startDate, $endDate]);
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($user, $startDate, $endDate, $walletIds, $request, $defaultCurrency) {
+            $periodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds, $defaultCurrency);
 
-            if (! empty($walletIds)) {
-                $transactionQuery->whereIn('wallet_id', $walletIds);
-            }
-
-            // Calculate overview stats
             $overview = [
-                'total_balance' => $this->getTotalBalance($user, $walletIds),
-                'net_worth' => $this->getNetWorth($user, $walletIds),
-                'total_income' => 0,
-                'total_expenses' => 0,
-                'net_cash_flow' => 0,
-                'avg_monthly_income' => $this->getAverageMonthlyAmount($user, 'income', $walletIds, $startDate, $endDate),
-                'avg_monthly_expenses' => $this->getAverageMonthlyAmount($user, 'expense', $walletIds, $startDate, $endDate),
+                'total_balance' => $this->getTotalBalance($user, $walletIds, $defaultCurrency),
+                'net_worth' => $this->getNetWorth($user, $walletIds, $defaultCurrency),
+                'total_income' => $periodTotals['income'],
+                'total_expenses' => $periodTotals['expense'],
+                'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
+                'avg_monthly_income' => $this->getAverageMonthlyAmount($user, 'income', $walletIds, $startDate, $endDate, $defaultCurrency),
+                'avg_monthly_expenses' => $this->getAverageMonthlyAmount($user, 'expense', $walletIds, $startDate, $endDate, $defaultCurrency),
                 'savings_rate' => 0,
             ];
 
-            // Calculate period totals
-            $periodTotals = (clone $transactionQuery)
-                ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income")
-                ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expenses")
-                ->first();
-
-            $overview['total_income'] = (float) ($periodTotals->total_income ?? 0);
-            $overview['total_expenses'] = (float) ($periodTotals->total_expenses ?? 0);
-            $overview['net_cash_flow'] = $overview['total_income'] - $overview['total_expenses'];
-
-            // Calculate savings rate (avoid division by zero)
             if ($overview['total_income'] > 0) {
                 $overview['savings_rate'] =
                     (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
             }
 
             return [
+                'currency' => $defaultCurrency,
                 'overview' => $overview,
-                'comparisons' => $this->getComparisons($user, $startDate, $endDate, $walletIds),
-                'top_categories' => $this->getTopCategories($user, $startDate, $endDate, $walletIds),
-                'largest_transactions' => $this->getLargestTransactions($user, $startDate, $endDate, $walletIds),
-                'spending_trends' => $this->getSpendingTrends($user, $startDate, $endDate, $request->input('period', 'month')),
-                'category_distribution' => $this->getCategoryDistribution($user, $startDate, $endDate, $walletIds),
-                'period_summary' => $this->getPeriodSummary($user, $startDate, $endDate, $walletIds),
+                'comparisons' => $this->getComparisons($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                'top_categories' => $this->getTopCategories($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                'largest_transactions' => $this->getLargestTransactions($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                'spending_trends' => $this->getSpendingTrends($user, $startDate, $endDate, $request->input('period', 'month'), $walletIds, $defaultCurrency),
+                'category_distribution' => $this->getCategoryDistribution($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                'period_summary' => $this->getPeriodSummary($user, $startDate, $endDate, $walletIds, $defaultCurrency),
                 'charts' => [
-                    'party_spending' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'expense'),
-                    'party_income' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'income'),
-                    'category_spending' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'expense'),
-                    'income_sources' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'income'),
-                    'monthly_cash_flow' => $this->getMonthlyCashFlowData($user, $startDate, $endDate, $walletIds),
-                    'expense_by_wallet' => $this->getExpenseByWalletData($user, $startDate, $endDate, $walletIds),
+                    'party_spending' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'expense', $defaultCurrency),
+                    'party_income' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'income', $defaultCurrency),
+                    'category_spending' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'expense', $defaultCurrency),
+                    'income_sources' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'income', $defaultCurrency),
+                    'monthly_cash_flow' => $this->getMonthlyCashFlowData($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                    'expense_by_wallet' => $this->getExpenseByWalletData($user, $startDate, $endDate, $walletIds, $defaultCurrency),
                 ],
             ];
         });
@@ -258,13 +273,9 @@ class StatsController extends ApiController
     }
 
     /**
-     * Calculate total balance across user's wallets.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  array  $walletIds  Filter by specific wallet IDs (empty for all)
-     * @return float Total balance
+     * Calculate total balance across user's wallets converted to target currency.
      */
-    private function getTotalBalance($user, array $walletIds = []): float
+    private function getTotalBalance($user, array $walletIds = [], string $targetCurrency = 'USD'): float
     {
         $query = Wallet::where('user_id', $user->id);
 
@@ -272,79 +283,77 @@ class StatsController extends ApiController
             $query->whereIn('id', $walletIds);
         }
 
-        return (float) $query->sum('balance');
-    }
+        $wallets = $query->get(['balance', 'currency']);
+        $total = 0.0;
 
-    /**
-     * Calculate user's net worth.
-     *
-     * Currently returns total balance. Can be extended to include
-     * other assets and liabilities in the future.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  array  $walletIds  Filter by specific wallet IDs (empty for all)
-     * @return float Net worth value
-     */
-    private function getNetWorth($user, array $walletIds = []): float
-    {
-        return $this->getTotalBalance($user, $walletIds);
-    }
-
-    /**
-     * Calculate average monthly amount for a transaction type within date range.
-     *
-     * Groups transactions by month and calculates the average of monthly totals.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  string  $type  Transaction type: 'income' or 'expense'
-     * @param  array  $walletIds  Filter by specific wallet IDs (empty for all)
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @return float Average monthly amount
-     */
-    private function getAverageMonthlyAmount($user, string $type, array $walletIds, Carbon $startDate, Carbon $endDate): float
-    {
-        $subQuery = Transaction::where('user_id', $user->id)
-            ->where('type', $type)
-            ->whereBetween('datetime', [$startDate, $endDate])
-            ->select(
-                DB::raw('YEAR(datetime) as year'),
-                DB::raw('MONTH(datetime) as month'),
-                DB::raw('SUM(amount) as monthly_total')
-            )
-            ->groupBy(DB::raw('YEAR(datetime)'), DB::raw('MONTH(datetime)'));
-
-        if (! empty($walletIds)) {
-            $subQuery->whereIn('wallet_id', $walletIds);
+        foreach ($wallets as $wallet) {
+            $total += $this->convertCurrency(
+                (float) $wallet->balance,
+                $wallet->currency,
+                $targetCurrency,
+                $user
+            );
         }
 
-        $result = DB::table(DB::raw("({$subQuery->toSql()}) as monthly_totals"))
-            ->mergeBindings($subQuery->getQuery())
-            ->select(DB::raw('AVG(monthly_total) as avg_monthly'))
-            ->first();
-
-        return (float) ($result->avg_monthly ?? 0);
+        return $total;
     }
 
     /**
-     * Get period-over-period comparisons for income, expenses, and savings rate.
-     *
-     * Compares current period with the equivalent previous period.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of current period
-     * @param  Carbon  $endDate  End of current period
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Comparison percentages for income, expenses, and savings rate
+     * Calculate user's net worth converted to target currency.
      */
-    private function getComparisons($user, $startDate, $endDate, array $walletIds = []): array
+    private function getNetWorth($user, array $walletIds = [], string $targetCurrency = 'USD'): float
+    {
+        return $this->getTotalBalance($user, $walletIds, $targetCurrency);
+    }
+
+    /**
+     * Calculate average monthly amount for a transaction type with currency conversion.
+     */
+    private function getAverageMonthlyAmount($user, string $type, array $walletIds, Carbon $startDate, Carbon $endDate, string $targetCurrency = 'USD'): float
+    {
+        $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('transactions.user_id', $user->id)
+            ->where('transactions.type', $type)
+            ->whereBetween('transactions.datetime', [$startDate, $endDate])
+            ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
+
+        if (! empty($walletIds)) {
+            $query->whereIn('transactions.wallet_id', $walletIds);
+        }
+
+        $transactions = $query->get();
+
+        $monthlyTotals = [];
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->currency,
+                $targetCurrency,
+                $user
+            );
+
+            $monthKey = Carbon::parse($transaction->datetime)->format('Y-m');
+            $monthlyTotals[$monthKey] = ($monthlyTotals[$monthKey] ?? 0) + $converted;
+        }
+
+        if (empty($monthlyTotals)) {
+            return 0.0;
+        }
+
+        return array_sum($monthlyTotals) / count($monthlyTotals);
+    }
+
+    /**
+     * Get period-over-period comparisons with currency conversion.
+     */
+    private function getComparisons($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
         $daysInPeriod = $startDate->diffInDays($endDate);
         $previousPeriodStart = $startDate->copy()->subDays($daysInPeriod);
         $previousPeriodEnd = $startDate->copy()->subDay();
 
-        $currentPeriodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds);
-        $previousPeriodTotals = $this->getPeriodTotals($user, $previousPeriodStart, $previousPeriodEnd, $walletIds);
+        $currentPeriodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds, $targetCurrency);
+        $previousPeriodTotals = $this->getPeriodTotals($user, $previousPeriodStart, $previousPeriodEnd, $walletIds, $targetCurrency);
 
         $calculateChange = function ($current, $previous) {
             if ($previous == 0) {
@@ -369,35 +378,43 @@ class StatsController extends ApiController
                     $previousPeriodTotals['savings_rate']
                 ),
             ],
-            // TODO: Implement year_over_year comparison
         ];
     }
 
     /**
-     * Calculate income, expense, and savings rate totals for a period.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the period
-     * @param  Carbon  $endDate  End of the period
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Totals with income, expense, and savings_rate keys
+     * Calculate income, expense totals for a period with currency conversion.
      */
-    private function getPeriodTotals($user, $startDate, $endDate, array $walletIds = []): array
+    private function getPeriodTotals($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::where('user_id', $user->id)
-            ->whereBetween('datetime', [$startDate, $endDate]);
+        $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('transactions.user_id', $user->id)
+            ->whereBetween('transactions.datetime', [$startDate, $endDate])
+            ->select('transactions.amount', 'transactions.type', 'wallets.currency');
 
         if (! empty($walletIds)) {
-            $query->whereIn('wallet_id', $walletIds);
+            $query->whereIn('transactions.wallet_id', $walletIds);
         }
 
-        $result = $query
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
-            ->first();
+        $transactions = $query->get();
 
-        $income = (float) ($result->income ?? 0);
-        $expense = (float) ($result->expense ?? 0);
+        $income = 0.0;
+        $expense = 0.0;
+
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->currency,
+                $targetCurrency,
+                $user
+            );
+
+            if ($transaction->type === 'income') {
+                $income += $converted;
+            } else {
+                $expense += $converted;
+            }
+        }
+
         $savingsRate = $income > 0 ? (($income - $expense) / $income) * 100 : 0;
 
         return [
@@ -408,17 +425,11 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get top categories by amount for both income and expenses.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Top 5 categories for income and expenses with percentages
+     * Get top categories with currency conversion.
      */
-    private function getTopCategories($user, $startDate, $endDate, array $walletIds = []): array
+    private function getTopCategories($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::with('categories')
+        $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -432,77 +443,75 @@ class StatsController extends ApiController
         $expenseTransactions = $transactions->where('type', 'expense');
 
         return [
-            'income' => $this->groupTransactionsByCategory($incomeTransactions, 5),
-            'expenses' => $this->groupTransactionsByCategory($expenseTransactions, 5),
+            'income' => $this->groupTransactionsByCategory($incomeTransactions, $user, $targetCurrency, 5),
+            'expenses' => $this->groupTransactionsByCategory($expenseTransactions, $user, $targetCurrency, 5),
         ];
     }
 
     /**
-     * Get the largest income and expense transactions in a period.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Largest income and expense transactions with details
+     * Get largest transactions with currency conversion.
      */
-    private function getLargestTransactions($user, $startDate, $endDate, array $walletIds = []): array
+    private function getLargestTransactions($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::where('user_id', $user->id)
+        $query = Transaction::with(['categories', 'wallet'])
+            ->where('user_id', $user->id)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {
             $query->whereIn('wallet_id', $walletIds);
         }
 
-        $largestIncome = (clone $query)
-            ->where('type', 'income')
-            ->orderBy('amount', 'desc')
-            ->first();
+        $transactions = $query->get();
 
-        $largestExpense = (clone $query)
-            ->where('type', 'expense')
-            ->orderBy('amount', 'desc')
-            ->first();
-
-        $formatTransaction = function ($transaction) {
-            if (! $transaction) {
+        $findLargest = function ($type) use ($transactions, $user, $targetCurrency) {
+            $filtered = $transactions->where('type', $type);
+            if ($filtered->isEmpty()) {
                 return null;
             }
 
-            return [
-                'amount' => (float) $transaction->amount,
-                'description' => $transaction->description,
-                'date' => $transaction->datetime ? Carbon::parse($transaction->datetime)->toDateString() : null,
-                'category' => $transaction->categories->first()?->name,
-            ];
+            $largest = null;
+            $largestAmount = 0;
+
+            foreach ($filtered as $transaction) {
+                $converted = $this->convertCurrency(
+                    (float) $transaction->amount,
+                    $transaction->wallet->currency ?? 'USD',
+                    $targetCurrency,
+                    $user
+                );
+
+                if ($converted > $largestAmount) {
+                    $largestAmount = $converted;
+                    $largest = [
+                        'amount' => $converted,
+                        'description' => $transaction->description,
+                        'date' => $transaction->datetime ? Carbon::parse($transaction->datetime)->toDateString() : null,
+                        'category' => $transaction->categories->first()?->name,
+                    ];
+                }
+            }
+
+            return $largest;
         };
 
         return [
-            'income' => $formatTransaction($largestIncome),
-            'expense' => $formatTransaction($largestExpense),
+            'income' => $findLargest('income'),
+            'expense' => $findLargest('expense'),
         ];
     }
 
     /**
-     * Get spending trends comparing current and previous periods.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of current period
-     * @param  Carbon  $endDate  End of current period
-     * @param  string  $period  Grouping period: 'day', 'week', 'month', or 'year'
-     * @return array Current and previous period spending data
+     * Get spending trends with currency conversion.
      */
-    private function getSpendingTrends($user, $startDate, $endDate, string $period = 'month'): array
+    private function getSpendingTrends($user, $startDate, $endDate, string $period = 'month', array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $currentPeriodData = $this->getTrendsForPeriod($user, $startDate, $endDate, $period);
+        $currentPeriodData = $this->getTrendsForPeriod($user, $startDate, $endDate, $period, $walletIds, $targetCurrency);
 
-        // Calculate previous period dates
         $daysInPeriod = $startDate->diffInDays($endDate);
         $previousStartDate = $startDate->copy()->subDays($daysInPeriod + 1);
         $previousEndDate = $startDate->copy()->subDay();
 
-        $previousPeriodData = $this->getTrendsForPeriod($user, $previousStartDate, $previousEndDate, $period);
+        $previousPeriodData = $this->getTrendsForPeriod($user, $previousStartDate, $previousEndDate, $period, $walletIds, $targetCurrency);
 
         return [
             'current_period' => $currentPeriodData,
@@ -511,63 +520,54 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get expense trends data for a specific period.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the period
-     * @param  Carbon  $endDate  End of the period
-     * @param  string  $period  Grouping period: 'day' or 'month'
-     * @return array Daily or monthly expense totals
+     * Get expense trends with currency conversion.
      */
-    private function getTrendsForPeriod($user, $startDate, $endDate, $period): array
+    private function getTrendsForPeriod($user, $startDate, $endDate, $period, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::where('user_id', $user->id)
-            ->whereBetween('datetime', [$startDate, $endDate])
-            ->where('type', 'expense')
-            ->select(
-                DB::raw('DATE(datetime) as date'),
-                DB::raw('SUM(amount) as amount')
-            )
-            ->groupBy('date')
-            ->orderBy('date');
+        $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('transactions.user_id', $user->id)
+            ->whereBetween('transactions.datetime', [$startDate, $endDate])
+            ->where('transactions.type', 'expense')
+            ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
 
-        // If period is month, group by month
-        if ($period === 'month') {
-            $query->selectRaw('YEAR(datetime) as year, MONTH(datetime) as month')
-                ->groupBy('year', 'month')
-                ->orderBy('year')
-                ->orderBy('month');
+        if (! empty($walletIds)) {
+            $query->whereIn('transactions.wallet_id', $walletIds);
         }
 
         $transactions = $query->get();
 
-        // Format the data for the response
-        return $transactions->map(function ($item) use ($period) {
-            $date = $period === 'month'
-                ? "{$item->year}-".str_pad($item->month, 2, '0', STR_PAD_LEFT).'-01'
-                : $item->date;
+        $groupedData = [];
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->currency,
+                $targetCurrency,
+                $user
+            );
 
+            $key = $period === 'month'
+                ? Carbon::parse($transaction->datetime)->format('Y-m-01')
+                : Carbon::parse($transaction->datetime)->format('Y-m-d');
+
+            $groupedData[$key] = ($groupedData[$key] ?? 0) + $converted;
+        }
+
+        ksort($groupedData);
+
+        return collect($groupedData)->map(function ($amount, $date) {
             return [
                 'date' => $date,
-                'amount' => (float) $item->amount,
+                'amount' => (float) $amount,
             ];
-        })->toArray();
+        })->values()->toArray();
     }
 
     /**
-     * Get expense distribution by classification (essential, savings, investments, discretionary).
-     *
-     * Uses pattern matching on category names to classify expenses automatically.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Distribution percentages by classification
+     * Get expense distribution by classification with currency conversion.
      */
-    private function getCategoryDistribution($user, $startDate, $endDate, array $walletIds = []): array
+    private function getCategoryDistribution($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::with('categories')
+        $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', 'expense')
             ->whereBetween('datetime', [$startDate, $endDate]);
@@ -585,15 +585,24 @@ class StatsController extends ApiController
             'investments' => 0,
         ];
 
-        $total = $transactions->sum('amount');
+        $total = 0;
+
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->wallet->currency ?? 'USD',
+                $targetCurrency,
+                $user
+            );
+
+            $total += $converted;
+
+            $category = $transaction->categories->first();
+            $classification = $this->classifyCategory($category);
+            $distribution[$classification] += $converted;
+        }
 
         if ($total > 0) {
-            foreach ($transactions as $transaction) {
-                $category = $transaction->categories->first();
-                $classification = $this->classifyCategory($category);
-                $distribution[$classification] += $transaction->amount;
-            }
-
             foreach ($distribution as $key => $amount) {
                 $distribution[$key] = ($amount / $total) * 100;
             }
@@ -637,41 +646,20 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get summary and projections for the current period.
-     *
-     * Calculates days remaining and projects income/expenses based on
-     * current daily averages.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the period
-     * @param  Carbon  $endDate  End of the period
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Period summary with dates, days remaining, and projections
+     * Get period summary with currency conversion.
      */
-    private function getPeriodSummary($user, $startDate, $endDate, array $walletIds = []): array
+    private function getPeriodSummary($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
         $today = Carbon::now();
         $daysRemaining = $today->diffInDays($endDate, false);
         $daysElapsed = $startDate->diffInDays($today);
         $totalDays = $startDate->diffInDays($endDate);
 
-        // Get actuals for the period so far
-        $query = Transaction::where('user_id', $user->id)
-            ->whereBetween('datetime', [$startDate, $today]);
+        $totals = $this->getPeriodTotals($user, $startDate, $today, $walletIds, $targetCurrency);
 
-        if (! empty($walletIds)) {
-            $query->whereIn('wallet_id', $walletIds);
-        }
+        $currentIncome = $totals['income'];
+        $currentExpenses = $totals['expense'];
 
-        $totals = $query
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
-            ->first();
-
-        $currentIncome = (float) ($totals->income ?? 0);
-        $currentExpenses = (float) ($totals->expense ?? 0);
-
-        // Calculate projections based on current daily averages
         $projectedIncome = $daysElapsed > 0
             ? ($currentIncome / $daysElapsed) * $totalDays
             : 0;
@@ -690,18 +678,11 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get transactions grouped by party/merchant for charts.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @param  string  $type  Transaction type: 'expense' or 'income'
-     * @return array Parties with amounts, percentages, and transaction counts
+     * Get party data with currency conversion.
      */
-    private function getPartyData($user, $startDate, $endDate, array $walletIds = [], string $type = 'expense'): array
+    private function getPartyData($user, $startDate, $endDate, array $walletIds = [], string $type = 'expense', string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::with('party')
+        $query = Transaction::with(['party', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
@@ -712,43 +693,50 @@ class StatsController extends ApiController
 
         $transactions = $query->get();
 
-        // Group by party
-        $partyData = $transactions->groupBy('party_id')->map(function ($transactions, $partyId) {
-            $party = $transactions->first()->party;
-            $total = $transactions->sum('amount');
+        $partyData = [];
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->wallet->currency ?? 'USD',
+                $targetCurrency,
+                $user
+            );
 
-            return [
-                'id' => $partyId,
-                'name' => $party ? $party->name : 'Uncategorized',
-                'amount' => (float) $total,
-                'transaction_count' => $transactions->count(),
-                'percentage' => 0, // Will be calculated after we have total
-            ];
-        })->values();
+            $partyId = $transaction->party_id ?? 'uncategorized';
 
-        // Calculate total and percentages
-        $totalAmount = $partyData->sum('amount');
+            if (! isset($partyData[$partyId])) {
+                $partyData[$partyId] = [
+                    'id' => $partyId,
+                    'name' => $transaction->party ? $transaction->party->name : 'Uncategorized',
+                    'amount' => 0,
+                    'transaction_count' => 0,
+                    'percentage' => 0,
+                ];
+            }
 
-        return $partyData->map(function ($item) use ($totalAmount) {
-            $item['percentage'] = $totalAmount > 0 ? ($item['amount'] / $totalAmount) * 100 : 0;
+            $partyData[$partyId]['amount'] += $converted;
+            $partyData[$partyId]['transaction_count']++;
+        }
 
-            return $item;
-        })->sortByDesc('amount')->values()->toArray();
+        $totalAmount = array_sum(array_column($partyData, 'amount'));
+
+        return collect($partyData)
+            ->map(function ($item) use ($totalAmount) {
+                $item['percentage'] = $totalAmount > 0 ? ($item['amount'] / $totalAmount) * 100 : 0;
+
+                return $item;
+            })
+            ->sortByDesc('amount')
+            ->values()
+            ->toArray();
     }
 
     /**
-     * Get category spending/income data for charts.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @param  string  $type  Transaction type: 'expense' or 'income'
-     * @return array Categories with amounts, percentages, and transaction counts
+     * Get category spending data with currency conversion.
      */
-    private function getCategorySpendingData($user, $startDate, $endDate, array $walletIds, string $type = 'expense'): array
+    private function getCategorySpendingData($user, $startDate, $endDate, array $walletIds, string $type = 'expense', string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::with('categories')
+        $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
@@ -757,21 +745,24 @@ class StatsController extends ApiController
             $query->whereIn('wallet_id', $walletIds);
         }
 
-        return $this->groupTransactionsByCategory($query->get());
+        return $this->groupTransactionsByCategory($query->get(), $user, $targetCurrency);
     }
 
     /**
-     * Group transactions by category and calculate totals with percentages.
-     *
-     * @param  \Illuminate\Support\Collection  $transactions  Collection of transactions with categories loaded
-     * @param  int|null  $limit  Maximum number of categories to return (null for all)
-     * @return array Grouped category data with amounts, percentages, and counts
+     * Group transactions by category with currency conversion.
      */
-    private function groupTransactionsByCategory($transactions, ?int $limit = null): array
+    private function groupTransactionsByCategory($transactions, $user, string $targetCurrency, ?int $limit = null): array
     {
         $categoryData = [];
 
         foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->wallet->currency ?? 'USD',
+                $targetCurrency,
+                $user
+            );
+
             $category = $transaction->categories->first();
 
             if (! $category) {
@@ -791,7 +782,7 @@ class StatsController extends ApiController
                 ];
             }
 
-            $categoryData[$categoryId]['amount'] += $transaction->amount;
+            $categoryData[$categoryId]['amount'] += $converted;
             $categoryData[$categoryId]['transaction_count']++;
         }
 
@@ -813,56 +804,59 @@ class StatsController extends ApiController
     }
 
     /**
-     * Get monthly cash flow data for line/bar charts.
-     *
-     * Groups transactions by month and calculates income, expense, and net for each.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Monthly periods with income, expense, and net amounts
+     * Get monthly cash flow data with currency conversion.
      */
-    private function getMonthlyCashFlowData($user, $startDate, $endDate, array $walletIds = []): array
+    private function getMonthlyCashFlowData($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
-        $query = Transaction::where('user_id', $user->id)
-            ->whereBetween('datetime', [$startDate, $endDate])
-            ->selectRaw('YEAR(datetime) as year')
-            ->selectRaw('MONTH(datetime) as month')
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month');
+        $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
+            ->where('transactions.user_id', $user->id)
+            ->whereBetween('transactions.datetime', [$startDate, $endDate])
+            ->select('transactions.amount', 'transactions.type', 'transactions.datetime', 'wallets.currency');
 
         if (! empty($walletIds)) {
-            $query->whereIn('wallet_id', $walletIds);
+            $query->whereIn('transactions.wallet_id', $walletIds);
         }
 
-        $results = $query->get();
+        $transactions = $query->get();
 
-        return $results->map(function ($item) {
+        $monthlyData = [];
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->currency,
+                $targetCurrency,
+                $user
+            );
+
+            $period = Carbon::parse($transaction->datetime)->format('Y-m');
+
+            if (! isset($monthlyData[$period])) {
+                $monthlyData[$period] = ['income' => 0, 'expense' => 0];
+            }
+
+            if ($transaction->type === 'income') {
+                $monthlyData[$period]['income'] += $converted;
+            } else {
+                $monthlyData[$period]['expense'] += $converted;
+            }
+        }
+
+        ksort($monthlyData);
+
+        return collect($monthlyData)->map(function ($data, $period) {
             return [
-                'period' => "{$item->year}-".str_pad($item->month, 2, '0', STR_PAD_LEFT),
-                'income' => (float) $item->income,
-                'expense' => (float) $item->expense,
-                'net' => (float) ($item->income - $item->expense),
+                'period' => $period,
+                'income' => (float) $data['income'],
+                'expense' => (float) $data['expense'],
+                'net' => (float) ($data['income'] - $data['expense']),
             ];
-        })->toArray();
+        })->values()->toArray();
     }
 
     /**
-     * Get expense distribution by wallet for charts.
-     *
-     * Groups expenses by wallet and calculates amounts and percentages.
-     *
-     * @param  mixed  $user  The authenticated user
-     * @param  Carbon  $startDate  Start of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @param  array  $walletIds  Filter by specific wallet IDs
-     * @return array Wallets with expense amounts, percentages, and transaction counts
+     * Get expense by wallet with currency conversion.
      */
-    private function getExpenseByWalletData($user, $startDate, $endDate, array $walletIds = []): array
+    private function getExpenseByWalletData($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
     {
         $query = Transaction::with('wallet')
             ->where('user_id', $user->id)
@@ -871,30 +865,44 @@ class StatsController extends ApiController
 
         if (! empty($walletIds)) {
             $query->whereIn('wallet_id', $walletIds);
-        } else {
-            // If no wallet IDs provided, use all user's wallets
-            $walletIds = $user->wallets()->pluck('id');
-            $query->whereIn('wallet_id', $walletIds);
         }
 
-        $results = $query->select(
-            'wallet_id',
-            DB::raw('SUM(amount) as total_amount'),
-            DB::raw('COUNT(*) as transaction_count')
-        )
-            ->groupBy('wallet_id')
-            ->get();
+        $transactions = $query->get();
 
-        $totalAmount = $results->sum('total_amount');
+        $walletData = [];
+        foreach ($transactions as $transaction) {
+            $converted = $this->convertCurrency(
+                (float) $transaction->amount,
+                $transaction->wallet->currency ?? 'USD',
+                $targetCurrency,
+                $user
+            );
 
-        return $results->map(function ($item) use ($totalAmount) {
-            return [
-                'wallet_id' => $item->wallet_id,
-                'wallet_name' => $item->wallet->name ?? 'Unknown',
-                'amount' => (float) $item->total_amount,
-                'transaction_count' => $item->transaction_count,
-                'percentage' => $totalAmount > 0 ? ($item->total_amount / $totalAmount) * 100 : 0,
-            ];
-        })->sortByDesc('amount')->values()->toArray();
+            $walletId = $transaction->wallet_id;
+
+            if (! isset($walletData[$walletId])) {
+                $walletData[$walletId] = [
+                    'wallet_id' => $walletId,
+                    'wallet_name' => $transaction->wallet->name ?? 'Unknown',
+                    'amount' => 0,
+                    'transaction_count' => 0,
+                ];
+            }
+
+            $walletData[$walletId]['amount'] += $converted;
+            $walletData[$walletId]['transaction_count']++;
+        }
+
+        $totalAmount = array_sum(array_column($walletData, 'amount'));
+
+        return collect($walletData)
+            ->map(function ($item) use ($totalAmount) {
+                $item['percentage'] = $totalAmount > 0 ? ($item['amount'] / $totalAmount) * 100 : 0;
+
+                return $item;
+            })
+            ->sortByDesc('amount')
+            ->values()
+            ->toArray();
     }
 }

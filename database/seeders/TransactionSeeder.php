@@ -238,7 +238,7 @@ class TransactionSeeder extends Seeder
     private function selectWallet(string $category, $wallets)
     {
         $primaryWallet = $wallets->firstWhere('name', 'Main Checking') ?? $wallets->first();
-        $cashWallet = $wallets->firstWhere('name', 'Cash Wallet') ?? $primaryWallet;
+        $cashWallet = $wallets->firstWhere('name', 'Main Wallet') ?? $primaryWallet;
         $creditCard = $wallets->firstWhere('name', 'Credit Card') ?? $primaryWallet;
         $mobileWallet = $wallets->firstWhere('name', 'Mobile Money') ?? $primaryWallet;
 

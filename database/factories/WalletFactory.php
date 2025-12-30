@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class WalletFactory extends Factory
 {
     private array $wallets = [
+        ['name' => 'Main Wallet', 'description' => 'Your primary wallet', 'type' => 'cash'],
         ['name' => 'Main Checking', 'description' => 'Primary bank account', 'type' => 'bank'],
         ['name' => 'Savings Account', 'description' => 'Savings for emergencies', 'type' => 'bank'],
-        ['name' => 'Cash Wallet', 'description' => 'Physical cash on hand', 'type' => 'cash'],
         ['name' => 'Mobile Money', 'description' => 'Mobile payment account', 'type' => 'mobile'],
         ['name' => 'Credit Card', 'description' => 'Primary credit card', 'type' => 'credit_card'],
         ['name' => 'Business Account', 'description' => 'Business banking', 'type' => 'bank'],
@@ -41,8 +41,8 @@ class WalletFactory extends Factory
     public function cash(): static
     {
         return $this->state(fn (array $attributes) => [
-            'name' => 'Cash Wallet',
-            'description' => 'Physical cash on hand',
+            'name' => 'Main Wallet',
+            'description' => 'Your primary wallet',
             'type' => 'cash',
         ]);
     }

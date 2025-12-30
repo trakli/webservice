@@ -14,6 +14,7 @@ return [
         'default-lang',
         'onboarding-complete',
         'theme',
+        'manual-exchange-rates',
     ],
     'model' => \App\Models\Configuration::class,
     'hooks' => [ModelConfigurationFilterHook::class],

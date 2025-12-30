@@ -328,6 +328,53 @@
                 }
             }
         },
+        "/categories/seed-defaults": {
+            "post": {
+                "tags": [
+                    "Category"
+                ],
+                "summary": "Create default categories for the user",
+                "description": "Creates a set of predefined income and expense categories. Skips categories that already exist.",
+                "operationId": "d6157cd169165d3d449e4342c6092478",
+                "responses": {
+                    "201": {
+                        "description": "Default categories created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "created": {
+                                                    "type": "integer"
+                                                },
+                                                "skipped": {
+                                                    "type": "integer"
+                                                },
+                                                "categories": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Category"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
         "/groups": {
             "get": {
                 "tags": [
@@ -1101,6 +1148,10 @@
                                     "properties": {
                                         "data": {
                                             "properties": {
+                                                "currency": {
+                                                    "description": "Currency used for all amounts",
+                                                    "type": "string"
+                                                },
                                                 "overview": {
                                                     "properties": {
                                                         "total_balance": {
