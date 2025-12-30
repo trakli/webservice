@@ -1,0 +1,197 @@
+version: "1.0"
+
+database:
+  type: mysql
+  connection:
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    database: ${DB_DATABASE}
+    user: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+llm:
+  provider: ${LLM_PROVIDER}
+  groq:
+    model: ${LLM_MODEL}
+    api_key: ${LLM_API_KEY}
+  temperature: ${LLM_TEMPERATURE}
+  retries: ${LLM_RETRIES}
+
+semantic_layer:
+  entities:
+    transactions:
+      table: transactions
+      description: "Financial transactions representing income or expenses"
+      aliases: [spending, expenses, income, payments, purchases]
+      columns:
+        id:
+          type: integer
+          primary: true
+        amount:
+          type: decimal
+          description: "Transaction amount in the wallet's currency"
+        type:
+          type: string
+          description: "Transaction type: 'income' or 'expense'"
+        datetime:
+          type: datetime
+          description: "When the transaction occurred"
+        description:
+          type: text
+          description: "Transaction description or notes"
+        user_id:
+          type: integer
+          description: "Owner of the transaction"
+        wallet_id:
+          type: integer
+          description: "Wallet this transaction belongs to"
+        party_id:
+          type: integer
+          description: "The counterparty (vendor, merchant, payer)"
+
+    wallets:
+      table: wallets
+      description: "User's financial accounts (bank accounts, cash, credit cards)"
+      aliases: [accounts, bank accounts, cards]
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: "Wallet name"
+        balance:
+          type: decimal
+          description: "Current balance"
+        currency:
+          type: string
+          description: "Currency code (USD, EUR, XAF, etc.)"
+        type:
+          type: string
+          description: "Wallet type: bank, cash, credit_card, mobile"
+        user_id:
+          type: integer
+          description: "Owner of the wallet"
+
+    categories:
+      table: categories
+      description: "Transaction categories for classification"
+      aliases: [category, tags, labels]
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: "Category name"
+        type:
+          type: string
+          description: "Category type: 'income' or 'expense'"
+        user_id:
+          type: integer
+          description: "Owner of the category"
+
+    parties:
+      table: parties
+      description: "Counterparties in transactions (vendors, merchants, employers)"
+      aliases: [vendors, merchants, payees, payers, contacts]
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: "Party name"
+        type:
+          type: string
+          description: "Party type classification"
+        user_id:
+          type: integer
+          description: "Owner of this party record"
+
+    categorizables:
+      table: categorizables
+      description: "Links transactions to categories (many-to-many)"
+      columns:
+        category_id:
+          type: integer
+        categorizable_id:
+          type: integer
+          description: "Transaction ID"
+        categorizable_type:
+          type: string
+          description: "Always 'App\\Models\\Transaction'"
+
+  relationships:
+    - name: transaction_wallet
+      from: transactions
+      to: wallets
+      foreign_key: wallet_id
+      description: "Each transaction belongs to a wallet"
+
+    - name: transaction_party
+      from: transactions
+      to: parties
+      foreign_key: party_id
+      description: "Each transaction may have a counterparty"
+
+    - name: transaction_category
+      from: categorizables
+      to: categories
+      foreign_key: category_id
+      description: "Categories assigned to transactions"
+
+    - name: transaction_categorizable
+      from: categorizables
+      to: transactions
+      foreign_key: categorizable_id
+      description: "Transaction that has categories"
+
+  business_rules:
+    - name: income
+      applies_to: [transactions]
+      definition: "type = 'income'"
+      description: "Filter for income transactions only"
+
+    - name: expense
+      applies_to: [transactions]
+      definition: "type = 'expense'"
+      description: "Filter for expense transactions only"
+
+    - name: this_month
+      applies_to: [transactions]
+      definition: "MONTH(datetime) = MONTH(CURRENT_DATE()) AND YEAR(datetime) = YEAR(CURRENT_DATE())"
+      description: "Transactions from the current month"
+
+    - name: last_month
+      applies_to: [transactions]
+      definition: "MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND YEAR(datetime) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+      description: "Transactions from last month"
+
+    - name: this_year
+      applies_to: [transactions]
+      definition: "YEAR(datetime) = YEAR(CURRENT_DATE())"
+      description: "Transactions from the current year"
+
+security:
+  mode: read_only
+  max_rows: 100
+  max_join_depth: 4
+  blocked_columns:
+    - users.password
+    - users.remember_token
+    - users.email_verified_at
+
+prompts:
+  examples:
+    - question: "How much did I spend last month?"
+      sql: "SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
+
+    - question: "What are my top 5 expense categories?"
+      sql: "SELECT c.name, SUM(t.amount) as total FROM transactions t JOIN categorizables cz ON t.id = cz.categorizable_id JOIN categories c ON cz.category_id = c.id WHERE t.type = 'expense' AND t.user_id = :user_id GROUP BY c.id ORDER BY total DESC LIMIT 5"
+
+    - question: "Show my income this year"
+      sql: "SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND user_id = :user_id AND YEAR(datetime) = YEAR(CURRENT_DATE())"
+
+    - question: "What is my wallet balance?"
+      sql: "SELECT name, balance, currency FROM wallets WHERE user_id = :user_id"

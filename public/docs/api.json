@@ -52,6 +52,123 @@
                 }
             }
         },
+        "/ai/chat": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Ask a question about your finances",
+                "description": "Uses AI to answer natural language questions about your financial data",
+                "operationId": "8b995d160e3f5a368710ca7aede3dbf1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "How much did I spend last month?"
+                                    },
+                                    "format_hint": {
+                                        "type": "string",
+                                        "enum": [
+                                            "scalar",
+                                            "pair",
+                                            "record",
+                                            "list",
+                                            "pair_list",
+                                            "table",
+                                            "raw"
+                                        ],
+                                        "example": "table"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "AI response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "answer": {
+                                                    "type": "string"
+                                                },
+                                                "format_type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "scalar",
+                                                        "pair",
+                                                        "record",
+                                                        "list",
+                                                        "pair_list",
+                                                        "table",
+                                                        "raw"
+                                                    ]
+                                                },
+                                                "results": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "503": {
+                        "description": "AI service unavailable"
+                    }
+                }
+            }
+        },
+        "/ai/health": {
+            "get": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Check AI service health",
+                "operationId": "8b6c5af866d0372334377fc2075e29bb",
+                "responses": {
+                    "200": {
+                        "description": "Service status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "available": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "tags": [
@@ -3180,6 +3297,10 @@
         }
     ],
     "tags": [
+        {
+            "name": "AI",
+            "description": "AI-powered financial insights"
+        },
         {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
