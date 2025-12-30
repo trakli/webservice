@@ -10,7 +10,6 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Statistics', description: 'Financial statistics and analytics')]
@@ -22,6 +21,29 @@ class StatsController extends ApiController
     {
         $this->exchangeRateService = $exchangeRateService;
     }
+
+    /**
+     * Convert amount to target currency, throwing exception on failure.
+     *
+     * @throws \RuntimeException When currency conversion fails
+     */
+    private function convertCurrency(float $amount, string $fromCurrency, string $targetCurrency, $user): float
+    {
+        if ($fromCurrency === $targetCurrency) {
+            return $amount;
+        }
+
+        $converted = $this->exchangeRateService->convert($amount, $fromCurrency, $targetCurrency, $user);
+
+        if ($converted === null) {
+            throw new \RuntimeException(
+                "Failed to convert {$fromCurrency} to {$targetCurrency}. Exchange rate unavailable."
+            );
+        }
+
+        return $converted;
+    }
+
     #[OA\Get(
         path: '/stats',
         summary: 'Get financial statistics',
@@ -265,13 +287,12 @@ class StatsController extends ApiController
         $total = 0.0;
 
         foreach ($wallets as $wallet) {
-            $converted = $this->exchangeRateService->convert(
+            $total += $this->convertCurrency(
                 (float) $wallet->balance,
                 $wallet->currency,
                 $targetCurrency,
                 $user
             );
-            $total += $converted ?? (float) $wallet->balance;
         }
 
         return $total;
@@ -304,12 +325,12 @@ class StatsController extends ApiController
 
         $monthlyTotals = [];
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->currency,
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $monthKey = Carbon::parse($transaction->datetime)->format('Y-m');
             $monthlyTotals[$monthKey] = ($monthlyTotals[$monthKey] ?? 0) + $converted;
@@ -380,12 +401,12 @@ class StatsController extends ApiController
         $expense = 0.0;
 
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->currency,
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             if ($transaction->type === 'income') {
                 $income += $converted;
@@ -452,12 +473,12 @@ class StatsController extends ApiController
             $largestAmount = 0;
 
             foreach ($filtered as $transaction) {
-                $converted = $this->exchangeRateService->convert(
+                $converted = $this->convertCurrency(
                     (float) $transaction->amount,
                     $transaction->wallet->currency ?? 'USD',
                     $targetCurrency,
                     $user
-                ) ?? (float) $transaction->amount;
+                );
 
                 if ($converted > $largestAmount) {
                     $largestAmount = $converted;
@@ -517,12 +538,12 @@ class StatsController extends ApiController
 
         $groupedData = [];
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->currency,
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $key = $period === 'month'
                 ? Carbon::parse($transaction->datetime)->format('Y-m-01')
@@ -567,12 +588,12 @@ class StatsController extends ApiController
         $total = 0;
 
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->wallet->currency ?? 'USD',
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $total += $converted;
 
@@ -674,12 +695,12 @@ class StatsController extends ApiController
 
         $partyData = [];
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->wallet->currency ?? 'USD',
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $partyId = $transaction->party_id ?? 'uncategorized';
 
@@ -735,12 +756,12 @@ class StatsController extends ApiController
         $categoryData = [];
 
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->wallet->currency ?? 'USD',
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $category = $transaction->categories->first();
 
@@ -800,12 +821,12 @@ class StatsController extends ApiController
 
         $monthlyData = [];
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->currency,
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $period = Carbon::parse($transaction->datetime)->format('Y-m');
 
@@ -850,12 +871,12 @@ class StatsController extends ApiController
 
         $walletData = [];
         foreach ($transactions as $transaction) {
-            $converted = $this->exchangeRateService->convert(
+            $converted = $this->convertCurrency(
                 (float) $transaction->amount,
                 $transaction->wallet->currency ?? 'USD',
                 $targetCurrency,
                 $user
-            ) ?? (float) $transaction->amount;
+            );
 
             $walletId = $transaction->wallet_id;
 
