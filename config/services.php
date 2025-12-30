@@ -37,4 +37,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'smartql' => [
+        'url' => env('SMARTQL_URL', 'http://smartql:8000'),
+    ],
+
 ];

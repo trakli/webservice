@@ -14,7 +14,7 @@ services:
         volumes:
             - '.:/var/www/html'
         networks:
-            - sail
+            - trakli
         depends_on:
             - mysql
 
@@ -29,9 +29,9 @@ services:
             MYSQL_PASSWORD: '${DB_PASSWORD}'
             MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
         volumes:
-            - 'sailmysql:/var/lib/mysql'
+            - 'trakli_mysql:/var/lib/mysql'
         networks:
-            - sail
+            - trakli
         healthcheck:
             test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
             retries: 3
@@ -48,7 +48,7 @@ services:
         depends_on:
             - mysql
         networks:
-            - sail
+            - trakli
 
     mailhog:
         image: 'mailhog/mailhog:latest'
@@ -56,11 +56,31 @@ services:
             - 1025:1025
             - 8025:8025
         networks:
-            - sail
+            - trakli
+
+    smartql:
+        image: 'ghcr.io/smartql/smartql:latest'
+        ports:
+            - '${SMARTQL_PORT:-5000}:8000'
+        environment:
+            SMARTQL_CONFIG: /app/smartql.yml
+            DB_HOST: mysql
+            DB_PORT: 3306
+            DB_DATABASE: '${DB_DATABASE}'
+            DB_USERNAME: '${DB_USERNAME}'
+            DB_PASSWORD: '${DB_PASSWORD}'
+            GROQ_API_KEY: '${GROQ_API_KEY}'
+        volumes:
+            - './smartql.yml:/app/smartql.yml:ro'
+        depends_on:
+            - mysql
+        networks:
+            - trakli
+        command: ["smartql", "serve", "-c", "/app/smartql.yml", "--host", "0.0.0.0", "--port", "8000"]
 
 networks:
-    sail:
+    trakli:
         driver: bridge
 volumes:
-    sailmysql:
+    trakli_mysql:
         driver: local

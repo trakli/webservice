@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
@@ -48,4 +49,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::get('imports', [ImportController::class, 'getImports']);
     Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);
     Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
+
+    // AI routes
+    Route::post('ai/chat', [AiController::class, 'chat']);
+    Route::get('ai/health', [AiController::class, 'health']);
 });
