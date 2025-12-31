@@ -19,7 +19,8 @@ class AiService
         int $userId,
         bool $execute = true,
         ?string $formatHint = null,
-        bool $generateResponse = true
+        bool $generateResponse = true,
+        ?string $language = null
     ): array {
         try {
             $payload = [
@@ -28,6 +29,7 @@ class AiService
                 'generate_response' => $generateResponse,
                 'context' => [
                     'user_id' => $userId,
+                    'language' => $language ?? app()->getLocale(),
                 ],
             ];
 
@@ -51,7 +53,7 @@ class AiService
 
             return [
                 'success' => false,
-                'error' => 'Failed to process your question. Please try again.',
+                'error' => __('Failed to process your question. Please try again.'),
             ];
         } catch (\Exception $e) {
             Log::error('SmartQL service error', [
@@ -61,7 +63,7 @@ class AiService
 
             return [
                 'success' => false,
-                'error' => 'AI service is currently unavailable. Please try again later.',
+                'error' => __('AI service is currently unavailable. Please try again later.'),
             ];
         }
     }

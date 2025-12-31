@@ -69,7 +69,11 @@ services:
             DB_DATABASE: '${DB_DATABASE}'
             DB_USERNAME: '${DB_USERNAME}'
             DB_PASSWORD: '${DB_PASSWORD}'
-            GROQ_API_KEY: '${GROQ_API_KEY}'
+            LLM_PROVIDER: '${LLM_PROVIDER:-groq}'
+            LLM_MODEL: '${LLM_MODEL:-}'
+            LLM_API_KEY: '${LLM_API_KEY:-}'
+            LLM_TEMPERATURE: '${LLM_TEMPERATURE:-0.1}'
+            LLM_RETRIES: '${LLM_RETRIES:-3}'
         volumes:
             - './smartql.yml:/app/smartql.yml:ro'
         depends_on:

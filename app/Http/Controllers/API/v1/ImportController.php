@@ -80,15 +80,15 @@ class ImportController extends ApiController
                 ]);
                 ImportFileJob::dispatchAfterResponse($fileImport, app(FileImportService::class));
 
-                return $this->success($fileImport, 'File uploaded. Import scheduled. You will be notified when complete.');
+                return $this->success($fileImport, __('File uploaded. Import scheduled. You will be notified when complete.'));
             } catch (\Exception $e) {
                 logger()->error($e);
 
-                return $this->failure('We could not upload your file.');
+                return $this->failure(__('We could not upload your file.'));
             }
         }
 
-        return $this->failure('No file uploaded.');
+        return $this->failure(__('No file uploaded.'));
     }
 
     #[OA\Get(
@@ -131,7 +131,7 @@ class ImportController extends ApiController
         }
         $import = $user->fileImports()->find($id);
         if (is_null($import)) {
-            return $this->failure('We could not find this import', 404);
+            return $this->failure(__('We could not find this import'), 404);
         }
 
         return $this->success($import->failedImports()->paginate($perPage));
@@ -220,7 +220,7 @@ class ImportController extends ApiController
         $user = $request->user();
         $import = $user->fileImports()->find($id);
         if (is_null($import)) {
-            return $this->failure('File import instance not found', 404);
+            return $this->failure(__('File import instance not found'), 404);
         }
         $failedImportsToReturn = [];
         $data = $request->all();
@@ -281,7 +281,7 @@ class ImportController extends ApiController
             }
         }
         if (count($failedImportsToReturn) > 0) {
-            return $this->success($failedImportsToReturn, 'Some imports could not be fixed', 206);
+            return $this->success($failedImportsToReturn, __('Some imports could not be fixed'), 206);
         }
 
         return $this->success();

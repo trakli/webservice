@@ -70,7 +70,7 @@ class ApiController extends BaseController
             if ($errors->hasAny(array_keys($rules))) {
                 return [
                     'isValidated' => false,
-                    'message' => 'Server failed to validate request.',
+                    'message' => __('Server failed to validate request.'),
                     'code' => 422,
                     'errors' => $errors->toArray(),
                 ];
@@ -78,7 +78,7 @@ class ApiController extends BaseController
 
             return [
                 'isValidated' => false,
-                'message' => 'Server unable to process request.',
+                'message' => __('Server unable to process request.'),
                 'code' => 400,
                 'errors' => $errors->toArray(),
             ];

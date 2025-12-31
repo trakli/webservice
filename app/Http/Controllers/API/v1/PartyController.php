@@ -127,7 +127,7 @@ class PartyController extends ApiController
         $validatedData['user_id'] = $user->id;
         $existing_party = $user->parties()->where('name', $validatedData['name'])->first();
         if ($existing_party) {
-            return $this->failure('Party already exists', 400);
+            return $this->failure(__('Party already exists'), 400);
         }
 
         try {
@@ -145,12 +145,12 @@ class PartyController extends ApiController
 
             $party->refresh();
 
-            return $this->success($party, 'Party created successfully', 201);
+            return $this->success($party, __('Party created successfully'), 201);
 
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to create party', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create party'), 500, [$e->getMessage()]);
         }
 
     }
@@ -192,7 +192,7 @@ class PartyController extends ApiController
         $party = Party::find($id);
 
         if (! $party) {
-            return $this->failure('Party not found', 404);
+            return $this->failure(__('Party not found'), 404);
         }
 
         return $this->success($party);
@@ -262,7 +262,7 @@ class PartyController extends ApiController
         $party = $user->parties()->find($id);
 
         if (! $party) {
-            return $this->failure('Party not found', 404);
+            return $this->failure(__('Party not found'), 404);
         }
         try {
             DB::transaction(function () use ($validatedData, $request, &$party) {
@@ -271,11 +271,11 @@ class PartyController extends ApiController
 
             $party->refresh();
 
-            return $this->success($party, 'Party updated successfully');
+            return $this->success($party, __('Party updated successfully'));
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to update party', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to update party'), 500, [$e->getMessage()]);
         }
     }
 
@@ -316,11 +316,11 @@ class PartyController extends ApiController
         $party = $user->parties()->find($id);
 
         if (! $party) {
-            return $this->failure('Party not found', 404);
+            return $this->failure(__('Party not found'), 404);
         }
 
         $party->delete();
 
-        return $this->success(null, 'Party deleted successfully');
+        return $this->success(null, __('Party deleted successfully'));
     }
 }

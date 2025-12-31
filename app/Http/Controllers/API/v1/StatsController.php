@@ -168,7 +168,7 @@ class StatsController extends ApiController
             $invalidWalletIds = array_diff($walletIds, $validWalletIds);
             if (! empty($invalidWalletIds)) {
                 return response()->json([
-                    'message' => 'One or more wallet IDs are invalid or do not belong to the user.',
+                    'message' => __('One or more wallet IDs are invalid or do not belong to the user.'),
                     'invalid_wallet_ids' => array_values($invalidWalletIds),
                 ], 422);
             }

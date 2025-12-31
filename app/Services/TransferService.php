@@ -13,7 +13,7 @@ class TransferService
     public function transfer(float $amountToSend, Model $fromWallet, float $amountToReceive, Model $toWallet, User $user, float $exchangeRate)
     {
         if ($fromWallet->balance < $amountToSend) {
-            throw new \InvalidArgumentException('Insufficient balance in source wallet');
+            throw new \InvalidArgumentException(__('Insufficient balance in source wallet'));
         }
         // create transfer
         $transfer = Transfer::create([

@@ -38,7 +38,7 @@ class Handler extends ExceptionHandler
     {
         return response()->json([
             'success' => false,
-            'message' => 'Unauthenticated. Please log in to access this resource.',
+            'message' => __('Unauthenticated. Please log in to access this resource.'),
             'errors' => [],
         ], 401);
     }
@@ -71,7 +71,7 @@ class Handler extends ExceptionHandler
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'An error occurred while processing your request.',
+                    'message' => __('An error occurred while processing your request.'),
                     'errors' => [],
                 ], 500);
             }

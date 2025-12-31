@@ -72,22 +72,22 @@ class TransferController extends ApiController
         $user = $request->user();
         $fromWallet = $user->wallets()->find($data['from_wallet_id']);
         if (is_null($fromWallet)) {
-            return $this->failure('Source wallet does not exist');
+            return $this->failure(__('Source wallet does not exist'));
         }
 
         $toWallet = $user->wallets()->find($data['to_wallet_id']);
         if (is_null($toWallet)) {
-            return $this->failure('Destination wallet does not exist');
+            return $this->failure(__('Destination wallet does not exist'));
         }
 
         if ($fromWallet->balance < $data['amount']) {
-            return $this->failure('Source wallet has insufficient balance');
+            return $this->failure(__('Source wallet has insufficient balance'));
         }
 
         $exchangeRate = 1;
         if ($fromWallet->currency != $toWallet->currency) {
             if (! $request->has('exchange_rate')) {
-                return $this->failure('Please fill in an exchange rate');
+                return $this->failure(__('Please fill in an exchange rate'));
             }
             $exchangeRate = $data['exchange_rate'];
 

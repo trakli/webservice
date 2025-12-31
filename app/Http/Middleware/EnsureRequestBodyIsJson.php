@@ -29,7 +29,7 @@ class EnsureRequestBodyIsJson
 
         return response()->json([
             'error' => 'Unsupported Media Type',
-            'message' => 'The Content-Type header must be application/json for this request.',
+            'message' => __('The Content-Type header must be application/json for this request.'),
         ], Response::HTTP_UNSUPPORTED_MEDIA_TYPE);
     }
 }
