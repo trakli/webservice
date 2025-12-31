@@ -136,7 +136,7 @@ class CategoryController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 422, $validator->errors()->all());
+            return $this->failure(__('Validation error'), 422, $validator->errors()->all());
         }
 
         $data = $validator->validated();
@@ -145,7 +145,7 @@ class CategoryController extends ApiController
         $category = $user->categories()->find($id);
 
         if (! $category) {
-            return $this->failure('Category not found', 404);
+            return $this->failure(__('Category not found'), 404);
         }
         try {
             DB::transaction(function () use ($data, $request, &$category) {
@@ -154,11 +154,11 @@ class CategoryController extends ApiController
 
             $category->refresh();
 
-            return $this->success($category, 'Category updated successfully');
+            return $this->success($category, __('Category updated successfully'));
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to update category', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to update category'), 500, [$e->getMessage()]);
         }
     }
 
@@ -211,7 +211,7 @@ class CategoryController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 422, $validator->errors()->all());
+            return $this->failure(__('Validation error'), 422, $validator->errors()->all());
         }
 
         $data = $validator->validated();
@@ -219,7 +219,7 @@ class CategoryController extends ApiController
         $data['user_id'] = $user->id;
         $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
         if ($category_exists) {
-            return $this->failure('Category already exists', 400);
+            return $this->failure(__('Category already exists'), 400);
         }
 
         try {
@@ -239,11 +239,11 @@ class CategoryController extends ApiController
 
             $category->refresh();
 
-            return $this->success($category, 'Category created successfully', 201);
+            return $this->success($category, __('Category created successfully'), 201);
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to create category', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create category'), 500, [$e->getMessage()]);
         }
     }
 
@@ -283,7 +283,7 @@ class CategoryController extends ApiController
         $category = $user->categories()->find($id);
 
         if (! $category) {
-            return $this->failure('Category not found', 404);
+            return $this->failure(__('Category not found'), 404);
         }
 
         return $this->success($category);
@@ -327,12 +327,12 @@ class CategoryController extends ApiController
         $category = $user->categories()->find($id);
 
         if (! $category) {
-            return $this->failure('Category not found', 404);
+            return $this->failure(__('Category not found'), 404);
         }
 
         $category->delete();
 
-        return $this->success(null, 'Category deleted successfully', 204);
+        return $this->success(null, __('Category deleted successfully'), 204);
     }
 
     #[OA\Post(
@@ -423,9 +423,9 @@ class CategoryController extends ApiController
                 'created' => count($created),
                 'skipped' => $skipped,
                 'categories' => $created,
-            ], 'Default categories created successfully', 201);
+            ], __('Default categories created successfully'), 201);
         } catch (\Exception $e) {
-            return $this->failure('Failed to create default categories', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create default categories'), 500, [$e->getMessage()]);
         }
     }
 }

@@ -52,7 +52,7 @@ class FileImportService
             for ($i = $fileImport->progress; $i < count($csvData); $i++) {
                 $data = $csvData[$i];
                 if (! $this->isValidDate($data[7])) {
-                    $this->saveFailedImport($fileImport, $data, $user, 'Date must be in the format YYYY-MM-DD');
+                    $this->saveFailedImport($fileImport, $data, $user, __('Date must be in the format YYYY-MM-DD'));
 
                     $fileImport->progress = $i + 1;
                     $fileImport->save();
@@ -68,7 +68,7 @@ class FileImportService
                         $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                         Log::error($e);
                     } catch (Exception $e) {
-                        $this->saveFailedImport($fileImport, $data, $user, 'An error occurred while importing this transaction');
+                        $this->saveFailedImport($fileImport, $data, $user, __('An error occurred while importing this transaction'));
                         Log::error($e);
                     }
                 } elseif ($transactionType == '+Transfer') {
@@ -79,17 +79,17 @@ class FileImportService
                             $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                             Log::error($e);
                         } catch (Exception $e) {
-                            $this->saveFailedImport($fileImport, $data, $user, 'An error occurred while importing this transaction');
-                            $this->saveFailedImport($fileImport, $csvData[$i + 1], $user, 'An error occurred while importing this transaction');
+                            $this->saveFailedImport($fileImport, $data, $user, __('An error occurred while importing this transaction'));
+                            $this->saveFailedImport($fileImport, $csvData[$i + 1], $user, __('An error occurred while importing this transaction'));
                             Log::error($e);
                         } finally {
                             $i += 1;
                         }
                     } else {
-                        $this->saveFailedImport($fileImport, $data, $user, 'Corresponding -Transfer transaction not found');
+                        $this->saveFailedImport($fileImport, $data, $user, __('Corresponding -Transfer transaction not found'));
                     }
                 } else {
-                    $this->saveFailedImport($fileImport, $data, $user, 'Invalid transaction type');
+                    $this->saveFailedImport($fileImport, $data, $user, __('Invalid transaction type'));
                 }
 
                 $fileImport->progress = $i + 1;
@@ -264,7 +264,7 @@ class FileImportService
             }
 
             if ($fromAmount == 0) {
-                throw new FileImportException('Cannot compute transfer with zero send amount');
+                throw new FileImportException(__('Cannot compute transfer with zero send amount'));
             }
             $exchangeRate = $toAmount / $fromAmount;
 

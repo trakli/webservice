@@ -68,8 +68,8 @@ class UserRegistered
     private function createDefaultWallet($user): void
     {
         $wallet = $user->wallets()->create([
-            'name' => 'Main Wallet',
-            'description' => 'Your primary wallet',
+            'name' => __('Main Wallet'),
+            'description' => __('Your primary wallet'),
             'type' => 'cash',
             'currency' => 'USD',
             'balance' => 0,

@@ -122,7 +122,7 @@ class GroupController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 422, $validator->errors()->all());
+            return $this->failure(__('Validation error'), 422, $validator->errors()->all());
         }
         $data = $validator->validated();
         $user = $request->user();
@@ -138,7 +138,7 @@ class GroupController extends ApiController
             }
             $existingGroup->refresh();
 
-            return $this->success($existingGroup, 'Group already exists', 200);
+            return $this->success($existingGroup, __('Group already exists'), 200);
         }
 
         try {
@@ -159,12 +159,12 @@ class GroupController extends ApiController
             });
             $group->refresh();
 
-            return $this->success($group, 'Group created successfully', 201);
+            return $this->success($group, __('Group created successfully'), 201);
 
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to create group', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create group'), 500, [$e->getMessage()]);
         }
 
     }
@@ -204,7 +204,7 @@ class GroupController extends ApiController
         $group = $user->groups()->find($id);
 
         if (! $group) {
-            return $this->failure('Group not found', 404);
+            return $this->failure(__('Group not found'), 404);
         }
 
         return $this->success($group);
@@ -270,7 +270,7 @@ class GroupController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->failure('Validation error', 422, $validator->errors()->all());
+            return $this->failure(__('Validation error'), 422, $validator->errors()->all());
         }
 
         $user = $request->user();
@@ -278,7 +278,7 @@ class GroupController extends ApiController
         $data = $validator->validated();
 
         if (! $group) {
-            return $this->failure('Group not found', 404);
+            return $this->failure(__('Group not found'), 404);
         }
         try {
             DB::transaction(function () use ($data, $request, &$group) {
@@ -287,11 +287,11 @@ class GroupController extends ApiController
 
             $group->refresh();
 
-            return $this->success($group, 'Group updated successfully');
+            return $this->success($group, __('Group updated successfully'));
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to update group', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to update group'), 500, [$e->getMessage()]);
         }
     }
 
@@ -329,11 +329,11 @@ class GroupController extends ApiController
         $group = $user->groups()->find($id);
 
         if (! $group) {
-            return $this->failure('Group not found', 404);
+            return $this->failure(__('Group not found'), 404);
         }
 
         $group->delete();
 
-        return $this->success(null, 'Group deleted successfully', 204);
+        return $this->success(null, __('Group deleted successfully'), 204);
     }
 }

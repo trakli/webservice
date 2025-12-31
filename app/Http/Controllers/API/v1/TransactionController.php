@@ -74,7 +74,7 @@ class TransactionController extends ApiController
         $type = $request->query('type');
 
         if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
-            return $this->failure('Invalid transaction type', 400);
+            return $this->failure(__('Invalid transaction type'), 400);
         }
 
         /** @var \App\Models\User $user */
@@ -132,7 +132,7 @@ class TransactionController extends ApiController
         $transaction = $request->user()->transactions()->find($id);
 
         if (! $transaction) {
-            return $this->failure('Transaction not found', 404);
+            return $this->failure(__('Transaction not found'), 404);
         }
 
         try {
@@ -145,7 +145,7 @@ class TransactionController extends ApiController
                 'exception' => $e,
             ]);
 
-            return $this->failure('Failed to upload files', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to upload files'), 500, [$e->getMessage()]);
         }
         $transaction->refresh();
 
@@ -316,7 +316,7 @@ class TransactionController extends ApiController
                 'exception' => $e,
             ]);
 
-            return $this->failure('Failed to create transaction', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create transaction'), 500, [$e->getMessage()]);
         }
 
         return $this->success($transaction, statusCode: 201);
@@ -343,13 +343,13 @@ class TransactionController extends ApiController
         $transaction = $request->user()->transactions()->find($transaction_id);
 
         if (! $transaction) {
-            return $this->failure('Transaction not found', 404);
+            return $this->failure(__('Transaction not found'), 404);
         }
 
         $file = $transaction->files()->find($file_id);
 
         if (! $file) {
-            return $this->failure('File not found', 404);
+            return $this->failure(__('File not found'), 404);
         }
 
         $file->delete();
@@ -400,7 +400,7 @@ class TransactionController extends ApiController
         $type = $request->query('type');
 
         if (! empty($type) && ! in_array($type, ['income', 'expense'])) {
-            return $this->failure('Invalid transaction type', 400);
+            return $this->failure(__('Invalid transaction type'), 400);
         }
 
         $query = Transaction::query();
@@ -411,7 +411,7 @@ class TransactionController extends ApiController
         $transaction = $query->find($id);
 
         if (! $transaction) {
-            return $this->failure('Transaction not found', 404);
+            return $this->failure(__('Transaction not found'), 404);
         }
 
         try {
@@ -543,7 +543,7 @@ class TransactionController extends ApiController
         $transaction = Transaction::find($id);
 
         if (! $transaction) {
-            return $this->failure('Transaction not found', 404);
+            return $this->failure(__('Transaction not found'), 404);
         }
 
         try {
@@ -623,7 +623,7 @@ class TransactionController extends ApiController
                 'exception' => $e,
             ]);
 
-            return $this->failure('Failed to update transaction', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to update transaction'), 500, [$e->getMessage()]);
         }
 
     }
@@ -661,7 +661,7 @@ class TransactionController extends ApiController
         $transaction = Transaction::find($id);
 
         if (! $transaction) {
-            return $this->failure('Transaction not found', 404);
+            return $this->failure(__('Transaction not found'), 404);
         }
 
         try {
@@ -672,7 +672,7 @@ class TransactionController extends ApiController
 
         $transaction->delete();
 
-        return $this->success(['message' => 'Transaction deleted successfully']);
+        return $this->success(['message' => __('Transaction deleted successfully')]);
     }
 
     /**

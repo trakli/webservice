@@ -143,7 +143,7 @@ class WalletController extends ApiController
             }
             $existingWallet->refresh();
 
-            return $this->success($existingWallet, 'Wallet already exists', 200);
+            return $this->success($existingWallet, __('Wallet already exists'), 200);
         }
 
         try {
@@ -162,12 +162,12 @@ class WalletController extends ApiController
             });
             $wallet->refresh();
 
-            return $this->success($wallet, 'Wallet created successfully', 201);
+            return $this->success($wallet, __('Wallet created successfully'), 201);
 
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to create wallet', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to create wallet'), 500, [$e->getMessage()]);
         }
     }
 
@@ -209,7 +209,7 @@ class WalletController extends ApiController
         $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
-            return $this->failure('Wallet not found', 404);
+            return $this->failure(__('Wallet not found'), 404);
         }
 
         return $this->success($wallet);
@@ -282,7 +282,7 @@ class WalletController extends ApiController
         $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
-            return $this->failure('Wallet not found', 404);
+            return $this->failure(__('Wallet not found'), 404);
         }
         try {
             DB::transaction(function () use ($validatedData, $request, &$wallet) {
@@ -291,11 +291,11 @@ class WalletController extends ApiController
 
             $wallet->refresh();
 
-            return $this->success($wallet, 'Wallet updated successfully');
+            return $this->success($wallet, __('Wallet updated successfully'));
         } catch (ValidationException $e) {
-            return $this->failure('Validation error', 422, $e->errors());
+            return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
-            return $this->failure('Failed to update wallet', 500, [$e->getMessage()]);
+            return $this->failure(__('Failed to update wallet'), 500, [$e->getMessage()]);
         }
     }
 
@@ -337,11 +337,11 @@ class WalletController extends ApiController
         $wallet = $user->wallets()->find($id);
 
         if (! $wallet) {
-            return $this->failure('Wallet not found', 404);
+            return $this->failure(__('Wallet not found'), 404);
         }
 
         $wallet->delete();
 
-        return $this->success(null, 'Wallet deleted successfully');
+        return $this->success(null, __('Wallet deleted successfully'));
     }
 }
