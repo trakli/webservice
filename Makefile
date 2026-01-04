@@ -87,7 +87,10 @@ logs: ## Show application logs
 	docker compose logs -f app
 
 prod-build: ## Build the production image
-	docker compose -f docker-compose.prod.yml build
+	docker build -f docker/prod/Dockerfile -t ghcr.io/trakli/webservice:latest .
+
+prod-push: ## Push production image to registry (requires docker login)
+	docker push ghcr.io/trakli/webservice:latest
 
 prod-up: ## Start the production container locally
 	docker compose -f docker-compose.prod.yml up -d
