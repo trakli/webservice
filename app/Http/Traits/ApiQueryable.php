@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Whilesmart\UserAuthentication\Traits\ApiResponse;
 
 trait ApiQueryable
@@ -70,6 +71,18 @@ trait ApiQueryable
         $user = $request->user();
         if (isset($request['client_id']) && ! $model->client_generated_id) {
             $model->setClientGeneratedId($request['client_id'], $user);
+        }
+    }
+
+    protected function checkUpdatedAt(Model $model, array &$validatedData): void
+    {
+        if (isset($validatedData['updated_at'])) {
+            // Ensure the updated at is always greater than the created at
+            $created_at = $model->created_at;
+            $updated_at = Carbon::parse($validatedData['updated_at']);
+            if ($updated_at->lt($created_at)) {
+                throw new HttpException(400, 'The updated at date is less than the created at date');
+            }
         }
     }
 }

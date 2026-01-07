@@ -75,4 +75,26 @@ class SyncableModelsTest extends TestCase
         $this->assertEquals($transfer->syncState->syncable_type, Transfer::class);
         $this->assertEquals($transfer->syncState->syncable_id, $transfer->id);
     }
+
+    /** @test */
+    public function user_can_not_update_a_transaction_if_the_updated_at_is_less_than_the_created_at()
+    {
+        $user = User::factory()->create();
+
+        /** @var Transaction */
+        $transaction = Transaction::factory()->create([
+            'user_id' => $user->id,
+        ]);
+
+        $response = $this->actingAs($user)->putJson('/api/v1/transactions/'.$transaction['id'], [
+            'amount' => 200,
+            'updated_at' => '2020-05-01T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(400);
+        $message = $response->json()['message'];
+
+        $this->assertEquals('The updated at date is less than the created at date', $message);
+
+    }
 }
