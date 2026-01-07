@@ -282,7 +282,7 @@ class TransactionsTest extends TestCase
 
         $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
             'amount' => 200,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $response->assertStatus(200)
@@ -399,7 +399,7 @@ class TransactionsTest extends TestCase
             'recurrence_period' => 'daily',
             'recurrence_interval' => 2,
             'is_recurring' => true,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $transaction = $response->json('data');
@@ -432,7 +432,7 @@ class TransactionsTest extends TestCase
             'recurrence_period' => 'weekly',
             'recurrence_interval' => 2,
             'is_recurring' => true,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $transaction = $response->json('data');
@@ -631,7 +631,7 @@ class TransactionsTest extends TestCase
             'recurrence_period' => 'weekly',
             'recurrence_interval' => 2,
             'is_recurring' => true,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $response->assertStatus(200);
@@ -656,7 +656,7 @@ class TransactionsTest extends TestCase
             'recurrence_period' => 'monthly',
             'recurrence_interval' => 1,
             'is_recurring' => true,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $response->assertStatus(200);
@@ -684,7 +684,7 @@ class TransactionsTest extends TestCase
         // Remove recurrence by setting is_recurring to false
         $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$transaction['id'], [
             'is_recurring' => false,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
         ]);
 
         $response->assertStatus(200);
@@ -703,7 +703,7 @@ class TransactionsTest extends TestCase
 
         $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/'.$expense['id'], [
             'amount' => 200,
-            'updated_at' => '2025-05-01T15:17:54.120Z',
+            'updated_at' => '2026-05-01T15:17:54.120Z',
             'client_id' => "$deviceToken:$clientId",
         ]);
 

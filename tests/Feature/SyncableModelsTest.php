@@ -8,7 +8,6 @@ use App\Models\Party;
 use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -78,7 +77,7 @@ class SyncableModelsTest extends TestCase
     }
 
     /** @test */
-    public function use_current_date_as_updated_at_if_the_updated_at_is_less_than_created_at_on_update()
+    public function user_can_not_update_a_transaction_if_the_updated_at_is_less_than_the_created_at()
     {
         $user = User::factory()->create();
 
@@ -92,11 +91,10 @@ class SyncableModelsTest extends TestCase
             'updated_at' => '2020-05-01T15:17:54.120Z',
         ]);
 
-        $response->assertStatus(200);
-        $transaction = Transaction::find($transaction['id']);
-        $parsed_date = Carbon::parse('2020-05-01T15:17:54.120Z');
+        $response->assertStatus(400);
+        $message = $response->json()['message'];
 
-        $this->assertTrue($parsed_date->lt($transaction->updated_at));
+        $this->assertEquals('The updated at date is less than the created at date', $message);
 
     }
 }

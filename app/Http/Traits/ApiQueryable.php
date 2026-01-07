@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Whilesmart\UserAuthentication\Traits\ApiResponse;
 
 trait ApiQueryable
@@ -80,8 +81,7 @@ trait ApiQueryable
             $created_at = $model->created_at;
             $updated_at = Carbon::parse($validatedData['updated_at']);
             if ($updated_at->lt($created_at)) {
-                // Remove the value so that laravel defaults to now();
-                unset($validatedData['updated_at']);
+                throw new HttpException(400, 'The updated at date is less than the created at date');
             }
         }
     }
