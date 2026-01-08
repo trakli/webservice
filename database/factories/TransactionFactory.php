@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,5 +24,18 @@ class TransactionFactory extends Factory
             'datetime' => now(),
             'type' => $this->faker->randomElement(['income', 'expense']),
         ];
+    }
+
+    public function withUserAndWallet(?User $user = null): static
+    {
+        return $this->state(function () use ($user) {
+            $user = $user ?? User::factory()->create();
+            $wallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+            return [
+                'user_id' => $user->id,
+                'wallet_id' => $wallet->id,
+            ];
+        });
     }
 }
