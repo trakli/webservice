@@ -4,6 +4,7 @@ use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
+use App\Http\Controllers\API\v1\NotificationController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\StatsController;
 use App\Http\Controllers\API\v1\TransactionController;
@@ -52,5 +53,14 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
 
     // AI routes
     Route::post('ai/chat', [AiController::class, 'chat']);
-    Route::get('ai/health', [AiController::class, 'health']);
+
+    // Notification routes
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::get('notifications/preferences', [NotificationController::class, 'getPreferences']);
+    Route::put('notifications/preferences', [NotificationController::class, 'updatePreferences']);
+    Route::get('notifications/{id}', [NotificationController::class, 'show']);
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
 });
