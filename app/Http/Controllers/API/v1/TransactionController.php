@@ -207,7 +207,7 @@ class TransactionController extends ApiController
             'created_at' => ['nullable', new Iso8601DateTime],
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'nullable|integer|exists:wallets,id',
+            'wallet_id' => 'required|integer|exists:wallets,id',
             'categories' => 'nullable|array',
             'is_recurring' => 'nullable|boolean',
             'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
