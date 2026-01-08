@@ -490,7 +490,7 @@ class TransactionController extends ApiController
             'datetime' => ['nullable', new Iso8601DateTime],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'nullable|integer|exists:wallets,id',
+            'wallet_id' => 'sometimes|integer|exists:wallets,id',
             'group_id' => 'nullable|integer|exists:groups,id',
             'categories' => 'nullable|array',
             'categories.*' => 'integer|exists:categories,id',

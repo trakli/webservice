@@ -12,8 +12,19 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('reminders:process')->everyMinute();
 
+        $schedule->command('insights:send --frequency=weekly')
+            ->weeklyOn(1, '08:00')
+            ->withoutOverlapping();
+
+        $schedule->command('insights:send --frequency=monthly')
+            ->monthlyOn(1, '08:00')
+            ->withoutOverlapping();
+
+        $schedule->command('engagement:send-inactivity-reminders')
+            ->dailyAt('10:00')
+            ->withoutOverlapping();
     }
 
     /**

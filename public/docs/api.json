@@ -927,6 +927,285 @@
                 }
             }
         },
+        "/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "List all notifications",
+                "operationId": "3a9d6c015f72a79b135f274d58527133",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "unread_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Notification"
+                                            }
+                                        },
+                                        "unread_count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get a specific notification",
+                "operationId": "a087568972a289a05012f66bd569c401",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Notification"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Notification not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Delete a notification",
+                "operationId": "f3e09a4ce982caf7e9ce38ae4d493a94",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Notification deleted"
+                    },
+                    "404": {
+                        "description": "Notification not found"
+                    }
+                }
+            }
+        },
+        "/notifications/{id}/read": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark a notification as read",
+                "operationId": "057bc4edab5f0e13b8b89356e8155f58",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification marked as read"
+                    },
+                    "404": {
+                        "description": "Notification not found"
+                    }
+                }
+            }
+        },
+        "/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark all notifications as read",
+                "operationId": "36edd8dbff9afbacd51a935b54e0d36c",
+                "responses": {
+                    "200": {
+                        "description": "All notifications marked as read"
+                    }
+                }
+            }
+        },
+        "/notifications/unread-count": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get unread notification count",
+                "operationId": "809c494bd08a0c58565ec64471eb971b",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/preferences": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Get notification preferences",
+                "operationId": "1a29f14561d2c31619fb1dd32537a51f",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "channels": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "boolean"
+                                                },
+                                                "push": {
+                                                    "type": "boolean"
+                                                },
+                                                "inapp": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "types": {
+                                            "properties": {
+                                                "reminders": {
+                                                    "type": "boolean"
+                                                },
+                                                "insights": {
+                                                    "type": "boolean"
+                                                },
+                                                "inactivity": {
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Update notification preferences",
+                "operationId": "03acc2ba653fc81cd3beecac6477ed5f",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "channels": {
+                                        "properties": {
+                                            "email": {
+                                                "type": "boolean"
+                                            },
+                                            "push": {
+                                                "type": "boolean"
+                                            },
+                                            "inapp": {
+                                                "type": "boolean"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "types": {
+                                        "properties": {
+                                            "reminders": {
+                                                "type": "boolean"
+                                            },
+                                            "insights": {
+                                                "type": "boolean"
+                                            },
+                                            "inactivity": {
+                                                "type": "boolean"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Preferences updated"
+                    }
+                }
+            }
+        },
         "/parties": {
             "get": {
                 "tags": [
@@ -1198,6 +1477,378 @@
                     },
                     "500": {
                         "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/reminders": {
+            "get": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "List all reminders",
+                "operationId": "07bf0b22503d9a861df7051e25440b28",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Reminder"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Create a new reminder",
+                "operationId": "94a00059d4b0d305e4e2085aa11b93c6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title"
+                                ],
+                                "properties": {
+                                    "client_id": {
+                                        "type": "string"
+                                    },
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "daily_tracking",
+                                            "weekly_review",
+                                            "monthly_summary",
+                                            "bill_due",
+                                            "budget_alert",
+                                            "custom"
+                                        ]
+                                    },
+                                    "trigger_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "due_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "repeat_rule": {
+                                        "type": "string",
+                                        "example": "FREQ=DAILY;BYHOUR=20;BYMINUTE=0"
+                                    },
+                                    "timezone": {
+                                        "type": "string",
+                                        "example": "UTC"
+                                    },
+                                    "priority": {
+                                        "type": "integer"
+                                    },
+                                    "metadata": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reminder created successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reminder"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/reminders/{id}": {
+            "get": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Get a specific reminder",
+                "operationId": "1d0b945e0f43359656b1740a541e0ac3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reminder"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reminder not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Update a specific reminder",
+                "operationId": "ea68d717738f1bfa92f9ed80007044a3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "type": "string"
+                                    },
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string"
+                                    },
+                                    "trigger_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "due_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "repeat_rule": {
+                                        "type": "string"
+                                    },
+                                    "timezone": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "string"
+                                    },
+                                    "priority": {
+                                        "type": "integer"
+                                    },
+                                    "metadata": {
+                                        "type": "object"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reminder updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reminder"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Reminder not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Delete a specific reminder",
+                "operationId": "3e1ad9dca4583a4fc91495d94d7cad49",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Reminder deleted successfully"
+                    },
+                    "404": {
+                        "description": "Reminder not found"
+                    }
+                }
+            }
+        },
+        "/reminders/{id}/snooze": {
+            "post": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Snooze a reminder",
+                "operationId": "3bd40c6dcf3c0253c0e2e855f5ecebb5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "until"
+                                ],
+                                "properties": {
+                                    "until": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reminder snoozed"
+                    },
+                    "404": {
+                        "description": "Reminder not found"
+                    }
+                }
+            }
+        },
+        "/reminders/{id}/pause": {
+            "post": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Pause a reminder",
+                "operationId": "183bdf7eb5407599ee6b73f0b56584d5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reminder paused"
+                    },
+                    "404": {
+                        "description": "Reminder not found"
+                    }
+                }
+            }
+        },
+        "/reminders/{id}/resume": {
+            "post": {
+                "tags": [
+                    "Reminders"
+                ],
+                "summary": "Resume a paused or snoozed reminder",
+                "operationId": "72a839dc7f70c3fefaabef68a0c5d2c3",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reminder resumed"
+                    },
+                    "404": {
+                        "description": "Reminder not found"
                     }
                 }
             }
@@ -3024,6 +3675,43 @@
                 },
                 "type": "object"
             },
+            "Notification": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "reminder",
+                            "alert",
+                            "achievement",
+                            "system"
+                        ]
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "data": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "read_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "Party": {
                 "properties": {
                     "id": {
@@ -3090,6 +3778,83 @@
                         "description": "when next the transaction should happen",
                         "type": "string",
                         "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Reminder": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "daily_tracking",
+                            "weekly_review",
+                            "monthly_summary",
+                            "bill_due",
+                            "budget_alert",
+                            "custom"
+                        ]
+                    },
+                    "trigger_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "due_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "repeat_rule": {
+                        "type": "string",
+                        "example": "FREQ=DAILY;BYHOUR=20;BYMINUTE=0",
+                        "nullable": true
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "example": "UTC"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "active",
+                            "paused",
+                            "snoozed",
+                            "completed",
+                            "cancelled"
+                        ]
+                    },
+                    "priority": {
+                        "type": "integer"
+                    },
+                    "snoozed_until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_triggered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "next_trigger_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "metadata": {
+                        "type": "object",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -3320,6 +4085,14 @@
         {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
+        },
+        {
+            "name": "Notifications",
+            "description": "Endpoints for managing notifications"
+        },
+        {
+            "name": "Reminders",
+            "description": "Endpoints for managing reminders"
         },
         {
             "name": "Statistics",

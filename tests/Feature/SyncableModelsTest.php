@@ -8,6 +8,7 @@ use App\Models\Party;
 use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,9 +19,13 @@ class SyncableModelsTest extends TestCase
     /** @test */
     public function transaction_creates_a_sync_state_on_creation()
     {
+        $user = User::factory()->create();
+        $wallet = Wallet::factory()->create(['user_id' => $user->id]);
+
         /** @var Transaction */
         $transaction = Transaction::factory()->create([
-            'user_id' => User::factory()->create()->id,
+            'user_id' => $user->id,
+            'wallet_id' => $wallet->id,
         ]);
 
         $this->assertNotNull($transaction->syncState);
@@ -80,10 +85,12 @@ class SyncableModelsTest extends TestCase
     public function user_can_not_update_a_transaction_if_the_updated_at_is_less_than_the_created_at()
     {
         $user = User::factory()->create();
+        $wallet = Wallet::factory()->create(['user_id' => $user->id]);
 
         /** @var Transaction */
         $transaction = Transaction::factory()->create([
             'user_id' => $user->id,
+            'wallet_id' => $wallet->id,
         ]);
 
         $response = $this->actingAs($user)->putJson('/api/v1/transactions/'.$transaction['id'], [

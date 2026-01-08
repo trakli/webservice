@@ -88,6 +88,16 @@ class User extends Authenticatable
         return $this->hasMany(FileImport::class);
     }
 
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(Reminder::class);
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->getConfigValue('avatar');

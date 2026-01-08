@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use InvalidArgumentException;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -49,6 +50,17 @@ use OpenApi\Attributes as OA;
 class Transaction extends Model
 {
     use Groupable, HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function (Transaction $transaction) {
+            if (empty($transaction->wallet_id)) {
+                throw new InvalidArgumentException('A transaction must belong to a wallet.');
+            }
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
