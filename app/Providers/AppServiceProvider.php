@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Kreait\Firebase\Contract\Messaging;
 use WhileSmart\LaravelPluginEngine\Providers\PluginServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,6 +14,18 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(PluginServiceProvider::class);
+
+        $this->app->bind(Messaging::class, function () {
+            $credentials = config('firebase.credentials') ?? env('FIREBASE_CREDENTIALS');
+            if (empty($credentials) || ! file_exists(base_path($credentials))) {
+                return null;
+            }
+
+            $factory = (new \Kreait\Firebase\Factory)
+                ->withServiceAccount(base_path($credentials));
+
+            return $factory->createMessaging();
+        });
     }
 
     /**

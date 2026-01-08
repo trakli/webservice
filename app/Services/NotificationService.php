@@ -282,4 +282,33 @@ class NotificationService
             ],
         ];
     }
+
+    /**
+     * Send an email notification to a specific email address.
+     */
+    public function sendEmailNotification(array $data): bool
+    {
+        try {
+            $to = $data['to'] ?? null;
+            $subject = $data['subject'] ?? 'Notification';
+            $body = $data['body'] ?? '';
+
+            if (! $to) {
+                return false;
+            }
+
+            $mail = new GenericMail($subject, $body);
+            Mail::to($to)->queue($mail);
+
+            Log::info('Email notification sent', ['email' => $to]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Email notification failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
 }
