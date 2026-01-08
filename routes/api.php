@@ -6,6 +6,7 @@ use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\NotificationController;
 use App\Http\Controllers\API\v1\PartyController;
+use App\Http\Controllers\API\v1\ReminderController;
 use App\Http\Controllers\API\v1\StatsController;
 use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransferController;
@@ -53,6 +54,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
 
     // AI routes
     Route::post('ai/chat', [AiController::class, 'chat']);
+    Route::get('ai/health', [AiController::class, 'health']);
+
+    // Reminder routes
+    Route::apiResource('reminders', ReminderController::class);
+    Route::post('reminders/{id}/snooze', [ReminderController::class, 'snooze']);
+    Route::post('reminders/{id}/pause', [ReminderController::class, 'pause']);
+    Route::post('reminders/{id}/resume', [ReminderController::class, 'resume']);
 
     // Notification routes
     Route::get('notifications', [NotificationController::class, 'index']);
