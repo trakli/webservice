@@ -199,15 +199,61 @@ class PartyTest extends TestCase
 
     }
 
-    public function test_api_user_can_not_create_two_parties_with_the_same_name()
+    public function test_api_returns_existing_party_when_creating_duplicate_name()
     {
         $response = $this->createParty();
-
         $response->assertStatus(201);
+        $firstPartyId = $response->json('data.id');
 
         $response = $this->createParty();
 
-        $response->assertStatus(400);
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Party already exists']);
+        $this->assertEquals($firstPartyId, $response->json('data.id'));
+    }
+
+    public function test_api_updates_client_id_when_returning_existing_party()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'Sync Test Party',
+            'description' => 'test description',
+            'type' => 'individual',
+        ]);
+        $response->assertStatus(201);
+        $partyId = $response->json('data.id');
+
+        $newClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a4:345cb3df-df3a-428b-a908-e5f74b8d58a5';
+        $response = $this->actingAs($this->user)->postJson('/api/v1/parties', [
+            'name' => 'Sync Test Party',
+            'description' => 'different description',
+            'type' => 'organization',
+            'client_id' => $newClientId,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Party already exists']);
+        $this->assertEquals($partyId, $response->json('data.id'));
+
+        $party = Party::find($partyId);
+        $this->assertEquals('345cb3df-df3a-428b-a908-e5f74b8d58a5', $party->syncState->client_generated_id);
+    }
+
+    public function test_api_different_users_can_create_parties_with_same_name()
+    {
+        $response = $this->createParty();
+        $response->assertStatus(201);
+        $user1PartyId = $response->json('data.id');
+
+        $user2 = User::factory()->create();
+        $response = $this->actingAs($user2)->postJson('/api/v1/parties', [
+            'name' => 'My Party',
+            'description' => 'test description',
+            'type' => 'individual',
+        ]);
+        $response->assertStatus(201);
+        $user2PartyId = $response->json('data.id');
+
+        $this->assertNotEquals($user1PartyId, $user2PartyId);
     }
 
     public function test_api_user_can_update_their_parties()
