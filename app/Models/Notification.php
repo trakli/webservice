@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\NotificationType;
+use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +24,7 @@ use OpenApi\Attributes as OA;
 )]
 class Notification extends Model
 {
-    use HasFactory;
+    use HasFactory, Syncable;
 
     protected $fillable = [
         'user_id',
@@ -39,6 +40,8 @@ class Notification extends Model
         'read_at' => 'datetime',
         'type' => NotificationType::class,
     ];
+
+    protected $appends = ['last_synced_at', 'client_generated_id'];
 
     public function user(): BelongsTo
     {

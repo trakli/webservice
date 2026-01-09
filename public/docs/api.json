@@ -936,13 +936,13 @@
                 "operationId": "3a9d6c015f72a79b135f274d58527133",
                 "parameters": [
                     {
-                        "name": "limit",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 20
-                        }
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
                     },
                     {
                         "name": "unread_only",
@@ -960,6 +960,10 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
                                         "data": {
                                             "type": "array",
                                             "items": {
