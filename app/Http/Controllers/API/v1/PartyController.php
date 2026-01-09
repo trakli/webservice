@@ -125,9 +125,16 @@ class PartyController extends ApiController
 
         $user = $request->user();
         $validatedData['user_id'] = $user->id;
-        $existing_party = $user->parties()->where('name', $validatedData['name'])->first();
-        if ($existing_party) {
-            return $this->failure(__('Party already exists'), 400);
+
+        $existingParty = $user->parties()->where('name', $validatedData['name'])->first();
+        if ($existingParty) {
+            if (isset($validatedData['client_id']) && $existingParty->client_generated_id !== $validatedData['client_id']) {
+                $existingParty->setClientGeneratedId($validatedData['client_id'], $user);
+                $existingParty->markAsSynced();
+            }
+            $existingParty->refresh();
+
+            return $this->success($existingParty, __('Party already exists'), 200);
         }
 
         try {
