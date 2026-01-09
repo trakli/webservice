@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Http\Traits\ApiQueryable;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Notifications', description: 'Endpoints for managing notifications')]
 class NotificationController extends ApiController
 {
+    use ApiQueryable;
+
     public function __construct(
         protected NotificationService $notificationService
     ) {}
@@ -20,7 +23,9 @@ class NotificationController extends ApiController
         summary: 'List all notifications',
         tags: ['Notifications'],
         parameters: [
-            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 20)),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
+            new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
             new OA\Parameter(name: 'unread_only', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),
         ],
         responses: [
@@ -29,6 +34,7 @@ class NotificationController extends ApiController
                 description: 'Successful operation',
                 content: new OA\JsonContent(
                     properties: [
+                        new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
                         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Notification')),
                         new OA\Property(property: 'unread_count', type: 'integer'),
                     ],
@@ -40,21 +46,20 @@ class NotificationController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $limit = $request->input('limit', 20);
-
         $query = $user->notifications()->orderBy('created_at', 'desc');
 
         if ($request->boolean('unread_only')) {
             $query->unread();
         }
 
-        $notifications = $query->limit($limit)->get();
-        $unreadCount = $user->notifications()->unread()->count();
+        try {
+            $data = $this->applyApiQuery($request, $query, false);
+            $data['unread_count'] = $user->notifications()->unread()->count();
 
-        return $this->success([
-            'data' => $notifications,
-            'unread_count' => $unreadCount,
-        ]);
+            return $this->success($data);
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($e->getMessage(), 422);
+        }
     }
 
     #[OA\Get(

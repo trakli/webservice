@@ -170,4 +170,61 @@ class NotificationTest extends TestCase
         $response->assertStatus(200);
         $this->assertEquals(3, $response->json('data.count'));
     }
+
+    public function test_notification_includes_sync_attributes()
+    {
+        $notification = Notification::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/notifications/{$notification->id}");
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'data' => [
+                'last_synced_at',
+                'client_generated_id',
+            ],
+        ]);
+    }
+
+    public function test_notifications_list_returns_last_sync()
+    {
+        Notification::factory()->count(3)->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/notifications');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'data' => [
+                'last_sync',
+                'data',
+            ],
+        ]);
+    }
+
+    public function test_notifications_can_be_filtered_by_synced_since()
+    {
+        $old = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'updated_at' => now()->subDays(5),
+        ]);
+        $new = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'updated_at' => now()->subDay(),
+        ]);
+
+        $syncedSince = urlencode(now()->subDays(3)->toIso8601String());
+        $response = $this->actingAs($this->user)->getJson("/api/v1/notifications?synced_since={$syncedSince}");
+
+        $response->assertStatus(200);
+        $data = $response->json('data.data');
+        $this->assertCount(1, $data);
+        $this->assertEquals($new->id, $data[0]['id']);
+    }
+
+    public function test_synced_since_with_invalid_date_returns_error()
+    {
+        $response = $this->actingAs($this->user)->getJson('/api/v1/notifications?synced_since=invalid-date');
+
+        $response->assertStatus(422);
+    }
 }
