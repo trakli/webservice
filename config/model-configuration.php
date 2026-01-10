@@ -21,6 +21,7 @@ return [
         'notifications-reminders',
         'notifications-insights',
         'notifications-inactivity',
+        'insights-frequency',
     ],
     'model' => \App\Models\Configuration::class,
     'hooks' => [ModelConfigurationFilterHook::class],
