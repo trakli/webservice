@@ -3,7 +3,6 @@
 namespace Tests\Unit;
 
 use App\Models\User;
-use Carbon\Carbon;
 use Tests\TestCase;
 use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 

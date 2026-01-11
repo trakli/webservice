@@ -32,6 +32,6 @@ if (! function_exists('parse_datetime_with_user_timezone')) {
             return Carbon::parse($input, $userTimezone)->utc();
         }
 
-        return Carbon::parse($input)->utc();
+        return Carbon::parse($input, config('app.timezone'))->utc();
     }
 }
