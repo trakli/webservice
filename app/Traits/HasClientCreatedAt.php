@@ -16,6 +16,7 @@ trait HasClientCreatedAt
                 try {
                     $parsed = Carbon::parse($input);
                     $model->created_at = $parsed;
+                    $model->updated_at = $parsed;
 
                     Log::info('[Sync] Setting created_at from client', [
                         'model' => class_basename($model),
