@@ -8378,16 +8378,16 @@
         },
         {
             "name": "whilesmart/eloquent-model-configuration",
-            "version": "1.0.10",
+            "version": "1.0.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-model-configs.git",
-                "reference": "c5b5d27a4897b07122a9cba0fc83063174ee4678"
+                "reference": "50a1075eab35c99dcef3d353ae6389804b2754b4"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/c5b5d27a4897b07122a9cba0fc83063174ee4678",
-                "reference": "c5b5d27a4897b07122a9cba0fc83063174ee4678",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-model-configs/zipball/50a1075eab35c99dcef3d353ae6389804b2754b4",
+                "reference": "50a1075eab35c99dcef3d353ae6389804b2754b4",
                 "shasum": ""
             },
             "require": {
@@ -8426,9 +8426,9 @@
             "description": "Laravel package for managing model-specific configurations with type safety and easy persistence",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-model-configs/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.10"
+                "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.11"
             },
-            "time": "2025-12-14T17:56:17+00:00"
+            "time": "2026-01-11T10:14:02+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",

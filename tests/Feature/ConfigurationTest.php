@@ -64,12 +64,12 @@ class ConfigurationTest extends TestCase
         $response->assertJsonFragment(['message' => 'Invalid configuration key.']);
     }
 
-    public function test_api_user_can_store_and_retrieve_int_config()
+    public function test_api_user_can_store_and_retrieve_string_config()
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/configurations', [
             'key' => 'default-wallet',
-            'type' => 'int',
-            'value' => 12345,
+            'type' => 'string',
+            'value' => '00000000-0000-0000-0000-000000000000:12345678-1234-1234-1234-123456789012',
         ]);
         $response->assertStatus(201);
         $response->assertJson([

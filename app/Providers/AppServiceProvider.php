@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Kreait\Firebase\Contract\Messaging;
 use WhileSmart\LaravelPluginEngine\Providers\PluginServiceProvider;
@@ -33,6 +34,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Carbon::serializeUsing(fn ($carbon) => $carbon->format('Y-m-d\TH:i:s\Z'));
     }
 }
