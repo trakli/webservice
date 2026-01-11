@@ -2,7 +2,6 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 trait HasClientCreatedAt
@@ -14,7 +13,7 @@ trait HasClientCreatedAt
 
             if ($input) {
                 try {
-                    $parsed = Carbon::parse($input);
+                    $parsed = parse_datetime_with_user_timezone($input);
                     $model->created_at = $parsed;
                     $model->updated_at = $parsed;
 

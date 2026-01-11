@@ -14,6 +14,7 @@ return [
         'default-lang',
         'onboarding-complete',
         'theme',
+        'timezone',
         'manual-exchange-rates',
         'notifications-email',
         'notifications-push',
