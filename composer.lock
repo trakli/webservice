@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ca9219a23eb418e7bf371f7479e10cf5",
+    "content-hash": "c1382a22096999de959329eade84f0c9",
     "packages": [
         {
             "name": "beste/clock",
@@ -8490,16 +8490,16 @@
         },
         {
             "name": "whilesmart/laravel-user-authentication",
-            "version": "v1.0.4",
+            "version": "v1.0.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/laravel-user-authentication.git",
-                "reference": "5caa6344e21a20fb3f0975996c903f6067bca9e1"
+                "reference": "e187243881461f877ff87f6795aee4cbb329d688"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/laravel-user-authentication/zipball/5caa6344e21a20fb3f0975996c903f6067bca9e1",
-                "reference": "5caa6344e21a20fb3f0975996c903f6067bca9e1",
+                "url": "https://api.github.com/repos/whilesmartphp/laravel-user-authentication/zipball/e187243881461f877ff87f6795aee4cbb329d688",
+                "reference": "e187243881461f877ff87f6795aee4cbb329d688",
                 "shasum": ""
             },
             "require": {
@@ -8541,9 +8541,9 @@
             "description": "Package for managing user authentication across our projects",
             "support": {
                 "issues": "https://github.com/whilesmartphp/laravel-user-authentication/issues",
-                "source": "https://github.com/whilesmartphp/laravel-user-authentication/tree/v1.0.4"
+                "source": "https://github.com/whilesmartphp/laravel-user-authentication/tree/v1.0.5"
             },
-            "time": "2025-10-15T11:19:11+00:00"
+            "time": "2026-01-10T10:51:52+00:00"
         },
         {
             "name": "whilesmart/laravel-user-devices",
