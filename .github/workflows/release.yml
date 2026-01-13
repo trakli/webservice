@@ -1,0 +1,26 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      php_version:
+        description: 'PHP version to use'
+        required: false
+        default: '8.2'
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: whilesmart/workflows/php/laravel/release@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: trakli-webservice
+          php_version: ${{ inputs.php_version }}
