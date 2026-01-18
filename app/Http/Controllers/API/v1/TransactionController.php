@@ -79,7 +79,7 @@ class TransactionController extends ApiController
 
         /** @var \App\Models\User $user */
         $user = auth()->user();
-        $query = $user->transactions();
+        $query = $user->transactions()->orderBy('created_at', 'desc');
         if (! empty($type)) {
             $query->where('type', $type);
         }
