@@ -6,16 +6,23 @@ use App\Enums\TransactionType;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Database\Eloquent\Model;
+use Ramsey\Uuid\Uuid;
 
 class TransferService
 {
-    public function transfer(float $amountToSend, Model $fromWallet, float $amountToReceive, Model $toWallet, User $user, float $exchangeRate)
-    {
+    public function transfer(
+        float $amountToSend,
+        Wallet $fromWallet,
+        float $amountToReceive,
+        Wallet $toWallet,
+        User $user,
+        float $exchangeRate,
+        ?string $deviceToken = null
+    ) {
         if ($fromWallet->balance < $amountToSend) {
             throw new \InvalidArgumentException(__('Insufficient balance in source wallet'));
         }
-        // create transfer
+
         $transfer = Transfer::create([
             'amount' => $amountToSend,
             'from_wallet_id' => $fromWallet->id,
@@ -24,11 +31,10 @@ class TransferService
             'exchange_rate' => $exchangeRate,
         ]);
 
-        // deduct from source wallet
         $fromWallet->balance -= $amountToSend;
         $fromWallet->save();
 
-        $user->transactions()->create([
+        $expenseTransaction = $user->transactions()->create([
             'amount' => $amountToSend,
             'datetime' => now(),
             'type' => TransactionType::EXPENSE->value,
@@ -37,11 +43,10 @@ class TransferService
             'transfer_id' => $transfer->id,
         ]);
 
-        // send  to destination wallet
         $toWallet->balance = bcadd($toWallet->balance, $amountToReceive, 4);
         $toWallet->save();
 
-        $user->transactions()->create([
+        $incomeTransaction = $user->transactions()->create([
             'amount' => $amountToReceive,
             'datetime' => now(),
             'type' => TransactionType::INCOME->value,
@@ -49,6 +54,16 @@ class TransferService
             'wallet_id' => $toWallet->id,
             'transfer_id' => $transfer->id,
         ]);
+
+        if ($deviceToken) {
+            $expenseRandomId = Uuid::uuid4()->toString();
+            $expenseTransaction->setClientGeneratedId($expenseRandomId, $user, $deviceToken);
+            $expenseTransaction->markAsSynced();
+
+            $incomeRandomId = Uuid::uuid4()->toString();
+            $incomeTransaction->setClientGeneratedId($incomeRandomId, $user, $deviceToken);
+            $incomeTransaction->markAsSynced();
+        }
 
         return $transfer;
     }

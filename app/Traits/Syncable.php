@@ -24,7 +24,7 @@ trait Syncable
         return $this->morphOne(ModelSyncState::class, 'syncable');
     }
 
-    public function setClientGeneratedId(string $value, Model|Authenticatable $user): void
+    public function setClientGeneratedId(string $value, Model|Authenticatable $user, ?string $deviceToken = null): void
     {
         if (empty($value)) {
             Log::info('Client generated ID is empty, skipping updateOrCreate for client_generated_id.');
@@ -32,25 +32,25 @@ trait Syncable
             return;
         }
 
-        $exploded_value = explode(':', $value);
-        if (count($exploded_value) !== 2) {
-            Log::info('Client ID is not in the format  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.');
+        if ($deviceToken !== null) {
+            $device_id = $deviceToken;
+            $random_id = $value;
+        } else {
+            $exploded_value = explode(':', $value);
+            if (count($exploded_value) !== 2) {
+                Log::info('Client ID is not in the format  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.');
 
-            return;
+                return;
+            }
+            $device_id = $exploded_value[0];
+            $random_id = $exploded_value[1];
         }
 
-        // assuming the ValidateClientId rule as already checked the validity of the uuid
-        $device_id = $exploded_value[0];
-        $random_id = $exploded_value[1];
-
-        // check if this device exists
         $device = Device::where('token', $device_id)->first();
         if (empty($device)) {
             $device = $user->devices()->create(['token' => $device_id]);
         } else {
-            // reassign device if it belongs to another user since device tokens are unique to every device
             if ($device->deviceable_id != $user->id) {
-                // assign device to the new user
                 $device->deviceable_id = $user->id;
                 $device->save();
             }
@@ -79,6 +79,4 @@ trait Syncable
     {
         return $this->syncState()->updateOrCreate([], ['last_synced_at' => now()]);
     }
-
-    private function splitClientId(string $client_id): array {}
 }

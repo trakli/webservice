@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\TransactionType;
+use App\Models\ModelSyncState;
 use App\Models\Transaction;
+use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Ramsey\Uuid\Uuid;
 use Tests\TestCase;
 
 class TransferTest extends TestCase
@@ -179,5 +182,189 @@ class TransferTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_transfer_with_client_id_stores_sync_state()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transfer = Transfer::first();
+        $this->assertNotNull($transfer);
+
+        $syncState = ModelSyncState::where('syncable_type', Transfer::class)
+            ->where('syncable_id', $transfer->id)
+            ->first();
+
+        $this->assertNotNull($syncState);
+        $this->assertEquals($randomId, $syncState->client_generated_id);
+    }
+
+    public function test_duplicate_transfer_request_returns_existing_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $firstResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $firstResponse->assertStatus(201);
+        $firstTransferId = $firstResponse->json('data.id');
+
+        $secondResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $secondResponse->assertStatus(200);
+        $secondTransferId = $secondResponse->json('data.id');
+
+        $this->assertEquals($firstTransferId, $secondTransferId);
+        $this->assertCount(1, Transfer::all());
+
+        $fromWallet->refresh();
+        $this->assertEquals(900, $fromWallet->balance);
+    }
+
+    public function test_transfer_transactions_get_client_ids_when_transfer_has_client_id()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(201);
+
+        $expenseTransaction = Transaction::where('wallet_id', $fromWallet->id)->first();
+        $incomeTransaction = Transaction::where('wallet_id', $toWallet->id)->first();
+
+        $expenseSyncState = ModelSyncState::where('syncable_type', Transaction::class)
+            ->where('syncable_id', $expenseTransaction->id)
+            ->first();
+
+        $incomeSyncState = ModelSyncState::where('syncable_type', Transaction::class)
+            ->where('syncable_id', $incomeTransaction->id)
+            ->first();
+
+        $this->assertNotNull($expenseSyncState);
+        $this->assertNotNull($expenseSyncState->client_generated_id);
+        $this->assertNotNull($incomeSyncState);
+        $this->assertNotNull($incomeSyncState->client_generated_id);
+
+        $this->assertNotEquals(
+            $expenseSyncState->client_generated_id,
+            $incomeSyncState->client_generated_id
+        );
+    }
+
+    public function test_transfer_without_client_id_does_not_prevent_duplicates()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $firstResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $firstResponse->assertStatus(201);
+
+        $secondResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $secondResponse->assertStatus(201);
+
+        $this->assertCount(2, Transfer::all());
+    }
+
+    public function test_transfer_with_invalid_client_id_format_fails_validation()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => 'invalid-format',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_different_client_ids_create_separate_transfers()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+
+        $firstClientId = $deviceId.':'.Uuid::uuid4()->toString();
+        $firstResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $firstClientId,
+        ]);
+
+        $firstResponse->assertStatus(201);
+
+        $secondClientId = $deviceId.':'.Uuid::uuid4()->toString();
+        $secondResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $secondClientId,
+        ]);
+
+        $secondResponse->assertStatus(201);
+
+        $this->assertCount(2, Transfer::all());
+        $this->assertNotEquals(
+            $firstResponse->json('data.id'),
+            $secondResponse->json('data.id')
+        );
     }
 }

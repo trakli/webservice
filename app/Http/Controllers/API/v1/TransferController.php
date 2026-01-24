@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
+use App\Models\Transfer;
+use App\Models\User;
 use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
+use Whilesmart\UserDevices\Models\Device;
 
 #[OA\Tag(name: 'Transfers', description: 'Endpoints for managing transfers')]
 class TransferController extends ApiController
@@ -55,7 +59,7 @@ class TransferController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => 'nullable|string|min:64|max:64',
+            'client_id' => ['nullable', 'string', new ValidateClientId],
             'amount' => 'required|numeric|min:0.01',
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
@@ -68,8 +72,14 @@ class TransferController extends ApiController
         }
 
         $data = $validationResult['data'];
-
         $user = $request->user();
+
+        if (! empty($data['client_id'])) {
+            $existingTransfer = $this->findTransferByClientId($data['client_id'], $user);
+            if ($existingTransfer) {
+                return $this->success($existingTransfer, statusCode: 200);
+            }
+        }
         $fromWallet = $user->wallets()->find($data['from_wallet_id']);
         if (is_null($fromWallet)) {
             return $this->failure(__('Source wallet does not exist'));
@@ -95,10 +105,58 @@ class TransferController extends ApiController
 
         $amountToReceive = bcmul($data['amount'], $exchangeRate);
 
-        $transfer = DB::Transaction(function () use ($data, $toWallet, $fromWallet, $amountToReceive, $user, $exchangeRate) {
-            return $this->transferService->transfer(amountToSend: $data['amount'], fromWallet: $fromWallet, amountToReceive: $amountToReceive, toWallet: $toWallet, user: $user, exchangeRate: $exchangeRate);
+        $fullClientId = $data['client_id'] ?? null;
+        $deviceToken = null;
+        $randomId = null;
+        if ($fullClientId && count($parts = explode(':', $fullClientId)) === 2) {
+            $deviceToken = $parts[0];
+            $randomId = $parts[1];
+        }
+
+        $transfer = DB::Transaction(function () use ($data, $toWallet, $fromWallet, $amountToReceive, $user, $exchangeRate, $deviceToken, $randomId) {
+            $transfer = $this->transferService->transfer(
+                amountToSend: $data['amount'],
+                fromWallet: $fromWallet,
+                amountToReceive: $amountToReceive,
+                toWallet: $toWallet,
+                user: $user,
+                exchangeRate: $exchangeRate,
+                deviceToken: $deviceToken
+            );
+
+            if ($randomId && $deviceToken) {
+                $transfer->setClientGeneratedId($randomId, $user, $deviceToken);
+            }
+            $transfer->markAsSynced();
+
+            return $transfer;
         });
 
         return $this->success($transfer, statusCode: 201);
+    }
+
+    private function findTransferByClientId(string $clientId, User $user): ?Transfer
+    {
+        $parts = explode(':', $clientId);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        $deviceToken = $parts[0];
+        $randomId = $parts[1];
+
+        $device = Device::where('token', $deviceToken)->first();
+        if (! $device) {
+            return null;
+        }
+
+        return Transfer::query()
+            ->where('user_id', $user->id)
+            ->join('model_sync_states', 'transfers.id', '=', 'model_sync_states.syncable_id')
+            ->where('model_sync_states.syncable_type', Transfer::class)
+            ->where('model_sync_states.client_generated_id', $randomId)
+            ->where('model_sync_states.device_id', $device->id)
+            ->select('transfers.*')
+            ->first();
     }
 }
