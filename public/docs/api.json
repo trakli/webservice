@@ -2426,6 +2426,50 @@
                 }
             }
         },
+        "/transfers": {
+            "get": {
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "List all transfers",
+                "operationId": "4e3254a7d99836bed059ca512312defb",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transfer"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/transfer": {
             "post": {
                 "tags": [
@@ -2489,6 +2533,63 @@
                     },
                     "400": {
                         "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/transfers/{id}": {
+            "put": {
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Update a transfer (attach client_id for sync)",
+                "operationId": "de007b47194042ea9215f582c1db4232",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the transfer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Transfer"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Transfer not found"
                     }
                 }
             }
