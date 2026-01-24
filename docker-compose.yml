@@ -40,7 +40,7 @@ services:
     phpmyadmin:
         image: 'phpmyadmin/phpmyadmin:latest'
         ports:
-            - '8080:80'
+            - '${PMA_PORT:-8080}:80'
         environment:
             PMA_HOST: mysql
             PMA_USER: '${DB_USERNAME}'
@@ -53,8 +53,8 @@ services:
     mailhog:
         image: 'mailhog/mailhog:latest'
         ports:
-            - 1025:1025
-            - 8025:8025
+            - '${MAILHOG_SMTP_PORT:-1025}:1025'
+            - '${MAILHOG_UI_PORT:-8025}:8025'
         networks:
             - trakli
 
