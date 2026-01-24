@@ -84,6 +84,11 @@ class User extends Authenticatable
         return $this->hasMany(Transaction::class);
     }
 
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class);
+    }
+
     public function fileImports(): HasMany
     {
         return $this->hasMany(FileImport::class);

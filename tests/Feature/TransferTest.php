@@ -367,4 +367,152 @@ class TransferTest extends TestCase
             $secondResponse->json('data.id')
         );
     }
+
+    public function test_api_user_can_list_transfers()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 50,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transfers');
+
+        $response->assertStatus(200);
+        $this->assertCount(2, $response->json('data.data'));
+    }
+
+    public function test_api_user_can_list_transfers_without_client_id()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.Uuid::uuid4()->toString();
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 50,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transfers?no_client_id=1');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('data.data'));
+        $this->assertEquals(50, $response->json('data.data.0.amount'));
+    }
+
+    public function test_api_user_can_attach_client_id_to_existing_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $createResponse->assertStatus(201);
+        $transferId = $createResponse->json('data.id');
+
+        $transfer = Transfer::find($transferId);
+        $this->assertNull($transfer->client_generated_id);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $updateResponse = $this->actingAs($user)->putJson("/api/v1/transfers/{$transferId}", [
+            'client_id' => $clientId,
+        ]);
+
+        $updateResponse->assertStatus(200);
+
+        $syncState = ModelSyncState::where('syncable_type', Transfer::class)
+            ->where('syncable_id', $transferId)
+            ->first();
+
+        $this->assertNotNull($syncState);
+        $this->assertEquals($randomId, $syncState->client_generated_id);
+    }
+
+    public function test_api_user_cannot_overwrite_existing_client_id()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $originalRandomId = Uuid::uuid4()->toString();
+        $originalClientId = $deviceId.':'.$originalRandomId;
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $originalClientId,
+        ]);
+
+        $createResponse->assertStatus(201);
+        $transferId = $createResponse->json('data.id');
+
+        $newRandomId = Uuid::uuid4()->toString();
+        $newClientId = $deviceId.':'.$newRandomId;
+
+        $this->actingAs($user)->putJson("/api/v1/transfers/{$transferId}", [
+            'client_id' => $newClientId,
+        ]);
+
+        $syncState = ModelSyncState::where('syncable_type', Transfer::class)
+            ->where('syncable_id', $transferId)
+            ->first();
+
+        $this->assertEquals($originalRandomId, $syncState->client_generated_id);
+    }
+
+    public function test_api_user_cannot_update_another_users_transfer()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user1->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user1->id]);
+
+        $createResponse = $this->actingAs($user1)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $deviceId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.Uuid::uuid4()->toString();
+
+        $updateResponse = $this->actingAs($user2)->putJson("/api/v1/transfers/{$transferId}", [
+            'client_id' => $clientId,
+        ]);
+
+        $updateResponse->assertStatus(404);
+    }
 }
