@@ -98,28 +98,43 @@ class TransactionController extends ApiController
         summary: 'Add file to a transaction',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ['files', 'type'],
-                properties: [
-                    new OA\Property(
-                        property: 'files',
-                        description: 'Files to attach to this transaction',
-                        type: 'array',
-                        items: new OA\Items(type: 'string', format: 'binary')
-                    ),
-                ]
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    properties: [
+                        new OA\Property(
+                            property: 'files[]',
+                            description: 'Files to attach (jpg, jpeg, png, pdf; max 1MB each)',
+                            type: 'array',
+                            items: new OA\Items(type: 'string', format: 'binary')
+                        ),
+                    ]
+                )
             )
         ),
         tags: ['Transactions'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transaction',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
         responses: [
             new OA\Response(
-                response: 201,
-                description: 'Transaction updated successfully',
+                response: 200,
+                description: 'Files uploaded successfully',
                 content: new OA\JsonContent(ref: '#/components/schemas/Transaction')
             ),
             new OA\Response(
-                response: 400,
-                description: 'Invalid input'
+                response: 404,
+                description: 'Transaction not found'
+            ),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error'
             ),
         ]
     )]
@@ -157,30 +172,34 @@ class TransactionController extends ApiController
         summary: 'Create a new transaction',
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(
-                required: ['amount', 'type'],
-                properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
-                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'datetime', type: 'string', format: 'datetime'),
-                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-                    new OA\Property(property: 'party_id', type: 'integer'),
-                    new OA\Property(property: 'wallet_id', type: 'integer'),
-                    new OA\Property(property: 'group_id', type: 'integer'),
-                    new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
-                    new OA\Property(property: 'recurrence_period', description: 'Set how often the transaction should repeat', type: 'string'),
-                    new OA\Property(property: 'recurrence_interval', description: 'Set how often the transaction should repeat', type: 'integer'),
-                    new OA\Property(property: 'recurrence_ends_at', description: 'When the transaction stops repeating', type: 'date-time'),
-                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID array', type: 'integer')),
-                    new OA\Property(
-                        property: 'files',
-                        description: 'Files to attach to this transaction',
-                        type: 'array',
-                        items: new OA\Items(type: 'string', format: 'binary')
-                    )]
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['amount', 'type', 'wallet_id'],
+                    properties: [
+                        new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
+                            example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                        new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
+                        new OA\Property(property: 'description', type: 'string'),
+                        new OA\Property(property: 'datetime', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'party_id', type: 'integer'),
+                        new OA\Property(property: 'wallet_id', type: 'integer'),
+                        new OA\Property(property: 'group_id', type: 'integer'),
+                        new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
+                        new OA\Property(property: 'recurrence_period', description: 'Set how often the transaction should repeat', type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly']),
+                        new OA\Property(property: 'recurrence_interval', description: 'Set how often the transaction should repeat', type: 'integer'),
+                        new OA\Property(property: 'recurrence_ends_at', description: 'When the transaction stops repeating', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID', type: 'integer')),
+                        new OA\Property(
+                            property: 'files[]',
+                            description: 'Files to attach (jpg, jpeg, png, pdf; max 1.2MB each)',
+                            type: 'array',
+                            items: new OA\Items(type: 'string', format: 'binary')
+                        ),
+                    ]
+                )
             )
         ),
         tags: ['Transactions'],
@@ -193,6 +212,10 @@ class TransactionController extends ApiController
             new OA\Response(
                 response: 400,
                 description: 'Invalid input'
+            ),
+            new OA\Response(
+                response: 403,
+                description: 'Resource does not belong to user'
             ),
         ]
     )]

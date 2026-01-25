@@ -2053,17 +2053,17 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "amount",
-                                    "type"
+                                    "type",
+                                    "wallet_id"
                                 ],
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
                                         "type": "string",
-                                        "format": "string",
                                         "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
                                     },
                                     "amount": {
@@ -2082,7 +2082,7 @@
                                     },
                                     "datetime": {
                                         "type": "string",
-                                        "format": "datetime"
+                                        "format": "date-time"
                                     },
                                     "created_at": {
                                         "type": "string",
@@ -2103,7 +2103,13 @@
                                     },
                                     "recurrence_period": {
                                         "description": "Set how often the transaction should repeat",
-                                        "type": "string"
+                                        "type": "string",
+                                        "enum": [
+                                            "daily",
+                                            "weekly",
+                                            "monthly",
+                                            "yearly"
+                                        ]
                                     },
                                     "recurrence_interval": {
                                         "description": "Set how often the transaction should repeat",
@@ -2111,17 +2117,18 @@
                                     },
                                     "recurrence_ends_at": {
                                         "description": "When the transaction stops repeating",
-                                        "type": "date-time"
+                                        "type": "string",
+                                        "format": "date-time"
                                     },
                                     "categories": {
                                         "type": "array",
                                         "items": {
-                                            "description": "Category ID array",
+                                            "description": "Category ID",
                                             "type": "integer"
                                         }
                                     },
-                                    "files": {
-                                        "description": "Files to attach to this transaction",
+                                    "files[]": {
+                                        "description": "Files to attach (jpg, jpeg, png, pdf; max 1.2MB each)",
                                         "type": "array",
                                         "items": {
                                             "type": "string",
@@ -2147,6 +2154,9 @@
                     },
                     "400": {
                         "description": "Invalid input"
+                    },
+                    "403": {
+                        "description": "Resource does not belong to user"
                     }
                 }
             }
@@ -2158,18 +2168,25 @@
                 ],
                 "summary": "Add file to a transaction",
                 "operationId": "c4819a10dcfa436a030128ac45465ae2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the transaction",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "required": [
-                                    "files",
-                                    "type"
-                                ],
                                 "properties": {
-                                    "files": {
-                                        "description": "Files to attach to this transaction",
+                                    "files[]": {
+                                        "description": "Files to attach (jpg, jpeg, png, pdf; max 1MB each)",
                                         "type": "array",
                                         "items": {
                                             "type": "string",
@@ -2183,8 +2200,8 @@
                     }
                 },
                 "responses": {
-                    "201": {
-                        "description": "Transaction updated successfully",
+                    "200": {
+                        "description": "Files uploaded successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2193,8 +2210,11 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid input"
+                    "404": {
+                        "description": "Transaction not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
