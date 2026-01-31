@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\CategoryController;
+use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\NotificationController;
@@ -43,6 +44,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::get('/files/{id}', [FileController::class, 'show']);
     Route::post('categories/seed-defaults', [CategoryController::class, 'seedDefaults']);
     Route::apiResource('categories', CategoryController::class);
 

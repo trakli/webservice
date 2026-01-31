@@ -496,6 +496,45 @@
                 }
             }
         },
+        "/files/{id}": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Get a file by ID",
+                "operationId": "af81c42fa385fdeeac3331249ee4d7b0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the file",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File content",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "File not found"
+                    },
+                    "403": {
+                        "description": "Unauthorized access"
+                    }
+                }
+            }
+        },
         "/groups": {
             "get": {
                 "tags": [
@@ -3674,6 +3713,10 @@
                         "description": "Path or content of the file",
                         "type": "string"
                     },
+                    "link": {
+                        "description": "URL to access the file",
+                        "type": "string"
+                    },
                     "type": {
                         "description": "Type of file (image, icon, emoji, pdf)",
                         "type": "string",
@@ -4210,6 +4253,10 @@
         {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
+        },
+        {
+            "name": "Files",
+            "description": "Endpoints for accessing files"
         },
         {
             "name": "Notifications",
