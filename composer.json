@@ -22,7 +22,7 @@
         "whilesmart/laravel-plugin-engine": "^1.0.0",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
-        "zircote/swagger-php": "^5.0"
+        "zircote/swagger-php": "^6.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
