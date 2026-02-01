@@ -435,6 +435,7 @@ class StatsController extends ApiController
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->where('transactions.type', $type)
+            ->whereNull('transactions.transfer_id')
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
 
@@ -525,6 +526,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
+            ->whereNull('transactions.transfer_id')
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.type', 'wallets.currency');
 
@@ -573,6 +575,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {
@@ -602,6 +605,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {
@@ -699,6 +703,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
+            ->whereNull('transactions.transfer_id')
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->where('transactions.type', 'expense')
             ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
@@ -747,6 +752,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->where('type', 'expense')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -874,6 +880,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['party', 'wallet'])
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -934,6 +941,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -1015,6 +1023,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
+            ->whereNull('transactions.transfer_id')
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.type', 'transactions.datetime', 'wallets.currency');
 
@@ -1070,6 +1079,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with('wallet')
             ->where('user_id', $user->id)
+            ->whereNull('transfer_id')
             ->where('type', 'expense')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
