@@ -39,7 +39,12 @@ use OpenApi\Attributes as OA;
 )]
 class Wallet extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Iconable;
+    use Sluggable;
+    use SoftDeletes;
+    use Syncable;
 
     protected $fillable = [
         'name',

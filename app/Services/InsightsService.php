@@ -15,7 +15,8 @@ class InsightsService
 
     public function __construct(
         protected NotificationService $notificationService
-    ) {}
+    ) {
+    }
 
     public function sendInsights(string $frequency = 'weekly'): int
     {
@@ -114,7 +115,7 @@ class InsightsService
         return [
             'start' => Carbon::now()->subWeek()->startOfWeek(),
             'end' => Carbon::now()->subWeek()->endOfWeek(),
-            'label' => Carbon::now()->subWeek()->startOfWeek()->format('M j').' - '.
+            'label' => Carbon::now()->subWeek()->startOfWeek()->format('M j') . ' - ' .
                        Carbon::now()->subWeek()->endOfWeek()->format('M j, Y'),
         ];
     }
@@ -138,8 +139,8 @@ class InsightsService
     {
         $periodLabel = $frequency === 'monthly' ? 'Monthly' : 'Weekly';
         $title = "{$periodLabel} Financial Insights";
-        $body = "Your {$periodLabel} insights are ready. ".
-                "Income: \${$insights['income']}, Expenses: \${$insights['expenses']}, ".
+        $body = "Your {$periodLabel} insights are ready. " .
+                "Income: \${$insights['income']}, Expenses: \${$insights['expenses']}, " .
                 "Savings rate: {$insights['savings_rate']}%";
 
         $this->notificationService->send(

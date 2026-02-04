@@ -76,8 +76,13 @@ class TransferController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'type'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'from_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'to_wallet_id', type: 'integer', example: 1),
@@ -103,12 +108,12 @@ class TransferController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -144,7 +149,6 @@ class TransferController extends ApiController
                 return $this->failure(__('Please fill in an exchange rate'));
             }
             $exchangeRate = $data['exchange_rate'];
-
         }
 
         $amountToReceive = bcmul($data['amount'], $exchangeRate);
@@ -186,8 +190,13 @@ class TransferController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -217,8 +226,8 @@ class TransferController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         if (! $validationResult['isValidated']) {

@@ -94,12 +94,12 @@ class ReminderController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => ['nullable', new Enum(ReminderType::class)],
-            'trigger_at' => ['nullable', new Iso8601DateTime],
-            'due_at' => ['nullable', new Iso8601DateTime],
+            'trigger_at' => ['nullable', new Iso8601DateTime()],
+            'due_at' => ['nullable', new Iso8601DateTime()],
             'repeat_rule' => 'nullable|string|max:500',
             'timezone' => 'nullable|string|timezone',
             'priority' => 'nullable|integer|min:0|max:255',
@@ -199,12 +199,12 @@ class ReminderController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'type' => ['nullable', new Enum(ReminderType::class)],
-            'trigger_at' => ['nullable', new Iso8601DateTime],
-            'due_at' => ['nullable', new Iso8601DateTime],
+            'trigger_at' => ['nullable', new Iso8601DateTime()],
+            'due_at' => ['nullable', new Iso8601DateTime()],
             'repeat_rule' => 'nullable|string|max:500',
             'timezone' => 'nullable|string|timezone',
             'status' => ['nullable', new Enum(ReminderStatus::class)],
@@ -294,7 +294,7 @@ class ReminderController extends ApiController
     public function snooze(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'until' => ['required', new Iso8601DateTime],
+            'until' => ['required', new Iso8601DateTime()],
         ]);
 
         if ($validator->fails()) {

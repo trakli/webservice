@@ -68,10 +68,10 @@ class ImportController extends ApiController
                 // upload the file
                 $file = $request->file('file');
 
-                $fileName = time().'_'.$file->getClientOriginalName();
+                $fileName = time() . '_' . $file->getClientOriginalName();
                 $filePath = $file->storeAs('imports', $fileName);
 
-                Log::info('File stored at: '.$filePath);
+                Log::info('File stored at: ' . $filePath);
 
                 $fileImport = $user->fileImports()->create([
                     'file_path' => $filePath,
@@ -108,7 +108,8 @@ class ImportController extends ApiController
             new OA\Response(
                 response: 200,
                 description: 'Successful response',
-                content: new OA\JsonContent(type: 'array',
+                content: new OA\JsonContent(
+                    type: 'array',
                     items: new OA\Items('#/components/schemas/FailedImport')
                 )
             ),
@@ -201,7 +202,8 @@ class ImportController extends ApiController
             new OA\Response(
                 response: 206,
                 description: 'Some imports could not be fixed',
-                content: new OA\JsonContent(type: 'array',
+                content: new OA\JsonContent(
+                    type: 'array',
                     items: new OA\Items('#/components/schemas/FailedImport')
                 )
             ),
@@ -234,7 +236,6 @@ class ImportController extends ApiController
             } elseif (! $this->fileImportService->isValidDate($importToFix['date'])) {
                 $importToFix['reason'] = 'Date must be in the format YYYY-MM-DD';
                 $failedImportsToReturn[] = $importToFix;
-
             } else {
                 $fixSucceeded = true;
 
