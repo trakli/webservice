@@ -58,6 +58,8 @@ jobs:
         with:
           php-version: '8.2'
           tools: composer
+          extensions: pcov
+          coverage: pcov
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-suggest --no-interaction
@@ -81,9 +83,25 @@ jobs:
 
       - name: Run migrations
         run: php artisan migrate --seed
-      - name: Run tests
-        run: php artisan test
       - name: Lint code
         run: composer pint:test
       - name: Ensure OpenAPI documentation is up to date
         run: composer openapi:test
+      - name: Run tests
+        run: php artisan test --coverage-clover=reports/coverage/coverage.xml --coverage-text
+      - name: Check code coverage
+        run: |
+          COVERAGE=$(php -r "
+            \$xml = simplexml_load_file('reports/coverage/coverage.xml');
+            \$metrics = \$xml->project->metrics;
+            \$coverage = ((int)\$metrics['coveredelements'] / (int)\$metrics['elements']) * 100;
+            echo round(\$coverage, 2);
+          ")
+          echo "Code coverage: $COVERAGE%"
+          MIN_COVERAGE=10
+          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+            echo "❌ Code coverage ($COVERAGE%) is below the minimum threshold of $MIN_COVERAGE%"
+            # exit 1
+          else
+            echo "✅ Code coverage ($COVERAGE%) meets the minimum threshold of $MIN_COVERAGE%"
+          fi
