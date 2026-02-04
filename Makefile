@@ -106,7 +106,7 @@ composer-update: ## Update composer dependencies
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer update
 
 test: ## Run tests
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test --coverage
 
 lint: ## Lint the code
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint:test
