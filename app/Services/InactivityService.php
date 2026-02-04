@@ -46,7 +46,8 @@ class InactivityService
 
     public function __construct(
         protected NotificationService $notificationService
-    ) {}
+    ) {
+    }
 
     public function sendInactivityReminders(): int
     {
@@ -160,7 +161,7 @@ class InactivityService
             user: $user,
             type: NotificationType::ALERT,
             title: $tier['subject'],
-            body: $tier['message'].' '.$tier['encouragement'],
+            body: $tier['message'] . ' ' . $tier['encouragement'],
             data: [
                 'type' => 'inactivity',
                 'days_inactive' => $daysInactive,

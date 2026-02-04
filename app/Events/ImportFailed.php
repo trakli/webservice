@@ -9,7 +9,9 @@ use Illuminate\Queue\SerializesModels;
 
 class ImportFailed
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable;
+    use InteractsWithSockets;
+    use SerializesModels;
 
     private FileImport $fileImport;
 

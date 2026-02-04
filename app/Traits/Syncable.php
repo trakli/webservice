@@ -69,7 +69,7 @@ trait Syncable
         $deviceToken = $this->syncState?->device?->token;
         $clientId = $this->syncState?->client_generated_id;
         if ($deviceToken && $clientId) {
-            return $deviceToken.':'.$clientId;
+            return $deviceToken . ':' . $clientId;
         }
 
         return null;

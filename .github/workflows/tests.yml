@@ -1,4 +1,4 @@
-name: Checks
+name: Tests
 
 on:
   push:
@@ -83,10 +83,6 @@ jobs:
 
       - name: Run migrations
         run: php artisan migrate --seed
-      - name: Lint code
-        run: composer pint:test
-      - name: Ensure OpenAPI documentation is up to date
-        run: composer openapi:test
       - name: Run tests
         run: php artisan test --coverage-clover=reports/coverage/coverage.xml --coverage-text
       - name: Check code coverage

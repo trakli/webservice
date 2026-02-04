@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
-            $factory = (new \Kreait\Firebase\Factory)
+            $factory = (new \Kreait\Firebase\Factory())
                 ->withServiceAccount(base_path($credentials));
 
             return $factory->createMessaging();

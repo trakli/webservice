@@ -50,7 +50,12 @@ class Group extends Model
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
 
-    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Iconable;
+    use Sluggable;
+    use SoftDeletes;
+    use Syncable;
 
     /**
      * Return the sluggable configuration array for this model.
