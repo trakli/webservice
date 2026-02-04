@@ -12,6 +12,7 @@ PORTS_FILE := .ports
 # Default ports
 DEFAULT_APP_PORT := 8000
 DEFAULT_DB_PORT := 3306
+DEFAULT_TEST_DB_PORT := 3307
 DEFAULT_PMA_PORT := 8080
 DEFAULT_MAILHOG_SMTP_PORT := 1025
 DEFAULT_MAILHOG_UI_PORT := 8025
@@ -29,12 +30,14 @@ endef
 	@echo "# Generated at: $$(date)" >> $(PORTS_FILE)
 	@APP_PORT=$(call find_port,$(DEFAULT_APP_PORT)); \
 	DB_PORT=$(call find_port,$(DEFAULT_DB_PORT)); \
+	TEST_DB_PORT=$(call find_port,$(DEFAULT_TEST_DB_PORT)); \
 	PMA_PORT=$(call find_port,$(DEFAULT_PMA_PORT)); \
 	MAILHOG_SMTP_PORT=$(call find_port,$(DEFAULT_MAILHOG_SMTP_PORT)); \
 	MAILHOG_UI_PORT=$(call find_port,$(DEFAULT_MAILHOG_UI_PORT)); \
 	SMARTQL_PORT=$(call find_port,$(DEFAULT_SMARTQL_PORT)); \
 	echo "APP_PORT=$$APP_PORT" >> $(PORTS_FILE); \
 	echo "FORWARD_DB_PORT=$$DB_PORT" >> $(PORTS_FILE); \
+	echo "FORWARD_TEST_DB_PORT=$$TEST_DB_PORT" >> $(PORTS_FILE); \
 	echo "PMA_PORT=$$PMA_PORT" >> $(PORTS_FILE); \
 	echo "MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT" >> $(PORTS_FILE); \
 	echo "MAILHOG_UI_PORT=$$MAILHOG_UI_PORT" >> $(PORTS_FILE); \
