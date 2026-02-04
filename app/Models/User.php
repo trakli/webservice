@@ -13,7 +13,11 @@ use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable
 {
-    use Configurable, HasApiTokens, HasDevices, HasFactory, Notifiable;
+    use Configurable;
+    use HasApiTokens;
+    use HasDevices;
+    use HasFactory;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.

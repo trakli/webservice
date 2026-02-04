@@ -15,7 +15,8 @@ class AiController extends ApiController
 
     public function __construct(
         protected AiService $aiService
-    ) {}
+    ) {
+    }
 
     #[OA\Post(
         path: '/ai/chat',
@@ -153,7 +154,7 @@ class AiController extends ApiController
             $value = number_format((float) $value, 2);
         }
 
-        return ucfirst($formattedKey).": {$value}";
+        return ucfirst($formattedKey) . ": {$value}";
     }
 
     private function formatSingleRow(array $row): string
@@ -167,7 +168,7 @@ class AiController extends ApiController
             if (is_numeric($value) && ! in_array($key, self::EXCLUDED_NUMERIC_FORMAT_KEYS)) {
                 $value = number_format((float) $value, 2);
             }
-            $parts[] = ucfirst($formattedKey).": {$value}";
+            $parts[] = ucfirst($formattedKey) . ": {$value}";
         }
 
         return implode(', ', $parts);
@@ -195,13 +196,13 @@ class AiController extends ApiController
                 $items[] = implode(' - ', $parts);
             }
 
-            return "Here's what I found:\n• ".implode("\n• ", $items);
+            return "Here's what I found:\n• " . implode("\n• ", $items);
         }
 
         if (in_array('name', $columns)) {
             $names = array_column($rows, 'name');
 
-            return "Found {$count} items: ".implode(', ', $names);
+            return "Found {$count} items: " . implode(', ', $names);
         }
 
         return "Found {$count} results.";

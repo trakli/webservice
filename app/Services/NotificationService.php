@@ -29,7 +29,8 @@ class NotificationService
 
     public function __construct(
         protected ?Messaging $messaging = null
-    ) {}
+    ) {
+    }
 
     /**
      * Send a notification through all enabled channels.

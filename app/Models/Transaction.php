@@ -49,7 +49,11 @@ use OpenApi\Attributes as OA;
 )]
 class Transaction extends Model
 {
-    use Groupable, HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
+    use Groupable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use SoftDeletes;
+    use Syncable;
 
     protected static function boot()
     {

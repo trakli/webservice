@@ -12,13 +12,15 @@ use Illuminate\Queue\SerializesModels;
 
 class InsightsMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+    use SerializesModels;
 
     public function __construct(
         public User $user,
         public array $insights,
         public string $periodLabel
-    ) {}
+    ) {
+    }
 
     public function envelope(): Envelope
     {

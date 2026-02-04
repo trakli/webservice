@@ -24,7 +24,8 @@ use OpenApi\Attributes as OA;
 )]
 class Notification extends Model
 {
-    use HasFactory, Syncable;
+    use HasFactory;
+    use Syncable;
 
     protected $fillable = [
         'user_id',

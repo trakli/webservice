@@ -78,8 +78,13 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
@@ -114,13 +119,13 @@ class PartyController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         $user = $request->user();
@@ -153,13 +158,11 @@ class PartyController extends ApiController
             $party->refresh();
 
             return $this->success($party, __('Party created successfully'), 201);
-
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create party'), 500, [$e->getMessage()]);
         }
-
     }
 
     #[OA\Get(
@@ -258,13 +261,13 @@ class PartyController extends ApiController
     public function update(Request $request, int $id): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         $user = $request->user();

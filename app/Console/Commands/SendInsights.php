@@ -20,7 +20,7 @@ class SendInsights extends Command
             $sent = $service->sendInsights($frequency);
             $this->info("Sent insights to {$sent} users.");
         } catch (\Throwable $e) {
-            $this->error('Error sending insights: '.$e->getMessage());
+            $this->error('Error sending insights: ' . $e->getMessage());
             logger()->error('Insights sending failed', ['error' => $e->getMessage()]);
         }
     }

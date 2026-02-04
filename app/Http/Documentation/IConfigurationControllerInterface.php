@@ -22,8 +22,13 @@ interface IConfigurationControllerInterface
                     new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
                     new OA\Property(property: 'value', type: 'object', example: '{"theme": "dark", "color": "#333333"}'),
                     new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                 ]
             )
         ),

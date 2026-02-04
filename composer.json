@@ -22,7 +22,8 @@
         "whilesmart/laravel-plugin-engine": "^1.0.0",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
-        "zircote/swagger-php": "^5.0"
+        "zircote/swagger-php": "^5.0",
+        "squizlabs/php_codesniffer": "^4.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
@@ -31,7 +32,10 @@
         "mockery/mockery": "^1.4.4",
         "nunomaduro/collision": "^8.1",
         "phpunit/phpunit": "^10.1",
-        "spatie/laravel-ignition": "^2.0"
+        "spatie/laravel-ignition": "^2.0",
+        "phpmd/phpmd": "@stable",
+        "phpstan/phpstan": "^2.1",
+        "larastan/larastan": "^3.0"
     },
     "autoload": {
         "psr-4": {
@@ -73,7 +77,13 @@
         ],
         "openapi:test": [
             "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
-        ]
+        ],
+        "phpmd": [
+            "vendor/bin/phpmd app text phpmd.xml"
+        ],
+        "phpstan": "phpstan analyse app --memory-limit=2048M --level=5",
+        "phpcs": "phpcbf app",
+        "phpcs:test": "phpcs app"
     },
     "extra": {
         "laravel": {
