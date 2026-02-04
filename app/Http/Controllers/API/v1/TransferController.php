@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Transfer;
@@ -61,6 +62,8 @@ class TransferController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $query, with_deleted: false);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -175,6 +178,8 @@ class TransferController extends ApiController
 
             return $transfer;
         });
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transfer, statusCode: 201);
     }
@@ -240,6 +245,8 @@ class TransferController extends ApiController
 
         $this->updateClientId($transfer, $request);
         $transfer->markAsSynced();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transfer);
     }

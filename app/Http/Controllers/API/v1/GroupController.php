@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Group;
@@ -60,6 +61,8 @@ class GroupController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $groupsQuery);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -137,6 +140,8 @@ class GroupController extends ApiController
                 $existingGroup->markAsSynced();
             }
             $existingGroup->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($existingGroup, __('Group already exists'), 200);
         }
@@ -198,7 +203,7 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $user = request()->user();
         $group = $user->groups()->find($id);
@@ -206,6 +211,9 @@ class GroupController extends ApiController
         if (! $group) {
             return $this->failure(__('Group not found'), 404);
         }
+        // update user streak
+        $user = $request->user();
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($group);
     }
@@ -294,6 +302,8 @@ class GroupController extends ApiController
             });
 
             $group->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($group, __('Group updated successfully'));
         } catch (ValidationException $e) {
@@ -341,6 +351,8 @@ class GroupController extends ApiController
         }
 
         $group->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Group deleted successfully'), 204);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Party;
@@ -63,6 +64,8 @@ class PartyController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $partiesQuery);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -151,6 +154,8 @@ class PartyController extends ApiController
             });
 
             $party->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($party, __('Party created successfully'), 201);
 
@@ -194,13 +199,16 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $party = Party::find($id);
 
         if (! $party) {
             return $this->failure(__('Party not found'), 404);
         }
+        // update user streak
+        $user = $request->user();
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($party);
     }
@@ -285,6 +293,8 @@ class PartyController extends ApiController
             });
 
             $party->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($party, __('Party updated successfully'));
         } catch (ValidationException $e) {
@@ -335,6 +345,8 @@ class PartyController extends ApiController
         }
 
         $party->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Party deleted successfully'));
     }

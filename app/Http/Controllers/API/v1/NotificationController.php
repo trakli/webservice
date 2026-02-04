@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Services\NotificationService;
@@ -55,6 +56,8 @@ class NotificationController extends ApiController
         try {
             $data = $this->applyApiQuery($request, $query, false);
             $data['unread_count'] = $user->notifications()->unread()->count();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -82,6 +85,8 @@ class NotificationController extends ApiController
         if (! $notification) {
             return $this->failure(__('Notification not found'), 404);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($notification);
     }
@@ -108,6 +113,8 @@ class NotificationController extends ApiController
         }
 
         $notification->markAsRead();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($notification, __('Notification marked as read'));
     }
@@ -124,6 +131,8 @@ class NotificationController extends ApiController
     {
         $user = $request->user();
         $user->notifications()->unread()->update(['read_at' => now()]);
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('All notifications marked as read'));
     }
@@ -150,6 +159,8 @@ class NotificationController extends ApiController
         }
 
         $notification->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Notification deleted'), 204);
     }
@@ -175,6 +186,8 @@ class NotificationController extends ApiController
     {
         $user = $request->user();
         $count = $user->notifications()->unread()->count();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(['count' => $count]);
     }
@@ -217,6 +230,8 @@ class NotificationController extends ApiController
     {
         $user = $request->user();
         $preferences = $this->notificationService->getPreferences($user);
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($preferences);
     }
@@ -279,6 +294,8 @@ class NotificationController extends ApiController
         }
 
         $preferences = $this->notificationService->getPreferences($user);
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($preferences, __('Notification preferences updated'));
     }

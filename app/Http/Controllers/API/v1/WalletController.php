@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
@@ -64,6 +65,8 @@ class WalletController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $walletsQuery);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -161,6 +164,8 @@ class WalletController extends ApiController
                 return $wallet;
             });
             $wallet->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($wallet, __('Wallet created successfully'), 201);
 
@@ -211,6 +216,8 @@ class WalletController extends ApiController
         if (! $wallet) {
             return $this->failure(__('Wallet not found'), 404);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($wallet);
     }
@@ -298,6 +305,8 @@ class WalletController extends ApiController
             });
 
             $wallet->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($wallet, __('Wallet updated successfully'));
         } catch (ValidationException $e) {
@@ -349,6 +358,8 @@ class WalletController extends ApiController
         }
 
         $wallet->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Wallet deleted successfully'));
     }

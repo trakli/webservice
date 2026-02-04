@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
@@ -72,6 +73,8 @@ class CategoryController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $categoriesQuery);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -161,6 +164,8 @@ class CategoryController extends ApiController
             });
 
             $category->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($category, __('Category updated successfully'));
         } catch (ValidationException $e) {
@@ -246,6 +251,8 @@ class CategoryController extends ApiController
             });
 
             $category->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($category, __('Category created successfully'), 201);
         } catch (ValidationException $e) {
@@ -293,6 +300,8 @@ class CategoryController extends ApiController
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($category);
     }
@@ -339,6 +348,8 @@ class CategoryController extends ApiController
         }
 
         $category->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Category deleted successfully'), 204);
     }
@@ -426,6 +437,8 @@ class CategoryController extends ApiController
                     $created[] = $category;
                 }
             });
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success([
                 'created' => count($created),

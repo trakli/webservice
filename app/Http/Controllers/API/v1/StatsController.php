@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Models\Transaction;
 use App\Models\Wallet;
@@ -217,6 +218,8 @@ class StatsController extends ApiController
                 ],
             ];
         });
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return response()->json(['data' => $data]);
     }
