@@ -98,7 +98,7 @@ jobs:
             echo round(\$coverage, 2);
           ")
           echo "Code coverage: $COVERAGE%"
-          MIN_COVERAGE=10
+          MIN_COVERAGE=50
           if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
             echo "❌ Code coverage ($COVERAGE%) is below the minimum threshold of $MIN_COVERAGE%"
             # exit 1
