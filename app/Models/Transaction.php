@@ -88,6 +88,7 @@ class Transaction extends Model
     protected $casts = [
         'datetime' => 'datetime',
         'amount' => 'decimal:2',
+        'wallet_id' => 'integer',
     ];
 
     protected $appends = [
