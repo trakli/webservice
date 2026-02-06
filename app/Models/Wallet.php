@@ -69,7 +69,6 @@ class Wallet extends Model
      */
     protected $casts = [
         'balance' => FloatCast::class,
-        'id' => 'integer',
     ];
 
     public function getStatsAttribute()
