@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\StreakType;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -37,6 +39,7 @@ class User extends Authenticatable
      */
     protected $appends = [
         'avatar_url',
+        'streaks',
     ];
 
     /**
@@ -107,5 +110,46 @@ class User extends Authenticatable
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->getConfigValue('avatar');
+    }
+
+    public function getStreak(string $type): ?Streak
+    {
+        return $this->streaks()->where('type', $type)->first();
+    }
+
+    public function streaks(): HasMany
+    {
+        return $this->hasMany(Streak::class);
+    }
+
+    public function getStreaksAttribute(): Collection
+    {
+        return $this->streaks()->get();
+    }
+
+    public function updateStreak(StreakType $streakType): void
+    {
+        $streak = $this->streaks()->where('type', $streakType->value)->first();
+        if (! $streak) {
+            $streak = $this->streaks()->create([
+                'type' => $streakType->value,
+                'last_activity_date' => now(),
+                'current_streak' => 1,
+            ]);
+        }
+
+        $last_activity = $streak->last_activity_date;
+        $diff = $last_activity->diffInDays(now(), true);
+        if ($diff > 1) {
+            if ($last_activity->diffInDays(now(), true) >= 2) {
+                $streak->longest_streak = max($streak->longest_streak, $streak->current_streak);
+                $streak->current_streak = 1;
+            } else {
+                $streak->current_streak = $streak->current_streak + 1;
+            }
+
+            $streak->last_activity_date = now();
+            $streak->save();
+        }
     }
 }

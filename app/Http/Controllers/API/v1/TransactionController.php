@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
@@ -86,6 +87,8 @@ class TransactionController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $query);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -138,13 +141,14 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function uploadFiles(Request $request, $id)
+    public function uploadFiles(Request $request, $id): JsonResponse
     {
         $request->validate([
             'files' => 'nullable|array',
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1024',
         ]);
-        $transaction = $request->user()->transactions()->find($id);
+        $user = $request->user();
+        $transaction = $user->transactions()->find($id);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -163,6 +167,8 @@ class TransactionController extends ApiController
             return $this->failure(__('Failed to upload files'), 500, [$e->getMessage()]);
         }
         $transaction->refresh();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transaction, statusCode: 200);
     }
@@ -341,6 +347,9 @@ class TransactionController extends ApiController
 
             return $this->failure(__('Failed to create transaction'), 500, [$e->getMessage()]);
         }
+        // update user streak
+        $user = $request->user();
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transaction, statusCode: 201);
     }
@@ -363,7 +372,8 @@ class TransactionController extends ApiController
     )]
     public function deleteFiles(Request $request, $transaction_id, $file_id): JsonResponse
     {
-        $transaction = $request->user()->transactions()->find($transaction_id);
+        $user = $request->user();
+        $transaction = $user->transactions()->find($transaction_id);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -378,6 +388,8 @@ class TransactionController extends ApiController
         $file->delete();
 
         $transaction->refresh();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transaction, statusCode: 200);
     }
@@ -442,6 +454,9 @@ class TransactionController extends ApiController
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
+        // update user streak
+        $user = $request->user();
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($transaction);
     }
@@ -638,6 +653,9 @@ class TransactionController extends ApiController
 
                 return $transaction;
             });
+            // update user streak
+            $user = $request->user();
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($transaction, 200);
         } catch (HttpException $e) {
@@ -680,7 +698,7 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function destroy($id): JsonResponse
+    public function destroy(Request $request, $id): JsonResponse
     {
         $transaction = Transaction::find($id);
 
@@ -695,6 +713,9 @@ class TransactionController extends ApiController
         }
 
         $transaction->delete();
+        // update user streak
+        $user = $request->user();
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(['message' => __('Transaction deleted successfully')]);
     }

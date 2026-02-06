@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Enums\ReminderStatus;
 use App\Enums\ReminderType;
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Reminder;
@@ -57,6 +58,8 @@ class ReminderController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $query);
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -132,6 +135,8 @@ class ReminderController extends ApiController
             });
 
             $reminder->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($reminder, __('Reminder created successfully'), 201);
         } catch (ValidationException $e) {
@@ -161,6 +166,8 @@ class ReminderController extends ApiController
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($reminder);
     }
@@ -235,6 +242,8 @@ class ReminderController extends ApiController
             });
 
             $reminder->refresh();
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
 
             return $this->success($reminder, __('Reminder updated successfully'));
         } catch (ValidationException $e) {
@@ -266,6 +275,8 @@ class ReminderController extends ApiController
         }
 
         $reminder->delete();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success(null, __('Reminder deleted successfully'), 204);
     }
@@ -309,6 +320,8 @@ class ReminderController extends ApiController
         }
 
         $reminder->snooze(new \DateTime($request->input('until')));
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($reminder, __('Reminder snoozed'));
     }
@@ -335,6 +348,8 @@ class ReminderController extends ApiController
         }
 
         $reminder->pause();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($reminder, __('Reminder paused'));
     }
@@ -361,6 +376,8 @@ class ReminderController extends ApiController
         }
 
         $reminder->resume();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($reminder, __('Reminder resumed'));
     }

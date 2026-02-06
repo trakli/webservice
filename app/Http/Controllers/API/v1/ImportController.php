@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Enums\TransactionType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Requests\FileImportApiRequest;
@@ -79,6 +80,8 @@ class ImportController extends ApiController
                     'file_type' => $file->getClientOriginalExtension(),
                 ]);
                 ImportFileJob::dispatchAfterResponse($fileImport, app(FileImportService::class));
+                // update user streak
+                $user->updateStreak(StreakType::APP_CHECK_IN);
 
                 return $this->success($fileImport, __('File uploaded. Import scheduled. You will be notified when complete.'));
             } catch (\Exception $e) {
@@ -133,6 +136,8 @@ class ImportController extends ApiController
         if (is_null($import)) {
             return $this->failure(__('We could not find this import'), 404);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($import->failedImports()->paginate($perPage));
     }
@@ -166,6 +171,8 @@ class ImportController extends ApiController
     {
         $user = $request->user();
         $imports = $user->fileImports()->orderBy('id', 'desc')->get();
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success($imports);
     }
@@ -283,6 +290,8 @@ class ImportController extends ApiController
         if (count($failedImportsToReturn) > 0) {
             return $this->success($failedImportsToReturn, __('Some imports could not be fixed'), 206);
         }
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
 
         return $this->success();
     }
