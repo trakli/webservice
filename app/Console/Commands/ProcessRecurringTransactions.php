@@ -38,12 +38,12 @@ class ProcessRecurringTransactions extends Command
             // 2. for each due rule
             foreach ($rules as $rule) {
                 $service->createTransactionFromRule($rule);
-                logger()->info('Dispatched job for rule '.$rule->id);
+                logger()->info('Dispatched job for rule ' . $rule->id);
             }
 
             $this->info('Recurring transactions processing completed.');
         } catch (\Throwable $e) {
-            $this->error('Error processing recurring transactions: '.$e->getMessage());
+            $this->error('Error processing recurring transactions: ' . $e->getMessage());
         }
     }
 }

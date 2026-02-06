@@ -1,0 +1,38 @@
+name: Lint & Sniffs
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+jobs:
+  php-lint-sniffs:
+    name: PHP (Sniffs)
+    runs-on: ubuntu-latest
+#    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest --no-interaction
+
+      - name: PHP Code Standards
+        run: composer phpcs:test
+
+# todo: Uncomment tests below once all current issues have been addressed
+#      - name: PHP Static Analysis
+#        run: composer phpstan
+
+#      - name: PHP Mess Detector
+#        run: composer phpmd
+
+      - name: Laravel Pint
+        run: composer pint:test
+
+      - name : Ensure OpenAPI documentation is up to date
+        run: composer openapi:test

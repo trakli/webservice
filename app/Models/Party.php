@@ -27,7 +27,11 @@ use OpenApi\Attributes as OA;
 )]
 class Party extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, SoftDeletes, Syncable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Iconable;
+    use SoftDeletes;
+    use Syncable;
 
     /**
      * The attributes that are mass assignable.

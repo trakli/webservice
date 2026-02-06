@@ -21,33 +21,32 @@ class RecurringTransactionService
 
         // 2. If the rule doesn't exist, we stop here.
         if (! $rule) {
-            logger()->info('Recurring transaction rule '.$ruleId.' not found.');
+            logger()->info('Recurring transaction rule ' . $ruleId . ' not found.');
 
             return false;
         }
 
         // 3. Make sure the rule is still active and hasn't expired.
         if ($rule->recurrence_ends_at && $rule->recurrence_ends_at < now()) {
-            logger()->info('Rule '.$ruleId.' has expired. Skipping.');
+            logger()->info('Rule ' . $ruleId . ' has expired. Skipping.');
 
             return false;
         }
         // 4. Check if the scheduled date matches today's date (YYYY-MM-DD only)
         if ($rule->next_scheduled_at->toDateString() !== now()->toDateString()) {
-            logger()->info('Rule '.$ruleId.' scheduled date ('.$rule->next_scheduled_at->toDateString().') does not match current date. Skipping.');
+            logger()->info('Rule ' . $ruleId . ' scheduled date (' . $rule->next_scheduled_at->toDateString() . ') does not match current date. Skipping.');
 
             return false;
         }
 
         // 5. Check if the transaction is not deleted even though this might never happen
         if (! $rule->transaction) {
-            logger()->info('Rule '.$ruleId.' does not have a transaction.');
+            logger()->info('Rule ' . $ruleId . ' does not have a transaction.');
 
             return false;
         }
 
         return true;
-
     }
 
     /**
@@ -78,7 +77,7 @@ class RecurringTransactionService
 
         // 8. Dispatch next job with delay
         RecurrentTransactionJob::dispatch($rule->id)->delay($rule->next_scheduled_at);
-        logger()->info('Scheduled next transaction for '.$rule->transaction->id.' at '.$rule->next_scheduled_at);
+        logger()->info('Scheduled next transaction for ' . $rule->transaction->id . ' at ' . $rule->next_scheduled_at);
     }
 
     public function getNextScheduleDate(RecurringTransactionRule|Model $recurring_transaction): ?Carbon

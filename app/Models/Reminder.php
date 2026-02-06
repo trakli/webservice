@@ -34,7 +34,9 @@ use RRule\RRule;
 )]
 class Reminder extends Model
 {
-    use HasFactory, SoftDeletes, Syncable;
+    use HasFactory;
+    use SoftDeletes;
+    use Syncable;
 
     protected $fillable = [
         'title',

@@ -15,7 +15,9 @@ class UserRegistered
      *
      * @return void
      */
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Handle the event.
@@ -54,7 +56,7 @@ class UserRegistered
         }
 
         if ($generalGroup) {
-            $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+            $clientId = self::SERVER_UUID . ':' . Str::uuid()->toString();
             $generalGroup->setClientGeneratedId($clientId, $user);
 
             $user->setConfigValue(
@@ -75,7 +77,7 @@ class UserRegistered
             'balance' => 0,
         ]);
 
-        $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+        $clientId = self::SERVER_UUID . ':' . Str::uuid()->toString();
         $wallet->setClientGeneratedId($clientId, $user);
 
         $user->setConfigValue(

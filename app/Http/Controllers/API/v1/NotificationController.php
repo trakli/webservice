@@ -16,7 +16,8 @@ class NotificationController extends ApiController
 
     public function __construct(
         protected NotificationService $notificationService
-    ) {}
+    ) {
+    }
 
     #[OA\Get(
         path: '/notifications',

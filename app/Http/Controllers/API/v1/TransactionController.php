@@ -154,9 +154,8 @@ class TransactionController extends ApiController
             DB::transaction(function () use ($request, $transaction) {
                 FileService::uploadFiles($transaction, $request, 'files', 'transactions');
             });
-
         } catch (Throwable $e) {
-            logger()->error('Transaction file upload error: '.$e->getMessage(), [
+            logger()->error('Transaction file upload error: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
 
@@ -177,8 +176,12 @@ class TransactionController extends ApiController
                 schema: new OA\Schema(
                     required: ['amount', 'type', 'wallet_id'],
                     properties: [
-                        new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                            example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                        new OA\Property(
+                            property: 'client_id',
+                            description: 'Unique identifier for your local client',
+                            type: 'string',
+                            example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                        ),
                         new OA\Property(property: 'amount', type: 'number', format: 'float'),
                         new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                         new OA\Property(property: 'description', type: 'string'),
@@ -222,12 +225,12 @@ class TransactionController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601DateTime],
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'datetime' => ['nullable', new Iso8601DateTime()],
+            'created_at' => ['nullable', new Iso8601DateTime()],
             'group_id' => 'nullable|integer|exists:groups,id',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'required|integer|exists:wallets,id',
@@ -235,7 +238,7 @@ class TransactionController extends ApiController
             'is_recurring' => 'nullable|boolean',
             'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
             'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime],
+            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
             'categories.*' => 'integer|exists:categories,id',
             'files' => 'nullable|array',
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
@@ -335,7 +338,7 @@ class TransactionController extends ApiController
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         } catch (Throwable $e) {
-            logger()->error('Transaction creation error: '.$e->getMessage(), [
+            logger()->error('Transaction creation error: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
 
@@ -507,10 +510,10 @@ class TransactionController extends ApiController
     public function update(Request $request, $id): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
-            'datetime' => ['nullable', new Iso8601DateTime],
+            'datetime' => ['nullable', new Iso8601DateTime()],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
             'wallet_id' => 'sometimes|integer|exists:wallets,id',
@@ -520,8 +523,8 @@ class TransactionController extends ApiController
             'is_recurring' => 'nullable|boolean',
             'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
             'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime],
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -609,7 +612,6 @@ class TransactionController extends ApiController
                         $recurring_transaction->delete();
                     }
                 } else {
-
                     $schedule_job = true;
 
                     if (is_null($recurring_transaction)) {
@@ -619,15 +621,16 @@ class TransactionController extends ApiController
                         $recurring_transaction->save();
                     } else {
                         // Check if details have changed. If not, do not reschedule the job
-                        if (($recurring_transaction_data['recurrence_period'] == $recurring_transaction->recurrence_period)
+                        if (
+                            ($recurring_transaction_data['recurrence_period'] == $recurring_transaction->recurrence_period)
                             &&
-                            ($recurring_transaction_data['recurrence_interval'] == $recurring_transaction->recurrence_interval)) {
+                            ($recurring_transaction_data['recurrence_interval'] == $recurring_transaction->recurrence_interval)
+                        ) {
                             $schedule_job = false;
                         } else {
                             $recurring_transaction_data['next_scheduled_at'] = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
                         }
                         $recurring_transaction->update($recurring_transaction_data);
-
                     }
                     if ($schedule_job) {
                         RecurrentTransactionJob::dispatch(
@@ -643,13 +646,12 @@ class TransactionController extends ApiController
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         } catch (Throwable $e) {
-            logger()->error('Transaction update error: '.$e->getMessage(), [
+            logger()->error('Transaction update error: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
 
             return $this->failure(__('Failed to update transaction'), 500, [$e->getMessage()]);
         }
-
     }
 
     #[OA\Delete(
@@ -731,7 +733,7 @@ class TransactionController extends ApiController
             $user_category_ids = $user->categories()->pluck('id')->toArray();
             $invalid_categories = array_diff($categories, $user_category_ids);
             if (! empty($invalid_categories)) {
-                throw new HttpException(403, 'Some of the selected categories do not belong to user. Invalid category IDs: '.implode(',', $invalid_categories));
+                throw new HttpException(403, 'Some of the selected categories do not belong to user. Invalid category IDs: ' . implode(',', $invalid_categories));
             }
         }
     }

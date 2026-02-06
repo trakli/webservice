@@ -24,7 +24,9 @@ use OpenApi\Attributes as OA;
 )]
 class Transfer extends Model
 {
-    use HasClientCreatedAt, HasFactory, Syncable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Syncable;
 
     /**
      * The attributes that are mass assignable.
