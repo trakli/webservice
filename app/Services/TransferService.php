@@ -6,6 +6,7 @@ use App\Enums\TransactionType;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
+use InvalidArgumentException;
 use Ramsey\Uuid\Uuid;
 
 class TransferService
@@ -20,7 +21,7 @@ class TransferService
         ?string $deviceToken = null
     ) {
         if ($fromWallet->balance < $amountToSend) {
-            throw new \InvalidArgumentException(__('Insufficient balance in source wallet'));
+            throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
         }
 
         $transfer = Transfer::create([

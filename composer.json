@@ -67,10 +67,10 @@
             "@php artisan key:generate --ansi"
         ],
         "pint": [
-            "vendor/bin/pint"
+            "vendor/bin/pint --preset psr12"
         ],
         "pint:test": [
-            "vendor/bin/pint --test"
+            "vendor/bin/pint --preset psr12 --test"
         ],
         "openapi": [
             "./vendor/bin/openapi app --debug --output public/docs/api.json"

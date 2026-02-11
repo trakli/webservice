@@ -43,9 +43,9 @@ class FileController extends ApiController
             ),
         ]
     )]
-    public function show(Request $request, int $id)
+    public function show(Request $request, int $fileId)
     {
-        $file = File::find($id);
+        $file = File::find($fileId);
 
         if (! $file) {
             return $this->failure(__('File not found'), 404);

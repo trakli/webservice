@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use InvalidArgumentException;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
@@ -244,7 +245,7 @@ class NotificationService
             'email' => self::CONFIG_EMAIL_NOTIFICATIONS,
             'push' => self::CONFIG_PUSH_NOTIFICATIONS,
             'inapp' => self::CONFIG_INAPP_NOTIFICATIONS,
-            default => throw new \InvalidArgumentException("Invalid channel: {$channel}"),
+            default => throw new InvalidArgumentException("Invalid channel: {$channel}"),
         };
 
         $user->setConfigValue($configKey, $enabled ? 'true' : 'false', ConfigValueType::String);
@@ -259,7 +260,7 @@ class NotificationService
             'reminders' => self::CONFIG_REMINDER_NOTIFICATIONS,
             'insights' => self::CONFIG_INSIGHTS_NOTIFICATIONS,
             'inactivity' => self::CONFIG_INACTIVITY_NOTIFICATIONS,
-            default => throw new \InvalidArgumentException("Invalid notification type: {$type}"),
+            default => throw new InvalidArgumentException("Invalid notification type: {$type}"),
         };
 
         $user->setConfigValue($configKey, $enabled ? 'true' : 'false', ConfigValueType::String);
@@ -290,18 +291,18 @@ class NotificationService
     public function sendEmailNotification(array $data): bool
     {
         try {
-            $to = $data['to'] ?? null;
+            $sendTo = $data['to'] ?? null;
             $subject = $data['subject'] ?? 'Notification';
             $body = $data['body'] ?? '';
 
-            if (! $to) {
+            if (! $sendTo) {
                 return false;
             }
 
             $mail = new GenericMail($subject, $body);
-            Mail::to($to)->queue($mail);
+            Mail::to($sendTo)->queue($mail);
 
-            Log::info('Email notification sent', ['email' => $to]);
+            Log::info('Email notification sent', ['email' => $sendTo]);
 
             return true;
         } catch (\Throwable $e) {

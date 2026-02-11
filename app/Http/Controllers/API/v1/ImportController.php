@@ -80,7 +80,10 @@ class ImportController extends ApiController
                 ]);
                 ImportFileJob::dispatchAfterResponse($fileImport, app(FileImportService::class));
 
-                return $this->success($fileImport, __('File uploaded. Import scheduled. You will be notified when complete.'));
+                return $this->success(
+                    $fileImport,
+                    __('File uploaded. Import scheduled. You will be notified when complete.')
+                );
             } catch (\Exception $e) {
                 logger()->error($e);
 
@@ -123,14 +126,14 @@ class ImportController extends ApiController
             ),
         ]
     )]
-    public function getFailedImports(Request $request, string $id): JsonResponse
+    public function getFailedImports(Request $request, string $importId): JsonResponse
     {
         $user = $request->user();
         $perPage = 50;
         if ($request->has('perPage')) {
             $perPage = intval($request->perPage);
         }
-        $import = $user->fileImports()->find($id);
+        $import = $user->fileImports()->find($importId);
         if (is_null($import)) {
             return $this->failure(__('We could not find this import'), 404);
         }
@@ -217,35 +220,40 @@ class ImportController extends ApiController
             ),
         ]
     )]
-    public function fixFailedImports(FixFailedImportsRequest $request, string $id): JsonResponse
+    public function fixFailedImports(FixFailedImportsRequest $request, string $importId): JsonResponse
     {
         $user = $request->user();
-        $import = $user->fileImports()->find($id);
+        $import = $user->fileImports()->find($importId);
         if (is_null($import)) {
             return $this->failure(__('File import instance not found'), 404);
         }
-        $failedImportsToReturn = [];
+        $failedImports = [];
         $data = $request->all();
-        for ($i = 0; $i < count($data); $i++) {
+        $count = count($data);
+        for ($i = 0; $i < $count; $i++) {
             // verify if this failed import belong to this request
             $importToFix = $data[$i];
             $failedImport = $import->failedImports()->find($importToFix['id']);
             if (is_null($failedImport)) {
                 $importToFix['reason'] = 'This failed record does not belong to this import instance';
-                $failedImportsToReturn[] = $importToFix;
+                $failedImports[] = $importToFix;
             } elseif (! $this->fileImportService->isValidDate($importToFix['date'])) {
                 $importToFix['reason'] = 'Date must be in the format YYYY-MM-DD';
-                $failedImportsToReturn[] = $importToFix;
+                $failedImports[] = $importToFix;
             } else {
                 $fixSucceeded = true;
 
                 $transactionType = strtolower(trim($importToFix['type']));
                 if (in_array($transactionType, [TransactionType::EXPENSE->value, TransactionType::INCOME->value])) {
                     try {
-                        $this->fileImportService->importTransaction($this->convertImportObjectToArray($importToFix), $transactionType, $user);
+                        $this->fileImportService->importTransaction(
+                            $this->convertImportObjectToArray($importToFix),
+                            $transactionType,
+                            $user
+                        );
                     } catch (\Exception $e) {
                         $importToFix['reason'] = 'An error occurred while importing this transaction';
-                        $failedImportsToReturn[] = $importToFix;
+                        $failedImports[] = $importToFix;
                         $fixSucceeded = false;
 
                         Log::error($e);
@@ -253,12 +261,16 @@ class ImportController extends ApiController
                 } elseif ($transactionType == '+Transfer') {
                     if (isset($data[$i + 1]) && $data[$i + 1]['type'] == '-Transfer') {
                         try {
-                            $this->fileImportService->importTransfer($this->convertImportObjectToArray($importToFix), $data[$i + 1], $transactionType, $user);
+                            $this->fileImportService->importTransfer(
+                                $this->convertImportObjectToArray($importToFix),
+                                $data[$i + 1],
+                                $user
+                            );
                         } catch (\Exception $e) {
                             $importToFix['reason'] = 'An error occurred while importing this transaction';
                             $data[$i + 1]['reason'] = 'An error occurred while importing this transaction';
-                            $failedImportsToReturn[] = $importToFix;
-                            $failedImportsToReturn[] = $data[$i + 1];
+                            $failedImports[] = $importToFix;
+                            $failedImports[] = $data[$i + 1];
                             $fixSucceeded = false;
 
                             Log::error($e);
@@ -267,12 +279,12 @@ class ImportController extends ApiController
                         }
                     } else {
                         $importToFix['reason'] = 'Corresponding -Transfer transaction not found';
-                        $failedImportsToReturn[] = $importToFix;
+                        $failedImports[] = $importToFix;
                         $fixSucceeded = false;
                     }
                 } else {
                     $importToFix['reason'] = 'Invalid transaction type';
-                    $failedImportsToReturn[] = $importToFix;
+                    $failedImports[] = $importToFix;
                     $fixSucceeded = false;
                 }
 
@@ -281,8 +293,8 @@ class ImportController extends ApiController
                 }
             }
         }
-        if (count($failedImportsToReturn) > 0) {
-            return $this->success($failedImportsToReturn, __('Some imports could not be fixed'), 206);
+        if (count($failedImports) > 0) {
+            return $this->success($failedImports, __('Some imports could not be fixed'), 206);
         }
 
         return $this->success();

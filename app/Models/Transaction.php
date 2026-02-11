@@ -19,21 +19,49 @@ use OpenApi\Attributes as OA;
     required: ['amount', 'type'],
     properties: [
         new OA\Property(property: 'id', description: 'ID of the transaction', type: 'integer'),
-        new OA\Property(property: 'type', description: 'Type of the transaction (income or expense)', type: 'string', enum: ['income', 'expense']),
+        new OA\Property(
+            property: 'type',
+            description: 'Type of the transaction (income or expense)',
+            type: 'string',
+            enum: ['income', 'expense']
+        ),
         new OA\Property(property: 'amount', description: 'Amount of the transaction', type: 'number', format: 'float'),
         new OA\Property(property: 'description', description: 'Description of the transaction', type: 'string'),
-        new OA\Property(property: 'datetime', description: 'Date and time of the transaction', type: 'string', format: 'date'),
+        new OA\Property(
+            property: 'datetime',
+            description: 'Date and time of the transaction',
+            type: 'string',
+            format: 'date'
+        ),
         new OA\Property(
             property: 'categories',
             description: 'List of categories of the transaction',
             type: 'array',
             items: new OA\Items(description: 'Category ID array', type: 'integer')
         ),
-        new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
-        new OA\Property(property: 'user_id', description: 'ID of the user who created the transaction', type: 'integer'),
+        new OA\Property(
+            property: 'is_recurring',
+            description: 'Set the transaction as a recurring transaction',
+            type: 'boolean'
+        ),
+        new OA\Property(
+            property: 'user_id',
+            description: 'ID of the user who created the transaction',
+            type: 'integer'
+        ),
         new OA\Property(property: 'transfer_id', description: 'ID of the associated transfer, if any', type: 'integer'),
-        new OA\Property(property: 'wallet_client_generated_id', description: 'Client-generated ID of the associated wallet', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'party_client_generated_id', description: 'Client-generated ID of the associated party', type: 'string', format: 'uuid'),
+        new OA\Property(
+            property: 'wallet_client_generated_id',
+            description: 'Client-generated ID of the associated wallet',
+            type: 'string',
+            format: 'uuid'
+        ),
+        new OA\Property(
+            property: 'party_client_generated_id',
+            description: 'Client-generated ID of the associated party',
+            type: 'string',
+            format: 'uuid'
+        ),
         new OA\Property(
             property: 'files',
             description: 'Files attached to the transaction',
@@ -167,17 +195,17 @@ class Transaction extends Model
 
     public function getRecurringRulesAttribute()
     {
-        return $this->recurring_transaction_rule()->first();
+        return $this->recurringTransactionRule()->first();
     }
 
-    public function recurring_transaction_rule(): HasOne
+    public function recurringTransactionRule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
     }
 
     public function delete()
     {
-        $this->recurring_transaction_rule()->delete();
+        $this->recurringTransactionRule()->delete();
 
         return parent::delete();
     }

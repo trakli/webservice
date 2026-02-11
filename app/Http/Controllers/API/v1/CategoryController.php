@@ -86,11 +86,31 @@ class CategoryController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
-                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
-                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
-                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'name',
+                        description: 'Name of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'description',
+                        description: 'The description of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the category (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -125,7 +145,7 @@ class CategoryController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $categoryId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -148,7 +168,7 @@ class CategoryController extends ApiController
             $data['updated_at'] = format_iso8601_to_sql($data['updated_at']);
         }
 
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -185,11 +205,32 @@ class CategoryController extends ApiController
                         format: 'string',
                         example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
                     ),
-                    new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
-                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
-                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
-                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'type',
+                        description: 'Type of the category',
+                        type: 'string',
+                        enum: ['income', 'expense']
+                    ),
+                    new OA\Property(
+                        property: 'name',
+                        description: 'Name of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'description',
+                        description: 'The description of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the category (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -290,10 +331,10 @@ class CategoryController extends ApiController
                 ),
             ]
         )]
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $categoryId): JsonResponse
     {
         $user = $request->user();
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -334,10 +375,10 @@ class CategoryController extends ApiController
             ),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $categoryId): JsonResponse
     {
         $user = $request->user();
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -350,8 +391,8 @@ class CategoryController extends ApiController
 
     #[OA\Post(
         path: '/categories/seed-defaults',
-        summary: 'Create default categories for the user',
         description: 'Creates a set of predefined income and expense categories. Skips categories that already exist.',
+        summary: 'Create default categories for the user',
         tags: ['Category'],
         responses: [
             new OA\Response(
@@ -362,7 +403,6 @@ class CategoryController extends ApiController
                         new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(
                             property: 'data',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'created', type: 'integer'),
                                 new OA\Property(property: 'skipped', type: 'integer'),
@@ -371,7 +411,8 @@ class CategoryController extends ApiController
                                     type: 'array',
                                     items: new OA\Items(ref: '#/components/schemas/Category')
                                 ),
-                            ]
+                            ],
+                            type: 'object'
                         ),
                     ]
                 )
@@ -396,7 +437,8 @@ class CategoryController extends ApiController
             ['type' => 'income', 'name' => 'Other Income', 'description' => 'Miscellaneous income'],
             // Expense categories
             ['type' => 'expense', 'name' => 'Food & Dining', 'description' => 'Groceries, restaurants, takeout'],
-            ['type' => 'expense', 'name' => 'Transportation', 'description' => 'Fuel, public transit, ride-share, parking'],
+            ['type' => 'expense', 'name' => 'Transportation',
+                'description' => 'Fuel, public transit, ride-share, parking'],
             ['type' => 'expense', 'name' => 'Housing', 'description' => 'Rent, mortgage, repairs, maintenance'],
             ['type' => 'expense', 'name' => 'Utilities', 'description' => 'Electric, water, gas, internet, phone'],
             ['type' => 'expense', 'name' => 'Healthcare', 'description' => 'Medical, dental, pharmacy, insurance'],

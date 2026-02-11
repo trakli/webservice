@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Factory;
 use WhileSmart\LaravelPluginEngine\Providers\PluginServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
-            $factory = (new \Kreait\Firebase\Factory())
+            $factory = (new Factory())
                 ->withServiceAccount(base_path($credentials));
 
             return $factory->createMessaging();

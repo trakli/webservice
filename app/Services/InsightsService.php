@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class InsightsService
 {
-    const CONFIG_KEY = 'insights-frequency';
+    public const CONFIG_KEY = 'insights-frequency';
 
     public function __construct(
         protected NotificationService $notificationService

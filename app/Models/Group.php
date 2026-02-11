@@ -37,6 +37,13 @@ use OpenApi\Attributes as OA;
 )]
 class Group extends Model
 {
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Iconable;
+    use Sluggable;
+    use SoftDeletes;
+    use Syncable;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -49,13 +56,6 @@ class Group extends Model
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
-
-    use HasClientCreatedAt;
-    use HasFactory;
-    use Iconable;
-    use Sluggable;
-    use SoftDeletes;
-    use Syncable;
 
     /**
      * Return the sluggable configuration array for this model.

@@ -28,8 +28,8 @@ jobs:
 #      - name: PHP Static Analysis
 #        run: composer phpstan
 
-#      - name: PHP Mess Detector
-#        run: composer phpmd
+      - name: PHP Mess Detector
+        run: composer phpmd
 
       - name: Laravel Pint
         run: composer pint:test

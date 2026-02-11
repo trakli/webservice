@@ -13,7 +13,12 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', description: 'ID of the file', type: 'integer'),
         new OA\Property(property: 'path', description: 'Path or content of the file', type: 'string'),
         new OA\Property(property: 'link', description: 'URL to access the file', type: 'string'),
-        new OA\Property(property: 'type', description: 'Type of file (image, icon, emoji, pdf)', type: 'string', enum: ['image', 'pdf', 'icon', 'emoji']),
+        new OA\Property(
+            property: 'type',
+            description: 'Type of file (image, icon, emoji, pdf)',
+            type: 'string',
+            enum: ['image', 'pdf', 'icon', 'emoji']
+        ),
         new OA\Property(property: 'model', description: 'Related model name', type: 'string'),
         new OA\Property(property: 'model_id', description: 'ID of the related model', type: 'integer'),
     ],

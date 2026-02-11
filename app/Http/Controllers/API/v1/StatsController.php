@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use OpenApi\Attributes as OA;
+use RuntimeException;
 
 #[OA\Tag(name: 'Statistics', description: 'Financial statistics and analytics')]
 class StatsController extends ApiController
@@ -36,7 +37,7 @@ class StatsController extends ApiController
         $converted = $this->exchangeRateService->convert($amount, $fromCurrency, $targetCurrency, $user);
 
         if ($converted === null) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 "Failed to convert {$fromCurrency} to {$targetCurrency}. Exchange rate unavailable."
             );
         }
@@ -94,9 +95,13 @@ class StatsController extends ApiController
                 description: 'Statistics retrieved successfully',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'data', type: 'object', properties: [
-                            new OA\Property(property: 'currency', type: 'string', description: 'Currency used for all amounts'),
-                            new OA\Property(property: 'overview', type: 'object', properties: [
+                        new OA\Property(property: 'data', properties: [
+                            new OA\Property(
+                                property: 'currency',
+                                description: 'Currency used for all amounts',
+                                type: 'string'
+                            ),
+                            new OA\Property(property: 'overview', properties: [
                                 new OA\Property(property: 'total_balance', type: 'number', format: 'float'),
                                 new OA\Property(property: 'net_worth', type: 'number', format: 'float'),
                                 new OA\Property(property: 'total_income', type: 'number', format: 'float'),
@@ -105,13 +110,16 @@ class StatsController extends ApiController
                                 new OA\Property(property: 'avg_monthly_income', type: 'number', format: 'float'),
                                 new OA\Property(property: 'avg_monthly_expenses', type: 'number', format: 'float'),
                                 new OA\Property(property: 'savings_rate', type: 'number', format: 'float'),
-                            ]),
-                        ]),
+                            ], type: 'object'),
+                        ], type: 'object'),
                     ]
                 )
             ),
         ]
     )]
+    /**
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
+     */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -177,46 +185,148 @@ class StatsController extends ApiController
         $defaultCurrency = $user->getConfigValue('default-currency') ?? 'USD';
 
         // Generate cache key based on user, dates, and filters
-        $cacheKey = $this->generateCacheKey($user->id, $startDate, $endDate, $walletIds, $request->input('period', 'month'));
+        $cacheKey = $this->generateCacheKey(
+            $user->id,
+            $startDate,
+            $endDate,
+            $walletIds,
+            $request->input('period', 'month')
+        );
 
-        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($user, $startDate, $endDate, $walletIds, $request, $defaultCurrency) {
-            $periodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds, $defaultCurrency);
+        $data = Cache::remember(
+            $cacheKey,
+            now()->addMinutes(5),
+            function () use (
+                $user,
+                $startDate,
+                $endDate,
+                $walletIds,
+                $request,
+                $defaultCurrency
+            ) {
+                $periodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds, $defaultCurrency);
 
-            $overview = [
-                'total_balance' => $this->getTotalBalance($user, $walletIds, $defaultCurrency),
-                'net_worth' => $this->getNetWorth($user, $walletIds, $defaultCurrency),
-                'total_income' => $periodTotals['income'],
-                'total_expenses' => $periodTotals['expense'],
-                'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
-                'avg_monthly_income' => $this->getAverageMonthlyAmount($user, 'income', $walletIds, $startDate, $endDate, $defaultCurrency),
-                'avg_monthly_expenses' => $this->getAverageMonthlyAmount($user, 'expense', $walletIds, $startDate, $endDate, $defaultCurrency),
-                'savings_rate' => 0,
-            ];
+                $overview = [
+                    'total_balance' => $this->getTotalBalance($user, $walletIds, $defaultCurrency),
+                    'net_worth' => $this->getNetWorth($user, $walletIds, $defaultCurrency),
+                    'total_income' => $periodTotals['income'],
+                    'total_expenses' => $periodTotals['expense'],
+                    'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
+                    'avg_monthly_income' => $this->getAverageMonthlyAmount(
+                        $user,
+                        'income',
+                        $walletIds,
+                        $startDate,
+                        $endDate,
+                        $defaultCurrency
+                    ),
+                    'avg_monthly_expenses' => $this->getAverageMonthlyAmount(
+                        $user,
+                        'expense',
+                        $walletIds,
+                        $startDate,
+                        $endDate,
+                        $defaultCurrency
+                    ),
+                    'savings_rate' => 0,
+                ];
 
-            if ($overview['total_income'] > 0) {
-                $overview['savings_rate'] =
+                if ($overview['total_income'] > 0) {
+                    $overview['savings_rate'] =
                     (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
-            }
+                }
 
-            return [
-                'currency' => $defaultCurrency,
-                'overview' => $overview,
-                'comparisons' => $this->getComparisons($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                'top_categories' => $this->getTopCategories($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                'largest_transactions' => $this->getLargestTransactions($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                'spending_trends' => $this->getSpendingTrends($user, $startDate, $endDate, $request->input('period', 'month'), $walletIds, $defaultCurrency),
-                'category_distribution' => $this->getCategoryDistribution($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                'period_summary' => $this->getPeriodSummary($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                'charts' => [
-                    'party_spending' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'expense', $defaultCurrency),
-                    'party_income' => $this->getPartyData($user, $startDate, $endDate, $walletIds, 'income', $defaultCurrency),
-                    'category_spending' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'expense', $defaultCurrency),
-                    'income_sources' => $this->getCategorySpendingData($user, $startDate, $endDate, $walletIds, 'income', $defaultCurrency),
-                    'monthly_cash_flow' => $this->getMonthlyCashFlowData($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                    'expense_by_wallet' => $this->getExpenseByWalletData($user, $startDate, $endDate, $walletIds, $defaultCurrency),
-                ],
-            ];
-        });
+                return [
+                    'currency' => $defaultCurrency,
+                    'overview' => $overview,
+                    'comparisons' => $this->getComparisons($user, $startDate, $endDate, $walletIds, $defaultCurrency),
+                    'top_categories' => $this->getTopCategories(
+                        $user,
+                        $startDate,
+                        $endDate,
+                        $walletIds,
+                        $defaultCurrency
+                    ),
+                    'largest_transactions' => $this->getLargestTransactions(
+                        $user,
+                        $startDate,
+                        $endDate,
+                        $walletIds,
+                        $defaultCurrency
+                    ),
+                    'spending_trends' => $this->getSpendingTrends(
+                        $user,
+                        $startDate,
+                        $endDate,
+                        $request->input('period', 'month'),
+                        $walletIds,
+                        $defaultCurrency
+                    ),
+                    'category_distribution' => $this->getCategoryDistribution(
+                        $user,
+                        $startDate,
+                        $endDate,
+                        $walletIds,
+                        $defaultCurrency
+                    ),
+                    'period_summary' => $this->getPeriodSummary(
+                        $user,
+                        $startDate,
+                        $endDate,
+                        $walletIds,
+                        $defaultCurrency
+                    ),
+                    'charts' => [
+                        'party_spending' => $this->getPartyData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            'expense',
+                            $defaultCurrency
+                        ),
+                        'party_income' => $this->getPartyData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            'income',
+                            $defaultCurrency
+                        ),
+                        'category_spending' => $this->getCategorySpendingData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            'expense',
+                            $defaultCurrency
+                        ),
+                        'income_sources' => $this->getCategorySpendingData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            'income',
+                            $defaultCurrency
+                        ),
+                        'monthly_cash_flow' => $this->getMonthlyCashFlowData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            $defaultCurrency
+                        ),
+                        'expense_by_wallet' => $this->getExpenseByWalletData(
+                            $user,
+                            $startDate,
+                            $endDate,
+                            $walletIds,
+                            $defaultCurrency
+                        ),
+                    ],
+                ];
+            }
+        );
 
         return response()->json(['data' => $data]);
     }
@@ -231,8 +341,13 @@ class StatsController extends ApiController
      * @param  string  $period  Grouping period (day, week, month, year)
      * @return string The generated cache key
      */
-    private function generateCacheKey(int $userId, Carbon $startDate, Carbon $endDate, array $walletIds, string $period): string
-    {
+    private function generateCacheKey(
+        int $userId,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $walletIds,
+        string $period
+    ): string {
         $version = Cache::get('stats:user:' . $userId . ':version', 1);
 
         $params = [
@@ -309,8 +424,14 @@ class StatsController extends ApiController
     /**
      * Calculate average monthly amount for a transaction type with currency conversion.
      */
-    private function getAverageMonthlyAmount($user, string $type, array $walletIds, Carbon $startDate, Carbon $endDate, string $targetCurrency = 'USD'): float
-    {
+    private function getAverageMonthlyAmount(
+        $user,
+        string $type,
+        array $walletIds,
+        Carbon $startDate,
+        Carbon $endDate,
+        string $targetCurrency = 'USD'
+    ): float {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->where('transactions.type', $type)
@@ -346,14 +467,25 @@ class StatsController extends ApiController
     /**
      * Get period-over-period comparisons with currency conversion.
      */
-    private function getComparisons($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getComparisons(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $daysInPeriod = $startDate->diffInDays($endDate);
         $previousPeriodStart = $startDate->copy()->subDays($daysInPeriod);
         $previousPeriodEnd = $startDate->copy()->subDay();
 
         $currentPeriodTotals = $this->getPeriodTotals($user, $startDate, $endDate, $walletIds, $targetCurrency);
-        $previousPeriodTotals = $this->getPeriodTotals($user, $previousPeriodStart, $previousPeriodEnd, $walletIds, $targetCurrency);
+        $previousPeriodTotals = $this->getPeriodTotals(
+            $user,
+            $previousPeriodStart,
+            $previousPeriodEnd,
+            $walletIds,
+            $targetCurrency
+        );
 
         $calculateChange = function ($current, $previous) {
             if ($previous == 0) {
@@ -384,8 +516,13 @@ class StatsController extends ApiController
     /**
      * Calculate income, expense totals for a period with currency conversion.
      */
-    private function getPeriodTotals($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getPeriodTotals(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
@@ -427,8 +564,13 @@ class StatsController extends ApiController
     /**
      * Get top categories with currency conversion.
      */
-    private function getTopCategories($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getTopCategories(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->whereBetween('datetime', [$startDate, $endDate]);
@@ -451,8 +593,13 @@ class StatsController extends ApiController
     /**
      * Get largest transactions with currency conversion.
      */
-    private function getLargestTransactions($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getLargestTransactions(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->whereBetween('datetime', [$startDate, $endDate]);
@@ -503,15 +650,35 @@ class StatsController extends ApiController
     /**
      * Get spending trends with currency conversion.
      */
-    private function getSpendingTrends($user, $startDate, $endDate, string $period = 'month', array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
-        $currentPeriodData = $this->getTrendsForPeriod($user, $startDate, $endDate, $period, $walletIds, $targetCurrency);
+    private function getSpendingTrends(
+        $user,
+        $startDate,
+        $endDate,
+        string $period = 'month',
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
+        $currentPeriodData = $this->getTrendsForPeriod(
+            $user,
+            $startDate,
+            $endDate,
+            $period,
+            $walletIds,
+            $targetCurrency
+        );
 
         $daysInPeriod = $startDate->diffInDays($endDate);
         $previousStartDate = $startDate->copy()->subDays($daysInPeriod + 1);
         $previousEndDate = $startDate->copy()->subDay();
 
-        $previousPeriodData = $this->getTrendsForPeriod($user, $previousStartDate, $previousEndDate, $period, $walletIds, $targetCurrency);
+        $previousPeriodData = $this->getTrendsForPeriod(
+            $user,
+            $previousStartDate,
+            $previousEndDate,
+            $period,
+            $walletIds,
+            $targetCurrency
+        );
 
         return [
             'current_period' => $currentPeriodData,
@@ -522,8 +689,14 @@ class StatsController extends ApiController
     /**
      * Get expense trends with currency conversion.
      */
-    private function getTrendsForPeriod($user, $startDate, $endDate, $period, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getTrendsForPeriod(
+        $user,
+        $startDate,
+        $endDate,
+        $period,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
@@ -565,8 +738,13 @@ class StatsController extends ApiController
     /**
      * Get expense distribution by classification with currency conversion.
      */
-    private function getCategoryDistribution($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getCategoryDistribution(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', 'expense')
@@ -628,6 +806,7 @@ class StatsController extends ApiController
         $text = $name . ' ' . $slug;
 
         // Essential: housing, utilities, food, healthcare, transport, insurance
+        // @phpcs:ignore
         if (preg_match('/\b(rent|mortgage|hous|utilit|electric|water|gas|grocer|food|meal|health|medic|pharma|doctor|hospital|insur|transport|fuel|petrol|diesel|commut|bus|train|taxi)\b/i', $text)) {
             return 'essential';
         }
@@ -648,8 +827,13 @@ class StatsController extends ApiController
     /**
      * Get period summary with currency conversion.
      */
-    private function getPeriodSummary($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getPeriodSummary(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $today = Carbon::now();
         $daysRemaining = $today->diffInDays($endDate, false);
         $daysElapsed = $startDate->diffInDays($today);
@@ -680,8 +864,14 @@ class StatsController extends ApiController
     /**
      * Get party data with currency conversion.
      */
-    private function getPartyData($user, $startDate, $endDate, array $walletIds = [], string $type = 'expense', string $targetCurrency = 'USD'): array
-    {
+    private function getPartyData(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $type = 'expense',
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with(['party', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', $type)
@@ -734,8 +924,14 @@ class StatsController extends ApiController
     /**
      * Get category spending data with currency conversion.
      */
-    private function getCategorySpendingData($user, $startDate, $endDate, array $walletIds, string $type = 'expense', string $targetCurrency = 'USD'): array
-    {
+    private function getCategorySpendingData(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds,
+        string $type = 'expense',
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
             ->where('type', $type)
@@ -751,8 +947,12 @@ class StatsController extends ApiController
     /**
      * Group transactions by category with currency conversion.
      */
-    private function groupTransactionsByCategory($transactions, $user, string $targetCurrency, ?int $limit = null): array
-    {
+    private function groupTransactionsByCategory(
+        $transactions,
+        $user,
+        string $targetCurrency,
+        ?int $limit = null
+    ): array {
         $categoryData = [];
 
         foreach ($transactions as $transaction) {
@@ -806,8 +1006,13 @@ class StatsController extends ApiController
     /**
      * Get monthly cash flow data with currency conversion.
      */
-    private function getMonthlyCashFlowData($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getMonthlyCashFlowData(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
@@ -856,8 +1061,13 @@ class StatsController extends ApiController
     /**
      * Get expense by wallet with currency conversion.
      */
-    private function getExpenseByWalletData($user, $startDate, $endDate, array $walletIds = [], string $targetCurrency = 'USD'): array
-    {
+    private function getExpenseByWalletData(
+        $user,
+        $startDate,
+        $endDate,
+        array $walletIds = [],
+        string $targetCurrency = 'USD'
+    ): array {
         $query = Transaction::with('wallet')
             ->where('user_id', $user->id)
             ->where('type', 'expense')
