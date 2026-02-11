@@ -111,11 +111,23 @@ composer-update: ## Update composer dependencies
 test: ## Run tests
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test --coverage
 
+phpmd: ## Mess detector
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpmd
+
+phpstan: ## Static Analyzer
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpstan
+
 lint: ## Lint the code
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint:test
 
 lint-fix: ## Fix linting errors
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint
+
+format: ## Format the code
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs:test
+
+format-fix: ## Fix formatting errors
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs
 
 openapi: ## Generate OpenAPI documentation
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer openapi

@@ -18,6 +18,7 @@ class ValidateClientId implements ValidationRule
         // check if the value is in the format xxx:xxx
         $exploded_value = explode(':', $value);
         if (count($exploded_value) !== 2) {
+            // @phpcs:ignore
             $fail("The {$attribute} must be in the format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
 
             return;

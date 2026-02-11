@@ -1325,7 +1325,7 @@
                                     },
                                     "type": {
                                         "type": "string",
-                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
+                                        "example": "individual,organization,\n                        business,partnership,non_profit,\n                        government_agency,educational_institution,\n                        healthcare_provider"
                                     },
                                     "description": {
                                         "type": "string",
@@ -1443,7 +1443,7 @@
                                     },
                                     "type": {
                                         "type": "string",
-                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
+                                        "example": "individual, organization,business,partnership, non_profit,government_agency, educational_institution,healthcare_provider"
                                     },
                                     "description": {
                                         "type": "string",

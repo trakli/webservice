@@ -105,6 +105,10 @@ class TransferController extends ApiController
             ),
         ]
     )]
+    /**
+     * @SuppressWarnings(PHPMD.IfStatementAssignment)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
@@ -161,7 +165,16 @@ class TransferController extends ApiController
             $randomId = $parts[1];
         }
 
-        $transfer = DB::Transaction(function () use ($data, $toWallet, $fromWallet, $amountToReceive, $user, $exchangeRate, $deviceToken, $randomId) {
+        $transfer = DB::Transaction(function () use (
+            $data,
+            $toWallet,
+            $fromWallet,
+            $amountToReceive,
+            $user,
+            $exchangeRate,
+            $deviceToken,
+            $randomId
+        ) {
             $transfer = $this->transferService->transfer(
                 amountToSend: $data['amount'],
                 fromWallet: $fromWallet,
@@ -223,7 +236,7 @@ class TransferController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $transferId): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -235,7 +248,7 @@ class TransferController extends ApiController
         }
 
         $user = $request->user();
-        $transfer = $user->transfers()->find($id);
+        $transfer = $user->transfers()->find($transferId);
 
         if (! $transfer) {
             return $this->failure(__('Transfer not found'), 404);

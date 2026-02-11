@@ -11,7 +11,12 @@ use OpenApi\Attributes as OA;
     schema: 'FailedImport',
     properties: [
         new OA\Property(property: 'id', description: 'ID of the failed import', type: 'integer'),
-        new OA\Property(property: 'amount', description: 'The amount of the transaction', type: 'number', format: 'float'),
+        new OA\Property(
+            property: 'amount',
+            description: 'The amount of the transaction',
+            type: 'number',
+            format: 'float'
+        ),
         new OA\Property(property: 'type', description: 'The type of the transaction', type: 'string'),
         new OA\Property(property: 'party', description: 'The party of the transaction', type: 'string'),
         new OA\Property(property: 'wallet', description: 'The wallet of the transaction', type: 'string'),
@@ -25,7 +30,10 @@ class FailedImport extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['amount', 'currency', 'type', 'party', 'wallet', 'category', 'description', 'date', 'reason', 'file_import_id'];
+    protected $fillable = ['amount',
+        'currency', 'type', 'party',
+        'wallet', 'category', 'description',
+        'date', 'reason', 'file_import_id'];
 
     protected $hidden = ['file_import_id'];
 

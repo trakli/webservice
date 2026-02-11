@@ -38,7 +38,8 @@ trait Syncable
         } else {
             $exploded_value = explode(':', $value);
             if (count($exploded_value) !== 2) {
-                Log::info('Client ID is not in the format  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.');
+                Log::info('Client ID is not in the format
+                xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.');
 
                 return;
             }

@@ -36,7 +36,11 @@ class NotificationController extends ApiController
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Notification')),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Notification')
+                        ),
                         new OA\Property(property: 'unread_count', type: 'integer'),
                     ],
                     type: 'object'
@@ -71,14 +75,18 @@ class NotificationController extends ApiController
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Successful operation', content: new OA\JsonContent(ref: '#/components/schemas/Notification')),
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(ref: '#/components/schemas/Notification')
+            ),
             new OA\Response(response: 404, description: 'Notification not found'),
         ]
     )]
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $notificationId): JsonResponse
     {
         $user = $request->user();
-        $notification = $user->notifications()->find($id);
+        $notification = $user->notifications()->find($notificationId);
 
         if (! $notification) {
             return $this->failure(__('Notification not found'), 404);
@@ -99,10 +107,10 @@ class NotificationController extends ApiController
             new OA\Response(response: 404, description: 'Notification not found'),
         ]
     )]
-    public function markAsRead(Request $request, int $id): JsonResponse
+    public function markAsRead(Request $request, int $notificationId): JsonResponse
     {
         $user = $request->user();
-        $notification = $user->notifications()->find($id);
+        $notification = $user->notifications()->find($notificationId);
 
         if (! $notification) {
             return $this->failure(__('Notification not found'), 404);
@@ -141,10 +149,10 @@ class NotificationController extends ApiController
             new OA\Response(response: 404, description: 'Notification not found'),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $notificationId): JsonResponse
     {
         $user = $request->user();
-        $notification = $user->notifications()->find($id);
+        $notification = $user->notifications()->find($notificationId);
 
         if (! $notification) {
             return $this->failure(__('Notification not found'), 404);
@@ -192,21 +200,21 @@ class NotificationController extends ApiController
                     properties: [
                         new OA\Property(
                             property: 'channels',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'email', type: 'boolean'),
                                 new OA\Property(property: 'push', type: 'boolean'),
                                 new OA\Property(property: 'inapp', type: 'boolean'),
-                            ]
+                            ],
+                            type: 'object'
                         ),
                         new OA\Property(
                             property: 'types',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'reminders', type: 'boolean'),
                                 new OA\Property(property: 'insights', type: 'boolean'),
                                 new OA\Property(property: 'inactivity', type: 'boolean'),
-                            ]
+                            ],
+                            type: 'object'
                         ),
                     ],
                     type: 'object'
@@ -225,32 +233,32 @@ class NotificationController extends ApiController
     #[OA\Put(
         path: '/notifications/preferences',
         summary: 'Update notification preferences',
-        tags: ['Notifications'],
         requestBody: new OA\RequestBody(
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(
                         property: 'channels',
-                        type: 'object',
                         properties: [
                             new OA\Property(property: 'email', type: 'boolean'),
                             new OA\Property(property: 'push', type: 'boolean'),
                             new OA\Property(property: 'inapp', type: 'boolean'),
-                        ]
+                        ],
+                        type: 'object'
                     ),
                     new OA\Property(
                         property: 'types',
-                        type: 'object',
                         properties: [
                             new OA\Property(property: 'reminders', type: 'boolean'),
                             new OA\Property(property: 'insights', type: 'boolean'),
                             new OA\Property(property: 'inactivity', type: 'boolean'),
-                        ]
+                        ],
+                        type: 'object'
                     ),
                 ],
                 type: 'object'
             )
         ),
+        tags: ['Notifications'],
         responses: [
             new OA\Response(response: 200, description: 'Preferences updated'),
         ]

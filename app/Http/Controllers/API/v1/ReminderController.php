@@ -9,6 +9,7 @@ use App\Http\Traits\ApiQueryable;
 use App\Models\Reminder;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
+use DateTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,11 @@ class ReminderController extends ApiController
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'last_sync', type: 'string', format: 'date-time'),
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Reminder')),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Reminder')
+                        ),
                     ],
                     type: 'object'
                 )
@@ -75,10 +80,23 @@ class ReminderController extends ApiController
                     new OA\Property(property: 'client_id', type: 'string'),
                     new OA\Property(property: 'title', type: 'string'),
                     new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['daily_tracking', 'weekly_review', 'monthly_summary', 'bill_due', 'budget_alert', 'custom']),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        enum: ['daily_tracking',
+                            'weekly_review',
+                            'monthly_summary',
+                            'bill_due',
+                            'budget_alert',
+                            'custom']
+                    ),
                     new OA\Property(property: 'trigger_at', type: 'string', format: 'date-time'),
                     new OA\Property(property: 'due_at', type: 'string', format: 'date-time'),
-                    new OA\Property(property: 'repeat_rule', type: 'string', example: 'FREQ=DAILY;BYHOUR=20;BYMINUTE=0'),
+                    new OA\Property(
+                        property: 'repeat_rule',
+                        type: 'string',
+                        example: 'FREQ=DAILY;BYHOUR=20;BYMINUTE=0'
+                    ),
                     new OA\Property(property: 'timezone', type: 'string', example: 'UTC'),
                     new OA\Property(property: 'priority', type: 'integer'),
                     new OA\Property(property: 'metadata', type: 'object'),
@@ -87,7 +105,11 @@ class ReminderController extends ApiController
         ),
         tags: ['Reminders'],
         responses: [
-            new OA\Response(response: 201, description: 'Reminder created successfully', content: new OA\JsonContent(ref: '#/components/schemas/Reminder')),
+            new OA\Response(
+                response: 201,
+                description: 'Reminder created successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reminder')
+            ),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
@@ -149,14 +171,18 @@ class ReminderController extends ApiController
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Successful operation', content: new OA\JsonContent(ref: '#/components/schemas/Reminder')),
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reminder')
+            ),
             new OA\Response(response: 404, description: 'Reminder not found'),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(int $reminderId): JsonResponse
     {
         $user = request()->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
 
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);
@@ -191,12 +217,16 @@ class ReminderController extends ApiController
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Reminder updated successfully', content: new OA\JsonContent(ref: '#/components/schemas/Reminder')),
+            new OA\Response(
+                response: 200,
+                description: 'Reminder updated successfully',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reminder')
+            ),
             new OA\Response(response: 404, description: 'Reminder not found'),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $reminderId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -217,7 +247,7 @@ class ReminderController extends ApiController
         }
 
         $user = $request->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
         $data = $validator->validated();
 
         if (! $reminder) {
@@ -256,10 +286,10 @@ class ReminderController extends ApiController
             new OA\Response(response: 404, description: 'Reminder not found'),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $reminderId): JsonResponse
     {
         $user = $request->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
 
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);
@@ -291,7 +321,7 @@ class ReminderController extends ApiController
             new OA\Response(response: 404, description: 'Reminder not found'),
         ]
     )]
-    public function snooze(Request $request, int $id): JsonResponse
+    public function snooze(Request $request, int $reminderId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'until' => ['required', new Iso8601DateTime()],
@@ -302,13 +332,13 @@ class ReminderController extends ApiController
         }
 
         $user = $request->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
 
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);
         }
 
-        $reminder->snooze(new \DateTime($request->input('until')));
+        $reminder->snooze(new DateTime($request->input('until')));
 
         return $this->success($reminder, __('Reminder snoozed'));
     }
@@ -325,10 +355,10 @@ class ReminderController extends ApiController
             new OA\Response(response: 404, description: 'Reminder not found'),
         ]
     )]
-    public function pause(Request $request, int $id): JsonResponse
+    public function pause(Request $request, int $reminderId): JsonResponse
     {
         $user = $request->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
 
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);
@@ -351,10 +381,10 @@ class ReminderController extends ApiController
             new OA\Response(response: 404, description: 'Reminder not found'),
         ]
     )]
-    public function resume(Request $request, int $id): JsonResponse
+    public function resume(Request $request, int $reminderId): JsonResponse
     {
         $user = $request->user();
-        $reminder = $user->reminders()->find($id);
+        $reminder = $user->reminders()->find($reminderId);
 
         if (! $reminder) {
             return $this->failure(__('Reminder not found'), 404);

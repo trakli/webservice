@@ -34,7 +34,9 @@ class RecurringTransactionService
         }
         // 4. Check if the scheduled date matches today's date (YYYY-MM-DD only)
         if ($rule->next_scheduled_at->toDateString() !== now()->toDateString()) {
-            logger()->info('Rule ' . $ruleId . ' scheduled date (' . $rule->next_scheduled_at->toDateString() . ') does not match current date. Skipping.');
+            logger()->info('Rule ' . $ruleId . ' scheduled date (' .
+                $rule->next_scheduled_at->toDateString() .
+                ') does not match current date. Skipping.');
 
             return false;
         }
@@ -80,22 +82,26 @@ class RecurringTransactionService
         logger()->info('Scheduled next transaction for ' . $rule->transaction->id . ' at ' . $rule->next_scheduled_at);
     }
 
-    public function getNextScheduleDate(RecurringTransactionRule|Model $recurring_transaction): ?Carbon
+    public function getNextScheduleDate(RecurringTransactionRule|Model $recurringTransaction): ?Carbon
     {
-        return match (TransactionRecurringPeriod::from($recurring_transaction->recurrence_period)) {
-            TransactionRecurringPeriod::DAILY => $this->getLastScheduledDate($recurring_transaction)->addDays($recurring_transaction->recurrence_interval),
-            TransactionRecurringPeriod::WEEKLY => $this->getLastScheduledDate($recurring_transaction)->addWeeks($recurring_transaction->recurrence_interval),
-            TransactionRecurringPeriod::MONTHLY => $this->getLastScheduledDate($recurring_transaction)->addMonths($recurring_transaction->recurrence_interval),
-            TransactionRecurringPeriod::YEARLY => $this->getLastScheduledDate($recurring_transaction)->addYears($recurring_transaction->recurrence_interval),
+        return match (TransactionRecurringPeriod::from($recurringTransaction->recurrence_period)) {
+            TransactionRecurringPeriod::DAILY => $this->getLastScheduledDate($recurringTransaction)
+                ->addDays($recurringTransaction->recurrence_interval),
+            TransactionRecurringPeriod::WEEKLY => $this->getLastScheduledDate($recurringTransaction)
+                ->addWeeks($recurringTransaction->recurrence_interval),
+            TransactionRecurringPeriod::MONTHLY => $this->getLastScheduledDate($recurringTransaction)
+                ->addMonths($recurringTransaction->recurrence_interval),
+            TransactionRecurringPeriod::YEARLY => $this->getLastScheduledDate($recurringTransaction)
+                ->addYears($recurringTransaction->recurrence_interval),
         };
     }
 
-    private function getLastScheduledDate(RecurringTransactionRule|Model $recurring_transaction): Carbon
+    private function getLastScheduledDate(RecurringTransactionRule|Model $recurringTransaction): Carbon
     {
-        if (is_null($recurring_transaction->next_scheduled_at)) {
+        if (is_null($recurringTransaction->next_scheduled_at)) {
             return now();
         }
 
-        return Carbon::parse($recurring_transaction->next_scheduled_at);
+        return Carbon::parse($recurringTransaction->next_scheduled_at);
     }
 }

@@ -20,8 +20,17 @@ interface IConfigurationControllerInterface
                 required: ['key', 'value', 'type'],
                 properties: [
                     new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
-                    new OA\Property(property: 'value', type: 'object', example: '{"theme": "dark", "color": "#333333"}'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
+                    new OA\Property(
+                        property: 'value',
+                        type: 'object',
+                        example: '{"theme": "dark", "color": "#333333"}'
+                    ),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'],
+                        example: 'string'
+                    ),
                     new OA\Property(
                         property: 'client_id',
                         description: 'Unique identifier for your local client',
@@ -51,9 +60,24 @@ interface IConfigurationControllerInterface
             content: new OA\JsonContent(
                 required: ['value'],
                 properties: [
-                    new OA\Property(property: 'value', type: 'object', example: '{"theme": "light", "color": "#ffffff"}'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'], example: 'string'),
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string', format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'value',
+                        type: 'object',
+                        example: '{"theme": "light", "color": "#ffffff"}'
+                    ),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        enum: ['string', 'int', 'float', 'bool', 'array', 'json', 'date'],
+                        example: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                 ]
             )
         ),
@@ -140,7 +164,11 @@ interface IConfigurationControllerInterface
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'success', type: 'boolean', example: true),
-                        new OA\Property(property: 'message', type: 'string', example: 'Configurations retrieved successfully'),
+                        new OA\Property(
+                            property: 'message',
+                            type: 'string',
+                            example: 'Configurations retrieved successfully'
+                        ),
                         new OA\Property(
                             property: 'data',
                             type: 'array',
@@ -149,7 +177,11 @@ interface IConfigurationControllerInterface
                                     new OA\Property(property: 'id', type: 'integer', example: 1),
                                     new OA\Property(property: 'user_id', type: 'integer', example: 1),
                                     new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
-                                    new OA\Property(property: 'value', type: 'object', example: '{"theme": "dark", "color": "#333333"}'),
+                                    new OA\Property(
+                                        property: 'value',
+                                        type: 'object',
+                                        example: '{"theme": "dark", "color": "#333333"}'
+                                    ),
                                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                                 ]

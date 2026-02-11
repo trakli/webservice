@@ -18,12 +18,30 @@ use RRule\RRule;
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'title', type: 'string'),
         new OA\Property(property: 'description', type: 'string', nullable: true),
-        new OA\Property(property: 'type', type: 'string', enum: ['daily_tracking', 'weekly_review', 'monthly_summary', 'bill_due', 'budget_alert', 'custom']),
+        new OA\Property(
+            property: 'type',
+            type: 'string',
+            enum: ['daily_tracking',
+                'weekly_review',
+                'monthly_summary',
+                'bill_due',
+                'budget_alert',
+                'custom']
+        ),
         new OA\Property(property: 'trigger_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'due_at', type: 'string', format: 'date-time', nullable: true),
-        new OA\Property(property: 'repeat_rule', type: 'string', nullable: true, example: 'FREQ=DAILY;BYHOUR=20;BYMINUTE=0'),
+        new OA\Property(
+            property: 'repeat_rule',
+            type: 'string',
+            nullable: true,
+            example: 'FREQ=DAILY;BYHOUR=20;BYMINUTE=0'
+        ),
         new OA\Property(property: 'timezone', type: 'string', example: 'UTC'),
-        new OA\Property(property: 'status', type: 'string', enum: ['active', 'paused', 'snoozed', 'completed', 'cancelled']),
+        new OA\Property(
+            property: 'status',
+            type: 'string',
+            enum: ['active', 'paused', 'snoozed', 'completed', 'cancelled']
+        ),
         new OA\Property(property: 'priority', type: 'integer'),
         new OA\Property(property: 'snoozed_until', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'last_triggered_at', type: 'string', format: 'date-time', nullable: true),

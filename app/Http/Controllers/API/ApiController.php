@@ -22,7 +22,11 @@ use OpenApi\Attributes as OA;
     description: 'Dynamic server URL',
     variables: [
         new OA\ServerVariable(serverVariable: 'protocol', default: 'https', enum: ['http', 'https']),
-        new OA\ServerVariable(serverVariable: 'host', default: 'api.dev.trakli.app', enum: ['api.dev.trakli.app', 'api.staging.trakli.app']),
+        new OA\ServerVariable(
+            serverVariable: 'host',
+            default: 'api.dev.trakli.app',
+            enum: ['api.dev.trakli.app', 'api.staging.trakli.app']
+        ),
     ]
 )]
 #[OA\Components(
@@ -92,8 +96,11 @@ class ApiController extends BaseController
      *
      * @param  mixed  $data
      */
-    protected function success($data = null, string $message = 'Operation successful', int $statusCode = 200): JsonResponse
-    {
+    protected function success(
+        $data = null,
+        string $message = 'Operation successful',
+        int $statusCode = 200
+    ): JsonResponse {
         return response()->json([
             'success' => true,
             'message' => $message,
@@ -104,8 +111,11 @@ class ApiController extends BaseController
     /**
      * Return a failure response.
      */
-    protected function failure(string $message = 'Operation failed', int $statusCode = 400, array $errors = []): JsonResponse
-    {
+    protected function failure(
+        string $message = 'Operation failed',
+        int $statusCode = 400,
+        array $errors = []
+    ): JsonResponse {
         return response()->json([
             'success' => false,
             'message' => $message,

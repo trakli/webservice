@@ -23,11 +23,11 @@ class TransactionController extends ApiController
 {
     use ApiQueryable;
 
-    private RecurringTransactionService $recurring_transaction_service;
+    private RecurringTransactionService $recurringTransactionService;
 
     public function __construct(RecurringTransactionService $recurring_transaction_service)
     {
-        $this->recurring_transaction_service = $recurring_transaction_service;
+        $this->recurringTransactionService = $recurring_transaction_service;
     }
 
     #[OA\Get(
@@ -138,13 +138,13 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function uploadFiles(Request $request, $id)
+    public function uploadFiles(Request $request, $transactionId)
     {
         $request->validate([
             'files' => 'nullable|array',
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1024',
         ]);
-        $transaction = $request->user()->transactions()->find($id);
+        $transaction = $request->user()->transactions()->find($transactionId);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -190,11 +190,33 @@ class TransactionController extends ApiController
                         new OA\Property(property: 'party_id', type: 'integer'),
                         new OA\Property(property: 'wallet_id', type: 'integer'),
                         new OA\Property(property: 'group_id', type: 'integer'),
-                        new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
-                        new OA\Property(property: 'recurrence_period', description: 'Set how often the transaction should repeat', type: 'string', enum: ['daily', 'weekly', 'monthly', 'yearly']),
-                        new OA\Property(property: 'recurrence_interval', description: 'Set how often the transaction should repeat', type: 'integer'),
-                        new OA\Property(property: 'recurrence_ends_at', description: 'When the transaction stops repeating', type: 'string', format: 'date-time'),
-                        new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID', type: 'integer')),
+                        new OA\Property(
+                            property: 'is_recurring',
+                            description: 'Set the transaction as a recurring transaction',
+                            type: 'boolean'
+                        ),
+                        new OA\Property(
+                            property: 'recurrence_period',
+                            description: 'Set how often the transaction should repeat',
+                            type: 'string',
+                            enum: ['daily', 'weekly', 'monthly', 'yearly']
+                        ),
+                        new OA\Property(
+                            property: 'recurrence_interval',
+                            description: 'Set how often the transaction should repeat',
+                            type: 'integer'
+                        ),
+                        new OA\Property(
+                            property: 'recurrence_ends_at',
+                            description: 'When the transaction stops repeating',
+                            type: 'string',
+                            format: 'date-time'
+                        ),
+                        new OA\Property(
+                            property: 'categories',
+                            type: 'array',
+                            items: new OA\Items(description: 'Category ID', type: 'integer')
+                        ),
                         new OA\Property(
                             property: 'files[]',
                             description: 'Files to attach (jpg, jpeg, png, pdf; max 1.2MB each)',
@@ -222,6 +244,9 @@ class TransactionController extends ApiController
             ),
         ]
     )]
+    /**
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function store(Request $request): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
@@ -249,7 +274,7 @@ class TransactionController extends ApiController
         }
 
         $data = $validationResult['data'];
-        $recurring_transaction_data = [];
+        $recurringTransactionData = [];
 
         if (isset($data['is_recurring']) && $data['is_recurring']) {
             $result = $this->validateRequest($request, [
@@ -259,9 +284,9 @@ class TransactionController extends ApiController
                 return $this->failure($result['message'], $result['code'], $result['errors']);
             }
 
-            $recurring_transaction_data['recurrence_period'] = $data['recurrence_period'];
-            $recurring_transaction_data['recurrence_interval'] = $data['recurrence_interval'] ?? null;
-            $recurring_transaction_data['recurrence_ends_at'] = $data['recurrence_ends_at'] ?? null;
+            $recurringTransactionData['recurrence_period'] = $data['recurrence_period'];
+            $recurringTransactionData['recurrence_interval'] = $data['recurrence_interval'] ?? null;
+            $recurringTransactionData['recurrence_ends_at'] = $data['recurrence_ends_at'] ?? null;
         }
         // remove recurring transaction data from $data
         unset($data['recurrence_ends_at']);
@@ -269,8 +294,11 @@ class TransactionController extends ApiController
         unset($data['recurrence_period']);
         unset($data['is_recurring']);
 
-        if (isset($recurring_transaction_data['recurrence_ends_at'])) {
-            $recurring_transaction_data['recurrence_ends_at'] = format_iso8601_to_sql($recurring_transaction_data['recurrence_ends_at']);
+        if (isset($recurringTransactionData['recurrence_ends_at'])) {
+            $recurringTransactionData['recurrence_ends_at'] =
+                format_iso8601_to_sql(
+                    $recurringTransactionData['recurrence_ends_at']
+                );
         }
 
         if (isset($data['datetime'])) {
@@ -291,7 +319,7 @@ class TransactionController extends ApiController
             // Validate ownership of all resources before creating the transaction
             $this->validateResourceOwnership($data, $categories);
 
-            $transaction = DB::transaction(function () use ($request, $data, $categories, $recurring_transaction_data) {
+            $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData) {
                 /** @var Transaction $transaction */
                 $transaction = auth()->user()->transactions()->create($data);
 
@@ -321,10 +349,13 @@ class TransactionController extends ApiController
                 }
 
                 // check if this transaction is recurring
-                if (! empty($recurring_transaction_data)) {
+                if (! empty($recurringTransactionData)) {
                     // Create recurring transaction
-                    $recurring_transaction = new RecurringTransactionRule($recurring_transaction_data);
-                    $recurring_transaction->next_scheduled_at = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
+                    $recurring_transaction = new RecurringTransactionRule($recurringTransactionData);
+                    $recurring_transaction->next_scheduled_at =
+                        $this->recurringTransactionService->getNextScheduleDate(
+                            $recurring_transaction
+                        );
                     $recurring_transaction->transaction_id = $transaction->id;
                     $recurring_transaction->save();
 
@@ -421,7 +452,7 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function show($id, Request $request): JsonResponse
+    public function show($transactionId, Request $request): JsonResponse
     {
         $type = $request->query('type');
 
@@ -434,7 +465,7 @@ class TransactionController extends ApiController
             $query->where('type', $type);
         }
 
-        $transaction = $query->find($id);
+        $transaction = $query->find($transactionId);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -457,7 +488,11 @@ class TransactionController extends ApiController
             content: new OA\JsonContent(
                 required: ['amount', 'updated_at'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
@@ -465,11 +500,31 @@ class TransactionController extends ApiController
                     new OA\Property(property: 'group_id', type: 'integer'),
                     new OA\Property(property: 'description', type: 'string'),
                     new OA\Property(property: 'wallet_id', type: 'integer'),
-                    new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
-                    new OA\Property(property: 'recurrence_period', description: 'Set how often the transaction should repeat', type: 'string'),
-                    new OA\Property(property: 'recurrence_interval', description: 'Set how often the transaction should repeat', type: 'integer'),
-                    new OA\Property(property: 'recurrence_ends_at', description: 'When the transaction stops repeating', type: 'date-time'),
-                    new OA\Property(property: 'categories', type: 'array', items: new OA\Items(description: 'Category ID array', type: 'integer')),
+                    new OA\Property(
+                        property: 'is_recurring',
+                        description: 'Set the transaction as a recurring transaction',
+                        type: 'boolean'
+                    ),
+                    new OA\Property(
+                        property: 'recurrence_period',
+                        description: 'Set how often the transaction should repeat',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'recurrence_interval',
+                        description: 'Set how often the transaction should repeat',
+                        type: 'integer'
+                    ),
+                    new OA\Property(
+                        property: 'recurrence_ends_at',
+                        description: 'When the transaction stops repeating',
+                        type: 'date-time'
+                    ),
+                    new OA\Property(
+                        property: 'categories',
+                        type: 'array',
+                        items: new OA\Items(description: 'Category ID array', type: 'integer')
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -507,7 +562,10 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, $id): JsonResponse
+    /**
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
+    public function update(Request $request, $transactionId): JsonResponse
     {
         $validationResult = $this->validateRequest($request, [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -532,7 +590,7 @@ class TransactionController extends ApiController
         }
 
         $validatedData = $validationResult['data'];
-        $recurring_transaction_data = [];
+        $recurringTransactionData = [];
 
         if (isset($validatedData['is_recurring']) && $validatedData['is_recurring']) {
             $result = $this->validateRequest($request, [
@@ -542,9 +600,9 @@ class TransactionController extends ApiController
                 return $this->failure($result['message'], $result['code'], $result['errors']);
             }
 
-            $recurring_transaction_data['recurrence_period'] = $validatedData['recurrence_period'];
-            $recurring_transaction_data['recurrence_interval'] = $validatedData['recurrence_interval'] ?? null;
-            $recurring_transaction_data['recurrence_ends_at'] = $validatedData['recurrence_ends_at'] ?? null;
+            $recurringTransactionData['recurrence_period'] = $validatedData['recurrence_period'];
+            $recurringTransactionData['recurrence_interval'] = $validatedData['recurrence_interval'] ?? null;
+            $recurringTransactionData['recurrence_ends_at'] = $validatedData['recurrence_ends_at'] ?? null;
         }
 
         // remove recurring transaction data from $data
@@ -553,8 +611,10 @@ class TransactionController extends ApiController
         unset($validatedData['recurrence_period']);
         unset($validatedData['is_recurring']);
 
-        if (isset($recurring_transaction_data['recurrence_ends_at'])) {
-            $recurring_transaction_data['recurrence_ends_at'] = format_iso8601_to_sql($recurring_transaction_data['recurrence_ends_at']);
+        if (isset($recurringTransactionData['recurrence_ends_at'])) {
+            $recurringTransactionData['recurrence_ends_at'] = format_iso8601_to_sql(
+                $recurringTransactionData['recurrence_ends_at']
+            );
         }
 
         if (isset($validatedData['datetime'])) {
@@ -566,7 +626,7 @@ class TransactionController extends ApiController
         }
 
         /** @var Transaction */
-        $transaction = Transaction::find($id);
+        $transaction = Transaction::find($transactionId);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -586,7 +646,12 @@ class TransactionController extends ApiController
             $this->validateResourceOwnership($validatedData, $categories);
             $this->checkUpdatedAt($transaction, $validatedData);
 
-            $transaction = DB::transaction(function () use ($validatedData, $transaction, $recurring_transaction_data, $request) {
+            $transaction = DB::transaction(function () use (
+                $validatedData,
+                $transaction,
+                $recurringTransactionData,
+                $request
+            ) {
 
                 $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
                 $transaction->markAsSynced();
@@ -604,10 +669,10 @@ class TransactionController extends ApiController
                     $transaction->setClientGeneratedId($request['client_id'], $user);
                 }
 
-                $recurring_transaction = $transaction->recurring_transaction_rule()->first();
+                $recurring_transaction = $transaction->recurringTransactionRule()->first();
 
                 // check if this transaction is recurring
-                if (empty($recurring_transaction_data)) {
+                if (empty($recurringTransactionData)) {
                     if (! is_null($recurring_transaction)) {
                         $recurring_transaction->delete();
                     }
@@ -615,22 +680,34 @@ class TransactionController extends ApiController
                     $schedule_job = true;
 
                     if (is_null($recurring_transaction)) {
-                        $recurring_transaction = new RecurringTransactionRule($recurring_transaction_data); // create temporay instance from data array
-                        $recurring_transaction->next_scheduled_at = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
+                        $recurring_transaction = new RecurringTransactionRule(
+                            $recurringTransactionData
+                        ); // create temporay instance from data array
+                        $recurring_transaction->next_scheduled_at =
+                            $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
                         $recurring_transaction->transaction_id = $transaction->id;
                         $recurring_transaction->save();
                     } else {
                         // Check if details have changed. If not, do not reschedule the job
                         if (
-                            ($recurring_transaction_data['recurrence_period'] == $recurring_transaction->recurrence_period)
+                            (
+                                $recurringTransactionData['recurrence_period']
+                                ==
+                                $recurring_transaction->recurrence_period
+                            )
                             &&
-                            ($recurring_transaction_data['recurrence_interval'] == $recurring_transaction->recurrence_interval)
+                            (
+                                $recurringTransactionData['recurrence_interval']
+                                ==
+                                $recurring_transaction->recurrence_interval
+                            )
                         ) {
                             $schedule_job = false;
                         } else {
-                            $recurring_transaction_data['next_scheduled_at'] = $this->recurring_transaction_service->getNextScheduleDate($recurring_transaction);
+                            $recurringTransactionData['next_scheduled_at'] =
+                                $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
                         }
-                        $recurring_transaction->update($recurring_transaction_data);
+                        $recurring_transaction->update($recurringTransactionData);
                     }
                     if ($schedule_job) {
                         RecurrentTransactionJob::dispatch(
@@ -682,9 +759,9 @@ class TransactionController extends ApiController
             ),
         ]
     )]
-    public function destroy($id): JsonResponse
+    public function destroy($transactionId): JsonResponse
     {
-        $transaction = Transaction::find($id);
+        $transaction = Transaction::find($transactionId);
 
         if (! $transaction) {
             return $this->failure(__('Transaction not found'), 404);
@@ -733,7 +810,11 @@ class TransactionController extends ApiController
             $user_category_ids = $user->categories()->pluck('id')->toArray();
             $invalid_categories = array_diff($categories, $user_category_ids);
             if (! empty($invalid_categories)) {
-                throw new HttpException(403, 'Some of the selected categories do not belong to user. Invalid category IDs: ' . implode(',', $invalid_categories));
+                throw new HttpException(
+                    403,
+                    'Some of the selected categories do not belong to user. Invalid category IDs: ' .
+                    implode(',', $invalid_categories)
+                );
             }
         }
     }

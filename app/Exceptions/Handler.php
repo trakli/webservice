@@ -23,6 +23,8 @@ class Handler extends ExceptionHandler
 
     /**
      * Register the exception handling callbacks for the application.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function register(): void
     {
@@ -33,6 +35,8 @@ class Handler extends ExceptionHandler
 
     /**
      * Handle unauthenticated users - return JSON for all requests.
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     protected function unauthenticated($request, AuthenticationException $exception): JsonResponse
     {
@@ -45,6 +49,8 @@ class Handler extends ExceptionHandler
 
     /**
      * Render an exception into an HTTP response - handle unhandled 500 errors.
+     *
+     * @SuppressWarnings(PHPMD.ShortVariable)
      */
     public function render($request, Throwable $e): Response|JsonResponse
     {

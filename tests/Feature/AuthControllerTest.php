@@ -12,7 +12,8 @@ use Whilesmart\UserAuthentication\Services\SmartPingsVerificationService;
 
 class AuthControllerTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
 
     public function test_api_user_can_register_successfully()
     {

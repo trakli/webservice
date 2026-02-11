@@ -92,8 +92,16 @@ class GroupController extends ApiController
                         description: 'Description of the group',
                         type: 'string'
                     ),
-                    new OA\Property(property: 'icon', description: 'The icon of the group (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the group (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -200,10 +208,10 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(int $groupId): JsonResponse
     {
         $user = request()->user();
-        $group = $user->groups()->find($id);
+        $group = $user->groups()->find($groupId);
 
         if (! $group) {
             return $this->failure(__('Group not found'), 404);
@@ -231,8 +239,16 @@ class GroupController extends ApiController
                         description: 'Name of the group',
                         type: 'string'
                     ),
-                    new OA\Property(property: 'icon', description: 'The icon of the group (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the group (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -267,7 +283,7 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $groupId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -283,7 +299,7 @@ class GroupController extends ApiController
         }
 
         $user = $request->user();
-        $group = $user->groups()->find($id);
+        $group = $user->groups()->find($groupId);
         $data = $validator->validated();
 
         if (isset($data['updated_at'])) {
@@ -338,10 +354,10 @@ class GroupController extends ApiController
             ),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $groupId): JsonResponse
     {
         $user = $request->user();
-        $group = $user->groups()->find($id);
+        $group = $user->groups()->find($groupId);
 
         if (! $group) {
             return $this->failure(__('Group not found'), 404);

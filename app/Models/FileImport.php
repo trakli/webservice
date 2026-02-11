@@ -16,7 +16,11 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'file_type', description: 'Type of the file to import', type: 'string'),
         new OA\Property(property: 'progress', description: 'Current import progress', type: 'integer'),
         new OA\Property(property: 'num_rows', description: 'Total number of records to import', type: 'integer'),
-        new OA\Property(property: 'failed_imports_count', description: 'Total number of failed imports', type: 'integer'),
+        new OA\Property(
+            property: 'failed_imports_count',
+            description: 'Total number of failed imports',
+            type: 'integer'
+        ),
     ],
     type: 'object'
 )]

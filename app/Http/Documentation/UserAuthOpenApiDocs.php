@@ -46,6 +46,9 @@ class UserAuthOpenApiDocs
             new OA\Response(response: 400, description: 'Invalid token'),
         ]
     )]
+    /**
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
     public function firebaseAuthCallback(Request $request, string $driver)
     {
     }
@@ -176,8 +179,19 @@ class UserAuthOpenApiDocs
                 required: ['contact', 'type'],
                 properties: [
                     new OA\Property(property: 'contact', type: 'string', description: 'Email address or phone number'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['email', 'phone'], description: 'Type of contact'),
-                    new OA\Property(property: 'purpose', type: 'string', enum: ['registration', 'login'], description: 'Purpose of verification (optional, defaults to "registration")', example: 'registration'),
+                    new OA\Property(
+                        property: 'type',
+                        description: 'Type of contact',
+                        type: 'string',
+                        enum: ['email', 'phone']
+                    ),
+                    new OA\Property(
+                        property: 'purpose',
+                        description: 'Purpose of verification (optional, defaults to "registration")',
+                        type: 'string',
+                        enum: ['registration', 'login'],
+                        example: 'registration'
+                    ),
                 ]
             )
         ),
@@ -203,8 +217,19 @@ class UserAuthOpenApiDocs
                 properties: [
                     new OA\Property(property: 'contact', type: 'string', description: 'Email address or phone number'),
                     new OA\Property(property: 'code', type: 'string', description: 'Verification code'),
-                    new OA\Property(property: 'type', type: 'string', enum: ['email', 'phone'], description: 'Type of contact'),
-                    new OA\Property(property: 'purpose', type: 'string', enum: ['registration', 'login'], description: 'Purpose of verification (optional, defaults to "registration")', example: 'registration'),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        enum: ['email', 'phone'],
+                        description: 'Type of contact'
+                    ),
+                    new OA\Property(
+                        property: 'purpose',
+                        type: 'string',
+                        enum: ['registration', 'login'],
+                        description: 'Purpose of verification (optional, defaults to "registration")',
+                        example: 'registration'
+                    ),
                 ]
             )
         ),

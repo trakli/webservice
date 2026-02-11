@@ -11,38 +11,41 @@ use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
 class InactivityService
 {
-    const CONFIG_LAST_REMINDER_SENT = 'last-inactivity-reminder-sent';
+    public const CONFIG_LAST_REMINDER_SENT = 'last-inactivity-reminder-sent';
 
-    const CONFIG_INACTIVITY_REMINDERS_ENABLED = 'inactivity-reminders-enabled';
+    public const CONFIG_INACTIVITY_REMINDERS_ENABLED = 'inactivity-reminders-enabled';
 
-    const CONFIG_INACTIVITY_REMINDER_COUNT = 'inactivity-reminder-count';
+    public const CONFIG_INACTIVITY_REMINDER_COUNT = 'inactivity-reminder-count';
 
-    const MAX_REMINDERS = 4;
+    public const MAX_REMINDERS = 4;
 
-    const MAX_INACTIVITY_DAYS = 60;
+    public const MAX_INACTIVITY_DAYS = 60;
 
-    const INACTIVITY_TIERS = [
+    public const INACTIVITY_TIERS = [
         7 => [
             'subject' => "It's been a week!",
             'message' => "You haven't tracked any transactions in a week. Did you really not spend anything? 🤔",
+            // @phpcs:ignore
             'encouragement' => "We know tracking every expense isn't easy - but if you really want to take control of your money, consistency is key. Even logging a few transactions helps build the habit.",
             'cta' => 'Log a transaction now to keep your finances on track.',
         ],
         14 => [
             'subject' => 'We miss you!',
             'message' => 'Two weeks without tracking - your budget misses you! Even small purchases add up.',
+            // @phpcs:ignore
             'encouragement' => "Building financial awareness is hard, and life gets busy. But here's the thing: the people who succeed at managing money aren't perfect - they just keep trying. Every transaction you log is a step forward.",
             'cta' => 'Take 30 seconds to log what you remember.',
         ],
         30 => [
             'subject' => 'A month already?',
             'message' => "It's been a whole month since you last tracked your spending. Ready to get back on track?",
+            // @phpcs:ignore
             'encouragement' => "We get it - tracking finances can feel like a chore. But financial freedom doesn't come from being perfect, it comes from showing up. You've already taken the hardest step by signing up. Don't let that effort go to waste.",
             'cta' => 'Start fresh today. No judgment, just a clean slate.',
         ],
     ];
 
-    const MIN_DAYS_BETWEEN_REMINDERS = 7;
+    public const MIN_DAYS_BETWEEN_REMINDERS = 7;
 
     public function __construct(
         protected NotificationService $notificationService
