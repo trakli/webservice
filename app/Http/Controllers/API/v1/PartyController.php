@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Party;
@@ -63,7 +64,8 @@ class PartyController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $partiesQuery);
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
             return $this->failure($e->getMessage(), 422);
@@ -158,6 +160,7 @@ class PartyController extends ApiController
             }
             $existingParty->refresh();
 
+            // todo: why return success if party already exists
             return $this->success($existingParty, __('Party already exists'), 200);
         }
 
@@ -175,7 +178,8 @@ class PartyController extends ApiController
             });
 
             $party->refresh();
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($party, __('Party created successfully'), 201);
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
@@ -216,14 +220,15 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function show(int $partyId): JsonResponse
+    public function show(Request $request, int $partyId): JsonResponse
     {
         $party = Party::find($partyId);
 
         if (! $party) {
             return $this->failure(__('Party not found'), 404);
         }
-
+        // update user streak
+        $request->user()->updateStreak(StreakType::APP_CHECK_IN);
         return $this->success($party);
     }
 
@@ -325,7 +330,8 @@ class PartyController extends ApiController
             });
 
             $party->refresh();
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($party, __('Party updated successfully'));
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
@@ -375,7 +381,8 @@ class PartyController extends ApiController
         }
 
         $party->delete();
-
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
         return $this->success(null, __('Party deleted successfully'));
     }
 }

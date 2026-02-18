@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\StreakType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Group;
@@ -60,7 +61,8 @@ class GroupController extends ApiController
 
         try {
             $data = $this->applyApiQuery($request, $groupsQuery);
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
             return $this->failure($e->getMessage(), 422);
@@ -170,7 +172,8 @@ class GroupController extends ApiController
                 return $group;
             });
             $group->refresh();
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($group, __('Group created successfully'), 201);
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
@@ -216,7 +219,8 @@ class GroupController extends ApiController
         if (! $group) {
             return $this->failure(__('Group not found'), 404);
         }
-
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
         return $this->success($group);
     }
 
@@ -317,7 +321,8 @@ class GroupController extends ApiController
             });
 
             $group->refresh();
-
+            // update user streak
+            $user->updateStreak(StreakType::APP_CHECK_IN);
             return $this->success($group, __('Group updated successfully'));
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
@@ -364,7 +369,8 @@ class GroupController extends ApiController
         }
 
         $group->delete();
-
+        // update user streak
+        $user->updateStreak(StreakType::APP_CHECK_IN);
         return $this->success(null, __('Group deleted successfully'), 204);
     }
 }
