@@ -515,4 +515,47 @@ class TransferTest extends TestCase
 
         $updateResponse->assertStatus(404);
     }
+
+    public function test_transfer_stores_datetime_and_propagates_to_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'datetime' => '2025-06-15T10:30:00.000Z',
+        ]);
+
+        $response->assertStatus(201);
+
+        $transfer = Transfer::first();
+        $this->assertEquals('2025-06-15 10:30:00', $transfer->datetime->format('Y-m-d H:i:s'));
+
+        $expenseTransaction = Transaction::where('wallet_id', $fromWallet->id)->first();
+        $incomeTransaction = Transaction::where('wallet_id', $toWallet->id)->first();
+
+        $this->assertEquals('2025-06-15 10:30:00', $expenseTransaction->datetime->format('Y-m-d H:i:s'));
+        $this->assertEquals('2025-06-15 10:30:00', $incomeTransaction->datetime->format('Y-m-d H:i:s'));
+    }
+
+    public function test_transfer_without_datetime_defaults_to_now()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transfer = Transfer::first();
+        $this->assertNotNull($transfer->datetime);
+    }
 }

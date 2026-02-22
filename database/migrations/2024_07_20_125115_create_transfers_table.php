@@ -17,6 +17,7 @@ return new class () extends Migration {
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('from_wallet_id');
             $table->unsignedBigInteger('to_wallet_id');
+            $table->timestamp('datetime')->nullable();
             $table->timestamps();
 
             $table->foreign('to_wallet_id')->references('id')->on('wallets')->onDelete('cascade');
