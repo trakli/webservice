@@ -118,6 +118,8 @@ phpstan: ## Static Analyzer
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpstan
 
 lint: ## Lint the code
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs:test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpmd
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint:test
 
 lint-fix: ## Fix linting errors
