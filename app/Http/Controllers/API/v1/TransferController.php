@@ -57,7 +57,7 @@ class TransferController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = $user->transfers()->orderBy('created_at', 'desc');
+        $query = $user->transfers()->orderBy('datetime', 'desc')->orderBy('created_at', 'desc');
 
         try {
             $data = $this->applyApiQuery($request, $query, with_deleted: false);
@@ -87,6 +87,7 @@ class TransferController extends ApiController
                     new OA\Property(property: 'from_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'to_wallet_id', type: 'integer', example: 1),
                     new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', example: 9.23),
+                    new OA\Property(property: 'datetime', type: 'string', format: 'date-time'),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
 
                 ]
@@ -117,6 +118,7 @@ class TransferController extends ApiController
             'exchange_rate' => 'sometimes|numeric|min:0.01',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
+            'datetime' => ['nullable', new Iso8601DateTime()],
             'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
@@ -157,6 +159,8 @@ class TransferController extends ApiController
 
         $amountToReceive = bcmul($data['amount'], $exchangeRate);
 
+        $datetime = isset($data['datetime']) ? format_iso8601_to_sql($data['datetime']) : null;
+
         $fullClientId = $data['client_id'] ?? null;
         $deviceToken = null;
         $randomId = null;
@@ -173,7 +177,8 @@ class TransferController extends ApiController
             $user,
             $exchangeRate,
             $deviceToken,
-            $randomId
+            $randomId,
+            $datetime
         ) {
             $transfer = $this->transferService->transfer(
                 amountToSend: $data['amount'],
@@ -182,7 +187,8 @@ class TransferController extends ApiController
                 toWallet: $toWallet,
                 user: $user,
                 exchangeRate: $exchangeRate,
-                deviceToken: $deviceToken
+                deviceToken: $deviceToken,
+                datetime: $datetime
             );
 
             if ($randomId && $deviceToken) {

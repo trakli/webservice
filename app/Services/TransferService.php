@@ -18,11 +18,14 @@ class TransferService
         Wallet $toWallet,
         User $user,
         float $exchangeRate,
-        ?string $deviceToken = null
+        ?string $deviceToken = null,
+        ?string $datetime = null
     ) {
         if ($fromWallet->balance < $amountToSend) {
             throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
         }
+
+        $transferDatetime = $datetime ?? now();
 
         $transfer = Transfer::create([
             'amount' => $amountToSend,
@@ -30,6 +33,7 @@ class TransferService
             'to_wallet_id' => $toWallet->id,
             'user_id' => $user->id,
             'exchange_rate' => $exchangeRate,
+            'datetime' => $transferDatetime,
         ]);
 
         $fromWallet->balance -= $amountToSend;
@@ -37,7 +41,7 @@ class TransferService
 
         $expenseTransaction = $user->transactions()->create([
             'amount' => $amountToSend,
-            'datetime' => now(),
+            'datetime' => $transferDatetime,
             'type' => TransactionType::EXPENSE->value,
             'description' => "Money transfer from $fromWallet->currency wallet to $toWallet->currency wallet",
             'wallet_id' => $fromWallet->id,
@@ -49,7 +53,7 @@ class TransferService
 
         $incomeTransaction = $user->transactions()->create([
             'amount' => $amountToReceive,
-            'datetime' => now(),
+            'datetime' => $transferDatetime,
             'type' => TransactionType::INCOME->value,
             'description' => "Money transfer from $fromWallet->currency wallet to $toWallet->currency wallet",
             'wallet_id' => $toWallet->id,

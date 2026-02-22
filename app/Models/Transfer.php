@@ -19,6 +19,12 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'to_wallet_id', description: 'Destination wallet', type: 'integer'),
         new OA\Property(property: 'exchange_rate', description: 'The exchange rate', type: 'number', format: 'float'),
         new OA\Property(property: 'user_id', description: 'ID of the user', type: 'integer'),
+        new OA\Property(
+            property: 'datetime',
+            description: 'Date and time of the transfer',
+            type: 'string',
+            format: 'date-time'
+        ),
     ],
     type: 'object'
 )]
@@ -39,6 +45,11 @@ class Transfer extends Model
         'user_id',
         'from_wallet_id',
         'to_wallet_id',
+        'datetime',
+    ];
+
+    protected $casts = [
+        'datetime' => 'datetime',
     ];
 
     protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id'];

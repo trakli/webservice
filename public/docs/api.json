@@ -2569,6 +2569,10 @@
                                         "format": "float",
                                         "example": 9.23
                                     },
+                                    "datetime": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
@@ -4135,6 +4139,11 @@
                     "user_id": {
                         "description": "ID of the user",
                         "type": "integer"
+                    },
+                    "datetime": {
+                        "description": "Date and time of the transfer",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
