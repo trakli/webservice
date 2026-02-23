@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
+use Whilesmart\UserDevices\Models\Device;
 
 #[OA\Schema(
     schema: 'Transaction',
@@ -201,6 +202,28 @@ class Transaction extends Model
     public function recurringTransactionRule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
+    }
+
+    public static function findByClientId(string $clientId, User $user): ?self
+    {
+        $parts = explode(':', $clientId);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        $device = Device::where('token', $parts[0])->first();
+        if (! $device) {
+            return null;
+        }
+
+        return static::query()
+            ->where('user_id', $user->id)
+            ->join('model_sync_states', 'transactions.id', '=', 'model_sync_states.syncable_id')
+            ->where('model_sync_states.syncable_type', static::class)
+            ->where('model_sync_states.client_generated_id', $parts[1])
+            ->where('model_sync_states.device_id', $device->id)
+            ->select('transactions.*')
+            ->first();
     }
 
     public function delete()
