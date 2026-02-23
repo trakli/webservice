@@ -23,11 +23,9 @@ class TransactionController extends ApiController
 {
     use ApiQueryable;
 
-    private RecurringTransactionService $recurringTransactionService;
-
-    public function __construct(RecurringTransactionService $recurring_transaction_service)
-    {
-        $this->recurringTransactionService = $recurring_transaction_service;
+    public function __construct(
+        private RecurringTransactionService $recurringTransactionService
+    ) {
     }
 
     #[OA\Get(
@@ -274,6 +272,15 @@ class TransactionController extends ApiController
         }
 
         $data = $validationResult['data'];
+        $user = $request->user();
+
+        if (! empty($data['client_id'])) {
+            $existingTransaction = Transaction::findByClientId($data['client_id'], $user);
+            if ($existingTransaction) {
+                return $this->success($existingTransaction, statusCode: 200);
+            }
+        }
+
         $recurringTransactionData = [];
 
         if (isset($data['is_recurring']) && $data['is_recurring']) {
@@ -319,11 +326,10 @@ class TransactionController extends ApiController
             // Validate ownership of all resources before creating the transaction
             $this->validateResourceOwnership($data, $categories);
 
-            $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData) {
+            $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData, $user) {
                 /** @var Transaction $transaction */
-                $transaction = auth()->user()->transactions()->create($data);
+                $transaction = $user->transactions()->create($data);
 
-                $user = $request->user();
                 if (isset($data['client_id'])) {
                     $transaction->setClientGeneratedId($data['client_id'], $user);
                 }

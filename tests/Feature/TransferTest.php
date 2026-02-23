@@ -11,6 +11,7 @@ use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Ramsey\Uuid\Uuid;
 use Tests\TestCase;
+use Whilesmart\UserDevices\Models\Device;
 
 class TransferTest extends TestCase
 {
@@ -557,5 +558,92 @@ class TransferTest extends TestCase
 
         $transfer = Transfer::first();
         $this->assertNotNull($transfer->datetime);
+    }
+
+    public function test_transfer_with_expense_and_income_transaction_client_ids_links_existing_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceToken = Uuid::uuid4()->toString();
+        $device = Device::create(['token' => $deviceToken, 'deviceable_id' => $user->id, 'deviceable_type' => get_class($user)]);
+
+        // Simulate transactions synced first (mobile created them before the transfer)
+        $expenseTransaction = $user->transactions()->create([
+            'amount' => 100,
+            'datetime' => now(),
+            'type' => TransactionType::EXPENSE->value,
+            'description' => 'Transfer expense',
+            'wallet_id' => $fromWallet->id,
+        ]);
+        $expenseRandomId = Uuid::uuid4()->toString();
+        $expenseTransaction->syncState()->updateOrCreate([], [
+            'client_generated_id' => $expenseRandomId,
+            'device_id' => $device->id,
+        ]);
+
+        $incomeTransaction = $user->transactions()->create([
+            'amount' => 100,
+            'datetime' => now(),
+            'type' => TransactionType::INCOME->value,
+            'description' => 'Transfer income',
+            'wallet_id' => $toWallet->id,
+        ]);
+        $incomeRandomId = Uuid::uuid4()->toString();
+        $incomeTransaction->syncState()->updateOrCreate([], [
+            'client_generated_id' => $incomeRandomId,
+            'device_id' => $device->id,
+        ]);
+
+        $transactionCountBefore = Transaction::where('user_id', $user->id)->count();
+
+        // Now sync the transfer with client IDs referencing the existing transactions
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'expense_transaction_client_id' => $deviceToken . ':' . $expenseRandomId,
+            'income_transaction_client_id' => $deviceToken . ':' . $incomeRandomId,
+        ]);
+
+        $response->assertStatus(201);
+
+        // No new transactions should have been created
+        $this->assertEquals($transactionCountBefore, Transaction::where('user_id', $user->id)->count());
+
+        // Existing transactions should now be linked to the transfer
+        $transfer = Transfer::first();
+        $expenseTransaction->refresh();
+        $incomeTransaction->refresh();
+
+        $this->assertEquals($transfer->id, $expenseTransaction->transfer_id);
+        $this->assertEquals($transfer->id, $incomeTransaction->transfer_id);
+    }
+
+    public function test_transfer_with_unknown_client_ids_creates_new_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceToken = Uuid::uuid4()->toString();
+        $expenseClientId = $deviceToken . ':' . Uuid::uuid4()->toString();
+        $incomeClientId = $deviceToken . ':' . Uuid::uuid4()->toString();
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'expense_transaction_client_id' => $expenseClientId,
+            'income_transaction_client_id' => $incomeClientId,
+        ]);
+
+        $response->assertStatus(201);
+
+        // New transactions should be created since client IDs don't match existing ones
+        $transfer = Transfer::first();
+        $transactions = Transaction::where('transfer_id', $transfer->id)->get();
+        $this->assertCount(2, $transactions);
     }
 }

@@ -2576,6 +2576,14 @@
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
+                                    },
+                                    "expense_transaction_client_id": {
+                                        "description": "Client ID of the expense transaction (for sync dedup)",
+                                        "type": "string"
+                                    },
+                                    "income_transaction_client_id": {
+                                        "description": "Client ID of the income transaction (for sync dedup)",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"

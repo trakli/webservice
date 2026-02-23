@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Ramsey\Uuid\Uuid;
 use Tests\TestCase;
 
 class TransactionsTest extends TestCase
@@ -1090,5 +1091,39 @@ class TransactionsTest extends TestCase
             'name' => 'Category',
             'type' => 'income',
         ]);
+    }
+
+    public function test_duplicate_transaction_with_same_client_id_returns_existing()
+    {
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId . ':' . $randomId;
+
+        $firstResponse = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'description' => 'Test transaction',
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => $clientId,
+        ]);
+
+        $firstResponse->assertStatus(201);
+        $firstId = $firstResponse->json('data.id');
+
+        $secondResponse = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'description' => 'Test transaction',
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => $clientId,
+        ]);
+
+        $secondResponse->assertStatus(200);
+        $secondId = $secondResponse->json('data.id');
+
+        $this->assertEquals($firstId, $secondId);
+        $this->assertEquals(1, Transaction::where('user_id', $this->user->id)->count());
     }
 }
