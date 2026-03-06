@@ -36,6 +36,7 @@ class Iso8601DateTime implements ValidationRule
         }
 
         if (! $date) {
+            // @phpcs:ignore
             $fail("The {$attribute} must be a valid ISO 8601 datetime (e.g., 2025-04-30T15:17:54.120Z or 2025-04-30T15:17:54Z or 2025-06-02T15:17:54+00:00).");
         }
     }

@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Ramsey\Uuid\Uuid;
 use Tests\TestCase;
 
 class TransactionsTest extends TestCase
@@ -274,6 +275,74 @@ class TransactionsTest extends TestCase
         $response = $this->actingAs($this->user)->getJson('/api/v1/transactions?type=expense&limit=2');
         $response->assertStatus(200)
             ->assertJsonCount(2, 'data.data');
+    }
+
+    public function test_transactions_are_ordered_by_datetime_then_created_at()
+    {
+        // Create transactions with different datetime values
+        $oldest = $this->user->transactions()->create([
+            'type' => 'expense',
+            'amount' => 10,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-01-01 00:00:00',
+            'created_at' => '2025-04-01 00:00:00',
+        ]);
+
+        $newest = $this->user->transactions()->create([
+            'type' => 'expense',
+            'amount' => 30,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-03-01 00:00:00',
+            'created_at' => '2025-04-01 00:00:00',
+        ]);
+
+        $middle = $this->user->transactions()->create([
+            'type' => 'expense',
+            'amount' => 20,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-02-01 00:00:00',
+            'created_at' => '2025-04-03 00:00:00',
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/transactions?type=expense');
+        $response->assertStatus(200);
+
+        $data = $response->json('data.data');
+
+        // Should be ordered by datetime desc: newest (Mar), middle (Feb), oldest (Jan)
+        $this->assertEquals($newest->id, $data[0]['id']);
+        $this->assertEquals($middle->id, $data[1]['id']);
+        $this->assertEquals($oldest->id, $data[2]['id']);
+    }
+
+    public function test_transactions_with_same_datetime_are_ordered_by_created_at()
+    {
+        $sameDate = '2025-06-15 12:00:00';
+
+        $first = $this->user->transactions()->create([
+            'type' => 'expense',
+            'amount' => 10,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => $sameDate,
+            'created_at' => '2025-06-15 10:00:00',
+        ]);
+
+        $second = $this->user->transactions()->create([
+            'type' => 'expense',
+            'amount' => 20,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => $sameDate,
+            'created_at' => '2025-06-15 14:00:00',
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/transactions?type=expense');
+        $response->assertStatus(200);
+
+        $data = $response->json('data.data');
+
+        // Same datetime, so ordered by created_at desc: second then first
+        $this->assertEquals($second->id, $data[0]['id']);
+        $this->assertEquals($first->id, $data[1]['id']);
     }
 
     public function test_api_user_can_update_their_transactions()
@@ -1022,5 +1091,39 @@ class TransactionsTest extends TestCase
             'name' => 'Category',
             'type' => 'income',
         ]);
+    }
+
+    public function test_duplicate_transaction_with_same_client_id_returns_existing()
+    {
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId . ':' . $randomId;
+
+        $firstResponse = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'description' => 'Test transaction',
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => $clientId,
+        ]);
+
+        $firstResponse->assertStatus(201);
+        $firstId = $firstResponse->json('data.id');
+
+        $secondResponse = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'description' => 'Test transaction',
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => $clientId,
+        ]);
+
+        $secondResponse->assertStatus(200);
+        $secondId = $secondResponse->json('data.id');
+
+        $this->assertEquals($firstId, $secondId);
+        $this->assertEquals(1, Transaction::where('user_id', $this->user->id)->count());
     }
 }

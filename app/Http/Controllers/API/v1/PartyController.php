@@ -78,13 +78,33 @@ class PartyController extends ApiController
             content: new OA\JsonContent(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
-                    new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        example: 'individual,organization,
+                        business,partnership,non_profit,
+                        government_agency,educational_institution,
+                        healthcare_provider'
+                    ),
                     new OA\Property(property: 'description', type: 'string', example: 'Incomes from John Doe'),
-                    new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the party (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
 
                 ]
@@ -114,13 +134,14 @@ class PartyController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            // @phpcs:ignore
             'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         $user = $request->user();
@@ -128,7 +149,10 @@ class PartyController extends ApiController
 
         $existingParty = $user->parties()->where('name', $validatedData['name'])->first();
         if ($existingParty) {
-            if (isset($validatedData['client_id']) && $existingParty->client_generated_id !== $validatedData['client_id']) {
+            if (
+                isset($validatedData['client_id']) &&
+                $existingParty->client_generated_id !== $validatedData['client_id']
+            ) {
                 $existingParty->setClientGeneratedId($validatedData['client_id'], $user);
                 $existingParty->markAsSynced();
             }
@@ -153,13 +177,11 @@ class PartyController extends ApiController
             $party->refresh();
 
             return $this->success($party, __('Party created successfully'), 201);
-
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create party'), 500, [$e->getMessage()]);
         }
-
     }
 
     #[OA\Get(
@@ -194,9 +216,9 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function show(int $id): JsonResponse
+    public function show(int $partyId): JsonResponse
     {
-        $party = Party::find($id);
+        $party = Party::find($partyId);
 
         if (! $party) {
             return $this->failure(__('Party not found'), 404);
@@ -212,12 +234,29 @@ class PartyController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'name', type: 'string', example: 'Jane Doe'),
-                    new OA\Property(property: 'type', type: 'string', example: 'individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider'),
+                    new OA\Property(
+                        property: 'type',
+                        type: 'string',
+                        // @phpcs:ignore
+                        example: 'individual, organization,business,partnership, non_profit,government_agency, educational_institution,healthcare_provider'
+                    ),
                     new OA\Property(property: 'description', type: 'string', example: 'income from John Doe'),
-                    new OA\Property(property: 'icon', description: 'The icon of the party (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the party (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -255,20 +294,21 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $partyId): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
+            // @phpcs:ignore
             'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         $user = $request->user();
-        $party = $user->parties()->find($id);
+        $party = $user->parties()->find($partyId);
 
         if (isset($validatedData['updated_at'])) {
             $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
@@ -325,10 +365,10 @@ class PartyController extends ApiController
             ),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $partyId): JsonResponse
     {
-        $user = request()->user();
-        $party = $user->parties()->find($id);
+        $user = $request->user();
+        $party = $user->parties()->find($partyId);
 
         if (! $party) {
             return $this->failure(__('Party not found'), 404);

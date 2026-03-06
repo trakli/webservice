@@ -79,16 +79,29 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type', 'currency'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
                     new OA\Property(property: 'name', type: 'string', example: 'Personal Cash'),
                     new OA\Property(property: 'type', type: 'string', example: 'cash'),
                     new OA\Property(property: 'description', type: 'string', example: 'Personal cash wallet'),
                     new OA\Property(property: 'currency', type: 'string', pattern: '^[A-Z]{3}$', example: 'XAF'),
                     new OA\Property(property: 'balance', type: 'number', format: 'float', example: 12.00),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-                    new OA\Property(property: 'icon', description: 'The icon of the wallet (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the wallet (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
 
                 ]
             )
@@ -117,7 +130,7 @@ class WalletController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'required|string|max:255',
             'type' => 'required|string|in:bank,cash,credit_card,mobile',
             'description' => 'sometimes|string',
@@ -125,7 +138,7 @@ class WalletController extends ApiController
             'balance' => 'sometimes|numeric|decimal:0,4',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         $user = $request->user();
@@ -163,7 +176,6 @@ class WalletController extends ApiController
             $wallet->refresh();
 
             return $this->success($wallet, __('Wallet created successfully'), 201);
-
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
         } catch (\Exception $e) {
@@ -203,10 +215,10 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $walletId): JsonResponse
     {
         $user = $request->user();
-        $wallet = $user->wallets()->find($id);
+        $wallet = $user->wallets()->find($walletId);
 
         if (! $wallet) {
             return $this->failure(__('Wallet not found'), 404);
@@ -223,12 +235,24 @@ class WalletController extends ApiController
             content: new OA\JsonContent(
                 required: ['name', 'type'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'name', type: 'string', example: 'Updated Wallet'),
                     new OA\Property(property: 'type', type: 'string', example: 'bank'),
                     new OA\Property(property: 'description', type: 'string', example: 'Updated wallet description'),
-                    new OA\Property(property: 'icon', description: 'The icon of the wallet (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the wallet (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -266,10 +290,10 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $walletId): JsonResponse
     {
         $validatedData = $request->validate([
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string',
             'description' => 'sometimes|string',
@@ -277,7 +301,7 @@ class WalletController extends ApiController
             'balance' => 'sometimes|numeric|decimal:0,4',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
         $user = $request->user();
 
@@ -285,7 +309,7 @@ class WalletController extends ApiController
             $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
         }
 
-        $wallet = $user->wallets()->find($id);
+        $wallet = $user->wallets()->find($walletId);
 
         if (! $wallet) {
             return $this->failure(__('Wallet not found'), 404);
@@ -338,11 +362,11 @@ class WalletController extends ApiController
             ),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $walletId): JsonResponse
     {
         $user = $request->user();
 
-        $wallet = $user->wallets()->find($id);
+        $wallet = $user->wallets()->find($walletId);
 
         if (! $wallet) {
             return $this->failure(__('Wallet not found'), 404);

@@ -13,27 +13,56 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
+use Whilesmart\UserDevices\Models\Device;
 
 #[OA\Schema(
     schema: 'Transaction',
     required: ['amount', 'type'],
     properties: [
         new OA\Property(property: 'id', description: 'ID of the transaction', type: 'integer'),
-        new OA\Property(property: 'type', description: 'Type of the transaction (income or expense)', type: 'string', enum: ['income', 'expense']),
+        new OA\Property(
+            property: 'type',
+            description: 'Type of the transaction (income or expense)',
+            type: 'string',
+            enum: ['income', 'expense']
+        ),
         new OA\Property(property: 'amount', description: 'Amount of the transaction', type: 'number', format: 'float'),
         new OA\Property(property: 'description', description: 'Description of the transaction', type: 'string'),
-        new OA\Property(property: 'datetime', description: 'Date and time of the transaction', type: 'string', format: 'date'),
+        new OA\Property(
+            property: 'datetime',
+            description: 'Date and time of the transaction',
+            type: 'string',
+            format: 'date'
+        ),
         new OA\Property(
             property: 'categories',
             description: 'List of categories of the transaction',
             type: 'array',
             items: new OA\Items(description: 'Category ID array', type: 'integer')
         ),
-        new OA\Property(property: 'is_recurring', description: 'Set the transaction as a recurring transaction', type: 'boolean'),
-        new OA\Property(property: 'user_id', description: 'ID of the user who created the transaction', type: 'integer'),
+        new OA\Property(
+            property: 'is_recurring',
+            description: 'Set the transaction as a recurring transaction',
+            type: 'boolean'
+        ),
+        new OA\Property(
+            property: 'user_id',
+            description: 'ID of the user who created the transaction',
+            type: 'integer'
+        ),
         new OA\Property(property: 'transfer_id', description: 'ID of the associated transfer, if any', type: 'integer'),
-        new OA\Property(property: 'wallet_client_generated_id', description: 'Client-generated ID of the associated wallet', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'party_client_generated_id', description: 'Client-generated ID of the associated party', type: 'string', format: 'uuid'),
+        new OA\Property(
+            property: 'wallet_client_generated_id',
+            description: 'Client-generated ID of the associated wallet',
+            type: 'string',
+            format: 'uuid'
+        ),
+        new OA\Property(
+            property: 'party_client_generated_id',
+            description: 'Client-generated ID of the associated party',
+            type: 'string',
+            format: 'uuid'
+        ),
         new OA\Property(
             property: 'files',
             description: 'Files attached to the transaction',
@@ -49,7 +78,11 @@ use OpenApi\Attributes as OA;
 )]
 class Transaction extends Model
 {
-    use Groupable, HasClientCreatedAt, HasFactory, SoftDeletes, Syncable;
+    use Groupable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use SoftDeletes;
+    use Syncable;
 
     protected static function boot()
     {
@@ -163,17 +196,39 @@ class Transaction extends Model
 
     public function getRecurringRulesAttribute()
     {
-        return $this->recurring_transaction_rule()->first();
+        return $this->recurringTransactionRule()->first();
     }
 
-    public function recurring_transaction_rule(): HasOne
+    public function recurringTransactionRule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
     }
 
+    public static function findByClientId(string $clientId, User $user): ?self
+    {
+        $parts = explode(':', $clientId);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        $device = Device::where('token', $parts[0])->first();
+        if (! $device) {
+            return null;
+        }
+
+        return static::query()
+            ->where('user_id', $user->id)
+            ->join('model_sync_states', 'transactions.id', '=', 'model_sync_states.syncable_id')
+            ->where('model_sync_states.syncable_type', static::class)
+            ->where('model_sync_states.client_generated_id', $parts[1])
+            ->where('model_sync_states.device_id', $device->id)
+            ->select('transactions.*')
+            ->first();
+    }
+
     public function delete()
     {
-        $this->recurring_transaction_rule()->delete();
+        $this->recurringTransactionRule()->delete();
 
         return parent::delete();
     }

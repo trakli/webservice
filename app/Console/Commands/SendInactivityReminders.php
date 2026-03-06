@@ -19,7 +19,7 @@ class SendInactivityReminders extends Command
             $sent = $service->sendInactivityReminders();
             $this->info("Sent reminders to {$sent} users.");
         } catch (\Throwable $e) {
-            $this->error('Error sending inactivity reminders: '.$e->getMessage());
+            $this->error('Error sending inactivity reminders: ' . $e->getMessage());
             logger()->error('Inactivity reminders failed', ['error' => $e->getMessage()]);
         }
     }

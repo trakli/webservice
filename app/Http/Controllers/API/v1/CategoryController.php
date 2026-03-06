@@ -86,11 +86,31 @@ class CategoryController extends ApiController
             required: true,
             content: new OA\JsonContent(
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string'),
-                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
-                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
-                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'name',
+                        description: 'Name of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'description',
+                        description: 'The description of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the category (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -125,16 +145,16 @@ class CategoryController extends ApiController
             ),
         ]
     )]
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, int $categoryId): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'type' => 'sometimes|required|string|in:income,expense',
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
-            'updated_at' => ['nullable', new Iso8601DateTime],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         if ($validator->fails()) {
@@ -148,7 +168,7 @@ class CategoryController extends ApiController
             $data['updated_at'] = format_iso8601_to_sql($data['updated_at']);
         }
 
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -178,13 +198,39 @@ class CategoryController extends ApiController
             content: new OA\JsonContent(
                 required: ['type', 'name'],
                 properties: [
-                    new OA\Property(property: 'client_id', description: 'Unique identifier for your local client', type: 'string',
-                        format: 'string', example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'),
-                    new OA\Property(property: 'type', description: 'Type of the category', type: 'string', enum: ['income', 'expense']),
-                    new OA\Property(property: 'name', description: 'Name of the category', type: 'string'),
-                    new OA\Property(property: 'description', description: 'The description of the category', type: 'string'),
-                    new OA\Property(property: 'icon', description: 'The icon of the category (file or icon string)', type: 'string'),
-                    new OA\Property(property: 'icon_type', description: 'The type of the icon (icon or emoji or  image)', type: 'string'),
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Unique identifier for your local client',
+                        type: 'string',
+                        format: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
+                    new OA\Property(
+                        property: 'type',
+                        description: 'Type of the category',
+                        type: 'string',
+                        enum: ['income', 'expense']
+                    ),
+                    new OA\Property(
+                        property: 'name',
+                        description: 'Name of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'description',
+                        description: 'The description of the category',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon',
+                        description: 'The icon of the category (file or icon string)',
+                        type: 'string'
+                    ),
+                    new OA\Property(
+                        property: 'icon_type',
+                        description: 'The type of the icon (icon or emoji or  image)',
+                        type: 'string'
+                    ),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ]
             )
@@ -209,13 +255,13 @@ class CategoryController extends ApiController
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'client_id' => ['nullable', 'string', new ValidateClientId],
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
             'type' => 'required|string|in:income,expense',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
-            'created_at' => ['nullable', new Iso8601DateTime],
+            'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
         if ($validator->fails()) {
@@ -285,10 +331,10 @@ class CategoryController extends ApiController
                 ),
             ]
         )]
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $categoryId): JsonResponse
     {
         $user = $request->user();
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -329,10 +375,10 @@ class CategoryController extends ApiController
             ),
         ]
     )]
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, int $categoryId): JsonResponse
     {
         $user = $request->user();
-        $category = $user->categories()->find($id);
+        $category = $user->categories()->find($categoryId);
 
         if (! $category) {
             return $this->failure(__('Category not found'), 404);
@@ -345,8 +391,8 @@ class CategoryController extends ApiController
 
     #[OA\Post(
         path: '/categories/seed-defaults',
-        summary: 'Create default categories for the user',
         description: 'Creates a set of predefined income and expense categories. Skips categories that already exist.',
+        summary: 'Create default categories for the user',
         tags: ['Category'],
         responses: [
             new OA\Response(
@@ -357,7 +403,6 @@ class CategoryController extends ApiController
                         new OA\Property(property: 'message', type: 'string'),
                         new OA\Property(
                             property: 'data',
-                            type: 'object',
                             properties: [
                                 new OA\Property(property: 'created', type: 'integer'),
                                 new OA\Property(property: 'skipped', type: 'integer'),
@@ -366,7 +411,8 @@ class CategoryController extends ApiController
                                     type: 'array',
                                     items: new OA\Items(ref: '#/components/schemas/Category')
                                 ),
-                            ]
+                            ],
+                            type: 'object'
                         ),
                     ]
                 )
@@ -383,28 +429,28 @@ class CategoryController extends ApiController
 
         $defaultCategories = [
             // Income categories
-            ['type' => 'income', 'name' => 'Salary', 'description' => 'Regular employment income'],
-            ['type' => 'income', 'name' => 'Freelance', 'description' => 'Contract/gig work'],
-            ['type' => 'income', 'name' => 'Investments', 'description' => 'Dividends, interest, capital gains'],
-            ['type' => 'income', 'name' => 'Gifts', 'description' => 'Money received as gifts'],
-            ['type' => 'income', 'name' => 'Refunds', 'description' => 'Returns and reimbursements'],
-            ['type' => 'income', 'name' => 'Other Income', 'description' => 'Miscellaneous income'],
+            ['type' => 'income', 'name' => __('Salary'), 'description' => __('Regular employment income')],
+            ['type' => 'income', 'name' => __('Freelance'), 'description' => __('Contract/gig work')],
+            ['type' => 'income', 'name' => __('Investments'), 'description' => __('Dividends, interest, capital gains')],
+            ['type' => 'income', 'name' => __('Gifts'), 'description' => __('Money received as gifts')],
+            ['type' => 'income', 'name' => __('Refunds'), 'description' => __('Returns and reimbursements')],
+            ['type' => 'income', 'name' => __('Other Income'), 'description' => __('Miscellaneous income')],
             // Expense categories
-            ['type' => 'expense', 'name' => 'Food & Dining', 'description' => 'Groceries, restaurants, takeout'],
-            ['type' => 'expense', 'name' => 'Transportation', 'description' => 'Fuel, public transit, ride-share, parking'],
-            ['type' => 'expense', 'name' => 'Housing', 'description' => 'Rent, mortgage, repairs, maintenance'],
-            ['type' => 'expense', 'name' => 'Utilities', 'description' => 'Electric, water, gas, internet, phone'],
-            ['type' => 'expense', 'name' => 'Healthcare', 'description' => 'Medical, dental, pharmacy, insurance'],
-            ['type' => 'expense', 'name' => 'Entertainment', 'description' => 'Movies, games, streaming, hobbies'],
-            ['type' => 'expense', 'name' => 'Shopping', 'description' => 'Clothing, electronics, household items'],
-            ['type' => 'expense', 'name' => 'Personal Care', 'description' => 'Haircuts, cosmetics, gym'],
-            ['type' => 'expense', 'name' => 'Education', 'description' => 'Courses, books, tuition'],
-            ['type' => 'expense', 'name' => 'Subscriptions', 'description' => 'Recurring services, memberships'],
-            ['type' => 'expense', 'name' => 'Insurance', 'description' => 'Auto, home, life (non-health)'],
-            ['type' => 'expense', 'name' => 'Savings', 'description' => 'Transfers to savings/investments'],
-            ['type' => 'expense', 'name' => 'Gifts & Donations', 'description' => 'Charity, presents for others'],
-            ['type' => 'expense', 'name' => 'Travel', 'description' => 'Vacations, hotels, flights'],
-            ['type' => 'expense', 'name' => 'Other Expenses', 'description' => 'Miscellaneous spending'],
+            ['type' => 'expense', 'name' => __('Food & Dining'), 'description' => __('Groceries, restaurants, takeout')],
+            ['type' => 'expense', 'name' => __('Transportation'), 'description' => __('Fuel, public transit, ride-share, parking')],
+            ['type' => 'expense', 'name' => __('Housing'), 'description' => __('Rent, mortgage, repairs, maintenance')],
+            ['type' => 'expense', 'name' => __('Utilities'), 'description' => __('Electric, water, gas, internet, phone')],
+            ['type' => 'expense', 'name' => __('Healthcare'), 'description' => __('Medical, dental, pharmacy, insurance')],
+            ['type' => 'expense', 'name' => __('Entertainment'), 'description' => __('Movies, games, streaming, hobbies')],
+            ['type' => 'expense', 'name' => __('Shopping'), 'description' => __('Clothing, electronics, household items')],
+            ['type' => 'expense', 'name' => __('Personal Care'), 'description' => __('Haircuts, cosmetics, gym')],
+            ['type' => 'expense', 'name' => __('Education'), 'description' => __('Courses, books, tuition')],
+            ['type' => 'expense', 'name' => __('Subscriptions'), 'description' => __('Recurring services, memberships')],
+            ['type' => 'expense', 'name' => __('Insurance'), 'description' => __('Auto, home, life (non-health)')],
+            ['type' => 'expense', 'name' => __('Savings'), 'description' => __('Transfers to savings/investments')],
+            ['type' => 'expense', 'name' => __('Gifts & Donations'), 'description' => __('Charity, presents for others')],
+            ['type' => 'expense', 'name' => __('Travel'), 'description' => __('Vacations, hotels, flights')],
+            ['type' => 'expense', 'name' => __('Other Expenses'), 'description' => __('Miscellaneous spending')],
         ];
 
         $existingNames = $user->categories()->pluck('name')->map(fn ($n) => strtolower($n))->toArray();

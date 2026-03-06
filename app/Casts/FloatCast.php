@@ -12,6 +12,8 @@ class FloatCast implements CastsAttributes
      * @param  \Illuminate\Database\Eloquent\Model  $model
      * @param  mixed  $value
      * @return float
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function get($model, string $key, $value, array $attributes)
     {
@@ -24,6 +26,8 @@ class FloatCast implements CastsAttributes
      * @param  \Illuminate\Database\Eloquent\Model  $model
      * @param  mixed  $value
      * @return float
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
     public function set($model, string $key, $value, array $attributes)
     {

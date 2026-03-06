@@ -9,11 +9,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
+use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable
 {
-    use Configurable, HasApiTokens, HasDevices, HasFactory, Notifiable;
+    use Configurable;
+    use HasApiTokens;
+    use HasDevices;
+    use HasFactory;
+    use HasRoles;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -82,6 +88,11 @@ class User extends Authenticatable
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(Transfer::class);
     }
 
     public function fileImports(): HasMany

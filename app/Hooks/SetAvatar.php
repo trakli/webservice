@@ -12,6 +12,9 @@ use Whilesmart\UserAuthentication\Interfaces\MiddlewareHookInterface;
 
 class SetAvatar implements MiddlewareHookInterface
 {
+    /**
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
     public function before(Request $request, string $action): ?Request
     {
         return $request;

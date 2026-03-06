@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\API\v1\AccountController;
+use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\CategoryController;
+use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\NotificationController;
@@ -33,6 +36,7 @@ Route::get('info', [VersionController::class, 'getServerInfo']);
 Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::group(['middleware' => ['request.body.json']], function () {
         Route::get('/user', [UserController::class, 'show']);
+        Route::delete('/account', [AccountController::class, 'destroy']);
         Route::apiResource('groups', GroupController::class);
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
@@ -43,6 +47,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::get('/files/{id}', [FileController::class, 'show']);
     Route::post('categories/seed-defaults', [CategoryController::class, 'seedDefaults']);
     Route::apiResource('categories', CategoryController::class);
 
@@ -71,4 +76,11 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
+
+    // Admin routes
+    Route::group(['prefix' => 'admin', 'middleware' => ['role:admin']], function () {
+        Route::get('users', [AdminUserController::class, 'index']);
+        Route::get('users/{id}', [AdminUserController::class, 'show']);
+        Route::delete('users/{id}', [AdminUserController::class, 'destroy']);
+    });
 });

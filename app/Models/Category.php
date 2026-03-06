@@ -38,7 +38,12 @@ use OpenApi\Attributes as OA;
 )]
 class Category extends Model
 {
-    use HasClientCreatedAt, HasFactory, Iconable, Sluggable, SoftDeletes, Syncable;
+    use HasClientCreatedAt;
+    use HasFactory;
+    use Iconable;
+    use Sluggable;
+    use SoftDeletes;
+    use Syncable;
 
     public const TYPE_INCOME = 'income';
 

@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\Log;
 
 class ImportFileJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     private FileImport $fileImport;
 
@@ -35,11 +38,11 @@ class ImportFileJob implements ShouldQueue
     public function handle(): void
     {
 
-        $path = storage_path('app/'.$this->fileImport->file_path);
+        $path = storage_path('app/' . $this->fileImport->file_path);
 
         // Check if the environment is testing
         if (app()->environment('testing')) {
-            $path = storage_path('framework/testing/disks/local/'.$this->fileImport->file_path);
+            $path = storage_path('framework/testing/disks/local/' . $this->fileImport->file_path);
         }
 
         if (! file_exists($path)) {

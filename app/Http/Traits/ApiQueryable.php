@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Whilesmart\UserAuthentication\Traits\ApiResponse;
 
@@ -30,7 +31,7 @@ trait ApiQueryable
                 }
             } catch (\Exception $exception) {
                 logger()->error($exception->getMessage());
-                throw new \InvalidArgumentException('Invalid date format for synced_since parameter.');
+                throw new InvalidArgumentException('Invalid date format for synced_since parameter.');
             }
         }
         if ($request->has('no_client_id')) {

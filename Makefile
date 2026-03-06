@@ -1,29 +1,92 @@
 .DEFAULT_GOAL := help
 
-.PHONY: setup up down stop restart composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs help prod-build prod-up prod-down
-
+.PHONY: setup up down stop restart reset-ports composer-install composer-update clean test lint lint-fix openapi openapi-test fix-permissions migrate migrate-fresh seed migrate-fresh-seed optimize tinker bash logs help prod-build prod-up prod-down ports
 
 # Get current user's UID and GID
 HOST_UID := $(shell id -u)
 HOST_GID := $(shell id -g)
 
-setup: ## Build and start the application
+# Port configuration file
+PORTS_FILE := .ports
+
+# Default ports
+DEFAULT_APP_PORT := 8000
+DEFAULT_DB_PORT := 3306
+DEFAULT_TEST_DB_PORT := 3307
+DEFAULT_PMA_PORT := 8080
+DEFAULT_MAILHOG_SMTP_PORT := 1025
+DEFAULT_MAILHOG_UI_PORT := 8025
+DEFAULT_SMARTQL_PORT := 5000
+
+# Function to find available port starting from a given port
+define find_port
+$(shell port=$(1); while nc -z 127.0.0.1 $$port 2>/dev/null || lsof -i :$$port >/dev/null 2>&1; do port=$$((port + 1)); done; echo $$port)
+endef
+
+# Generate .ports file with available ports
+.ports:
+	@echo "Finding available ports..."
+	@echo "# Auto-generated port assignments - do not edit" > $(PORTS_FILE)
+	@echo "# Generated at: $$(date)" >> $(PORTS_FILE)
+	@APP_PORT=$(call find_port,$(DEFAULT_APP_PORT)); \
+	DB_PORT=$(call find_port,$(DEFAULT_DB_PORT)); \
+	TEST_DB_PORT=$(call find_port,$(DEFAULT_TEST_DB_PORT)); \
+	PMA_PORT=$(call find_port,$(DEFAULT_PMA_PORT)); \
+	MAILHOG_SMTP_PORT=$(call find_port,$(DEFAULT_MAILHOG_SMTP_PORT)); \
+	MAILHOG_UI_PORT=$(call find_port,$(DEFAULT_MAILHOG_UI_PORT)); \
+	SMARTQL_PORT=$(call find_port,$(DEFAULT_SMARTQL_PORT)); \
+	echo "APP_PORT=$$APP_PORT" >> $(PORTS_FILE); \
+	echo "FORWARD_DB_PORT=$$DB_PORT" >> $(PORTS_FILE); \
+	echo "FORWARD_TEST_DB_PORT=$$TEST_DB_PORT" >> $(PORTS_FILE); \
+	echo "PMA_PORT=$$PMA_PORT" >> $(PORTS_FILE); \
+	echo "MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT" >> $(PORTS_FILE); \
+	echo "MAILHOG_UI_PORT=$$MAILHOG_UI_PORT" >> $(PORTS_FILE); \
+	echo "SMARTQL_PORT=$$SMARTQL_PORT" >> $(PORTS_FILE)
+	@echo "Port assignments saved to $(PORTS_FILE)"
+
+ports: ## Show current port assignments
+	@if [ -f $(PORTS_FILE) ]; then \
+		echo "Current port assignments:"; \
+		cat $(PORTS_FILE) | grep -v "^#"; \
+	else \
+		echo "No ports file found. Run 'make up' to generate."; \
+	fi
+
+setup: .ports ## Build and start the application
 	@echo "Building custom image with HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID)"
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose build app
+	@. ./$(PORTS_FILE) && HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) \
+		APP_PORT=$$APP_PORT FORWARD_DB_PORT=$$FORWARD_DB_PORT PMA_PORT=$$PMA_PORT \
+		MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT MAILHOG_UI_PORT=$$MAILHOG_UI_PORT \
+		SMARTQL_PORT=$$SMARTQL_PORT docker compose build app
 	@echo "Starting containers..."
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose up -d
+	@. ./$(PORTS_FILE) && HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) \
+		APP_PORT=$$APP_PORT FORWARD_DB_PORT=$$FORWARD_DB_PORT PMA_PORT=$$PMA_PORT \
+		MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT MAILHOG_UI_PORT=$$MAILHOG_UI_PORT \
+		SMARTQL_PORT=$$SMARTQL_PORT docker compose up -d
 	@echo "Waiting for containers to be ready..."
 	@sleep 5
 	@echo "Installing composer dependencies..."
 	$(MAKE) composer-install
 	@echo "Generating application key..."
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan key:generate
+	@. ./$(PORTS_FILE) && HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) \
+		APP_PORT=$$APP_PORT FORWARD_DB_PORT=$$FORWARD_DB_PORT PMA_PORT=$$PMA_PORT \
+		MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT MAILHOG_UI_PORT=$$MAILHOG_UI_PORT \
+		SMARTQL_PORT=$$SMARTQL_PORT docker compose exec --user www-data app php artisan key:generate
 	@echo "Running fresh migrations with seeders..."
 	$(MAKE) migrate-fresh-seed
-	@echo "Setup complete! Application ready at http://localhost:8000"
+	@. ./$(PORTS_FILE) && echo "Setup complete! Application ready at http://localhost:$$APP_PORT"
 
-up: ## Start the application
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose up -d
+up: .ports ## Start the application
+	@. ./$(PORTS_FILE) && HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) \
+		APP_PORT=$$APP_PORT FORWARD_DB_PORT=$$FORWARD_DB_PORT PMA_PORT=$$PMA_PORT \
+		MAILHOG_SMTP_PORT=$$MAILHOG_SMTP_PORT MAILHOG_UI_PORT=$$MAILHOG_UI_PORT \
+		SMARTQL_PORT=$$SMARTQL_PORT docker compose up -d
+	@. ./$(PORTS_FILE) && echo "Services running on:" && \
+		echo "  App:        http://localhost:$$APP_PORT" && \
+		echo "  phpMyAdmin: http://localhost:$$PMA_PORT" && \
+		echo "  MailHog:    http://localhost:$$MAILHOG_UI_PORT" && \
+		echo "  SmartQL:    http://localhost:$$SMARTQL_PORT" && \
+		echo "  MySQL:      localhost:$$FORWARD_DB_PORT"
 
 down: ## Stop and remove the application containers
 	docker compose down
@@ -35,6 +98,10 @@ restart: ## Restart the application
 	$(MAKE) down
 	$(MAKE) up
 
+reset-ports: ## Clear port assignments and find new available ports
+	@rm -f $(PORTS_FILE)
+	@$(MAKE) .ports
+
 composer-install: ## Install composer dependencies
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer install
 
@@ -42,13 +109,27 @@ composer-update: ## Update composer dependencies
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer update
 
 test: ## Run tests
-	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec -T --user www-data app php artisan test --coverage
+
+phpmd: ## Mess detector
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpmd
+
+phpstan: ## Static Analyzer
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpstan
 
 lint: ## Lint the code
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs:test
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpmd
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint:test
 
 lint-fix: ## Fix linting errors
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer pint
+
+format: ## Format the code
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs:test
+
+format-fix: ## Fix formatting errors
+	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer phpcs
 
 openapi: ## Generate OpenAPI documentation
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app composer openapi
@@ -58,6 +139,7 @@ openapi-test: ## Test OpenAPI documentation
 
 clean: ## Stop and remove all containers, networks, and volumes
 	docker compose down --rmi all -v
+	@rm -f $(PORTS_FILE)
 
 migrate: ## Run database migrations
 	HOST_UID=$(HOST_UID) HOST_GID=$(HOST_GID) docker compose exec --user www-data app php artisan migrate

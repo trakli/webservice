@@ -12,7 +12,8 @@ class ReminderService
 {
     public function __construct(
         protected NotificationService $notificationService
-    ) {}
+    ) {
+    }
 
     public function processDueReminders(): int
     {

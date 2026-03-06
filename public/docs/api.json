@@ -52,6 +52,193 @@
                 }
             }
         },
+        "/account": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Delete authenticated user account",
+                "operationId": "0cd27ad5e9aea43ddf1967ec966f7f97",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "confirm_delete"
+                                ],
+                                "properties": {
+                                    "confirm_delete": {
+                                        "description": "Must be true to confirm deletion",
+                                        "type": "boolean"
+                                    },
+                                    "reason": {
+                                        "description": "Reason for account deletion",
+                                        "type": "string",
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Account deleted successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Account deleted successfully."
+                                        },
+                                        "data": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List all users",
+                "operationId": "e32caa8422866755d92dae3e4d9f4e64",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Get a specific user",
+                "operationId": "24dda39dfbbe5047c1d0511adac26c1b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Delete a user account",
+                "operationId": "99473fa29b65baacff5eb150ea70866c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "description": "Reason for account deletion",
+                                        "type": "string",
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
         "/ai/chat": {
             "post": {
                 "tags": [
@@ -492,6 +679,45 @@
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/files/{id}": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Get a file by ID",
+                "operationId": "af81c42fa385fdeeac3331249ee4d7b0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the file",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File content",
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "File not found"
+                    },
+                    "403": {
+                        "description": "Unauthorized access"
                     }
                 }
             }
@@ -1286,7 +1512,7 @@
                                     },
                                     "type": {
                                         "type": "string",
-                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
+                                        "example": "individual,organization,\n                        business,partnership,non_profit,\n                        government_agency,educational_institution,\n                        healthcare_provider"
                                     },
                                     "description": {
                                         "type": "string",
@@ -1404,7 +1630,7 @@
                                     },
                                     "type": {
                                         "type": "string",
-                                        "example": "individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider"
+                                        "example": "individual, organization,business,partnership, non_profit,government_agency, educational_institution,healthcare_provider"
                                     },
                                     "description": {
                                         "type": "string",
@@ -2053,17 +2279,17 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "required": [
                                     "amount",
-                                    "type"
+                                    "type",
+                                    "wallet_id"
                                 ],
                                 "properties": {
                                     "client_id": {
                                         "description": "Unique identifier for your local client",
                                         "type": "string",
-                                        "format": "string",
                                         "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
                                     },
                                     "amount": {
@@ -2082,7 +2308,7 @@
                                     },
                                     "datetime": {
                                         "type": "string",
-                                        "format": "datetime"
+                                        "format": "date-time"
                                     },
                                     "created_at": {
                                         "type": "string",
@@ -2103,7 +2329,13 @@
                                     },
                                     "recurrence_period": {
                                         "description": "Set how often the transaction should repeat",
-                                        "type": "string"
+                                        "type": "string",
+                                        "enum": [
+                                            "daily",
+                                            "weekly",
+                                            "monthly",
+                                            "yearly"
+                                        ]
                                     },
                                     "recurrence_interval": {
                                         "description": "Set how often the transaction should repeat",
@@ -2111,17 +2343,18 @@
                                     },
                                     "recurrence_ends_at": {
                                         "description": "When the transaction stops repeating",
-                                        "type": "date-time"
+                                        "type": "string",
+                                        "format": "date-time"
                                     },
                                     "categories": {
                                         "type": "array",
                                         "items": {
-                                            "description": "Category ID array",
+                                            "description": "Category ID",
                                             "type": "integer"
                                         }
                                     },
-                                    "files": {
-                                        "description": "Files to attach to this transaction",
+                                    "files[]": {
+                                        "description": "Files to attach (jpg, jpeg, png, pdf; max 1.2MB each)",
                                         "type": "array",
                                         "items": {
                                             "type": "string",
@@ -2147,6 +2380,9 @@
                     },
                     "400": {
                         "description": "Invalid input"
+                    },
+                    "403": {
+                        "description": "Resource does not belong to user"
                     }
                 }
             }
@@ -2158,18 +2394,25 @@
                 ],
                 "summary": "Add file to a transaction",
                 "operationId": "c4819a10dcfa436a030128ac45465ae2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the transaction",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "required": [
-                                    "files",
-                                    "type"
-                                ],
                                 "properties": {
-                                    "files": {
-                                        "description": "Files to attach to this transaction",
+                                    "files[]": {
+                                        "description": "Files to attach (jpg, jpeg, png, pdf; max 1MB each)",
                                         "type": "array",
                                         "items": {
                                             "type": "string",
@@ -2183,8 +2426,8 @@
                     }
                 },
                 "responses": {
-                    "201": {
-                        "description": "Transaction updated successfully",
+                    "200": {
+                        "description": "Files uploaded successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2193,8 +2436,11 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Invalid input"
+                    "404": {
+                        "description": "Transaction not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -2426,6 +2672,50 @@
                 }
             }
         },
+        "/transfers": {
+            "get": {
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "List all transfers",
+                "operationId": "4e3254a7d99836bed059ca512312defb",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "last_sync": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transfer"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/transfer": {
             "post": {
                 "tags": [
@@ -2466,9 +2756,21 @@
                                         "format": "float",
                                         "example": 9.23
                                     },
+                                    "datetime": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
                                     "created_at": {
                                         "type": "string",
                                         "format": "date-time"
+                                    },
+                                    "expense_transaction_client_id": {
+                                        "description": "Client ID of the expense transaction (for sync dedup)",
+                                        "type": "string"
+                                    },
+                                    "income_transaction_client_id": {
+                                        "description": "Client ID of the income transaction (for sync dedup)",
+                                        "type": "string"
                                     }
                                 },
                                 "type": "object"
@@ -2489,6 +2791,63 @@
                     },
                     "400": {
                         "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/transfers/{id}": {
+            "put": {
+                "tags": [
+                    "Transfers"
+                ],
+                "summary": "Update a transfer (attach client_id for sync)",
+                "operationId": "de007b47194042ea9215f582c1db4232",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the transfer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "description": "Unique identifier for your local client",
+                                        "type": "string",
+                                        "format": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Transfer"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Transfer not found"
                     }
                 }
             }
@@ -3553,6 +3912,10 @@
                         "description": "Path or content of the file",
                         "type": "string"
                     },
+                    "link": {
+                        "description": "URL to access the file",
+                        "type": "string"
+                    },
                     "type": {
                         "description": "Type of file (image, icon, emoji, pdf)",
                         "type": "string",
@@ -3971,6 +4334,11 @@
                     "user_id": {
                         "description": "ID of the user",
                         "type": "integer"
+                    },
+                    "datetime": {
+                        "description": "Date and time of the transfer",
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"
@@ -4091,6 +4459,10 @@
             "description": "Endpoints for managing transaction categories"
         },
         {
+            "name": "Files",
+            "description": "Endpoints for accessing files"
+        },
+        {
             "name": "Notifications",
             "description": "Endpoints for managing notifications"
         },
@@ -4117,6 +4489,14 @@
         {
             "name": "Info",
             "description": "Info"
+        },
+        {
+            "name": "Account",
+            "description": "Account"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin"
         },
         {
             "name": "Groups",

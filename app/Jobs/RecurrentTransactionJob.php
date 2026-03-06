@@ -12,7 +12,10 @@ use Illuminate\Queue\SerializesModels;
 
 class RecurrentTransactionJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     public int $ruleId;
 
@@ -29,7 +32,7 @@ class RecurrentTransactionJob implements ShouldQueue
      */
     public function handle(RecurringTransactionService $service): void
     {
-        logger()->info('Handling recurrent transaction for rule ID: '.$this->ruleId);
+        logger()->info('Handling recurrent transaction for rule ID: ' . $this->ruleId);
 
         try {
             if ($service->isRuleValid($this->ruleId)) {
@@ -38,7 +41,7 @@ class RecurrentTransactionJob implements ShouldQueue
                 $service->createTransactionFromRule($rule);
             }
         } catch (\Throwable $e) {
-            logger()->error('Error processing job for rule '.$this->ruleId.': '.$e->getMessage());
+            logger()->error('Error processing job for rule ' . $this->ruleId . ': ' . $e->getMessage());
         }
     }
 }

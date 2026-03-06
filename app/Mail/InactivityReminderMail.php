@@ -12,13 +12,15 @@ use Illuminate\Queue\SerializesModels;
 
 class InactivityReminderMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+    use SerializesModels;
 
     public function __construct(
         public User $user,
         public array $tier,
         public int $daysInactive
-    ) {}
+    ) {
+    }
 
     public function envelope(): Envelope
     {

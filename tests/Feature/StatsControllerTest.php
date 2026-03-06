@@ -23,8 +23,18 @@ class StatsControllerTest extends TestCase
     {
         parent::setUp();
 
+        // Freeze time to Wednesday noon so relative dates (subHours, subDays)
+        // land on deterministic days of the week regardless of when tests run
+        Carbon::setTestNow(Carbon::create(2026, 2, 25, 12, 0, 0));
+
         $this->user = User::factory()->create();
         $this->token = $this->user->createToken('test-token')->plainTextToken;
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     protected function createTestData(): array

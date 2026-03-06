@@ -26,7 +26,7 @@ class PasswordResetCodeGeneratedListener
         $this->notificationService->sendEmailNotification([
             'to' => $event->email,
             'subject' => __('Password Reset Code'),
-            'body' => __('Your password reset code for Trakli is: ').$event->code,
+            'body' => __('Your password reset code for Trakli is: ') . $event->code,
         ]);
     }
 }

@@ -38,6 +38,10 @@ Trakli is a personal income tracking application built using Laravel. The applic
 - `make test` - Run tests
 - `make lint` - Check code style
 - `make lint-fix` - Fix code style issues
+- `make phpmd` - Runs PHP Mess Detector
+- `make phpstan` - Runs PHP Static Analyzer
+- `make format` - Additional code style checks
+- `make format-fix` - Fix additional code style issues
 - `make migrate` - Run database migrations
 - `make migrate-fresh` - Fresh migrations (drops all tables)
 - `make seed` - Run database seeders

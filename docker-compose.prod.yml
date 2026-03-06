@@ -5,7 +5,6 @@ services:
     image: ghcr.io/trakli/webservice:latest
     container_name: trakli-app
     restart: unless-stopped
-    env_file: .env
     volumes:
       - ./storage:/var/www/html/storage
     networks:

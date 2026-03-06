@@ -15,7 +15,9 @@ class UserRegistered
      *
      * @return void
      */
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Handle the event.
@@ -33,28 +35,27 @@ class UserRegistered
     private function createDefaultGroups($user): void
     {
         $defaultGroups = [
-            'General',
-            'Personal',
-            'Family',
-            'Friends',
-            'Work',
+            ['key' => 'general', 'name' => __('General'), 'description' => __('Default group for General')],
+            ['key' => 'personal', 'name' => __('Personal'), 'description' => __('Default group for Personal')],
+            ['key' => 'family', 'name' => __('Family'), 'description' => __('Default group for Family')],
+            ['key' => 'friends', 'name' => __('Friends'), 'description' => __('Default group for Friends')],
+            ['key' => 'work', 'name' => __('Work'), 'description' => __('Default group for Work')],
         ];
 
         $generalGroup = null;
 
-        foreach ($defaultGroups as $groupName) {
-            $group = $user->groups()->create([
-                'name' => $groupName,
-                'description' => "Default group for $groupName",
-            ]);
+        foreach ($defaultGroups as $groupData) {
+            $key = $groupData['key'];
+            unset($groupData['key']);
+            $group = $user->groups()->create($groupData);
 
-            if ($groupName === 'General') {
+            if ($key === 'general') {
                 $generalGroup = $group;
             }
         }
 
         if ($generalGroup) {
-            $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+            $clientId = self::SERVER_UUID . ':' . Str::uuid()->toString();
             $generalGroup->setClientGeneratedId($clientId, $user);
 
             $user->setConfigValue(
@@ -75,7 +76,7 @@ class UserRegistered
             'balance' => 0,
         ]);
 
-        $clientId = self::SERVER_UUID.':'.Str::uuid()->toString();
+        $clientId = self::SERVER_UUID . ':' . Str::uuid()->toString();
         $wallet->setClientGeneratedId($clientId, $user);
 
         $user->setConfigValue(

@@ -22,6 +22,10 @@ class FileImportService
         $this->transferService = $transferService;
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.IfStatementAssignment)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function processImports(string $path, FileImport $fileImport): void
     {
         $user = $fileImport->user;
@@ -49,7 +53,8 @@ class FileImportService
                 $fileImport->save();
             }
 
-            for ($i = $fileImport->progress; $i < count($csvData); $i++) {
+            $count = count($csvData);
+            for ($i = $fileImport->progress; $i < $count; $i++) {
                 $data = $csvData[$i];
                 if (! $this->isValidDate($data[7])) {
                     $this->saveFailedImport($fileImport, $data, $user, __('Date must be in the format YYYY-MM-DD'));
@@ -68,25 +73,45 @@ class FileImportService
                         $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                         Log::error($e);
                     } catch (Exception $e) {
-                        $this->saveFailedImport($fileImport, $data, $user, __('An error occurred while importing this transaction'));
+                        $this->saveFailedImport(
+                            $fileImport,
+                            $data,
+                            $user,
+                            __('An error occurred while importing this transaction')
+                        );
                         Log::error($e);
                     }
                 } elseif ($transactionType == '+Transfer') {
                     if (isset($csvData[$i + 1]) && $csvData[$i + 1][2] == '-Transfer') {
                         try {
-                            $this->importTransfer($data, $csvData[$i + 1], $transactionType, $user);
+                            $this->importTransfer($data, $csvData[$i + 1], $user);
                         } catch (FileImportException $e) {
                             $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                             Log::error($e);
                         } catch (Exception $e) {
-                            $this->saveFailedImport($fileImport, $data, $user, __('An error occurred while importing this transaction'));
-                            $this->saveFailedImport($fileImport, $csvData[$i + 1], $user, __('An error occurred while importing this transaction'));
+                            $this->saveFailedImport(
+                                $fileImport,
+                                $data,
+                                $user,
+                                __('An error occurred while importing this transaction')
+                            );
+                            $this->saveFailedImport(
+                                $fileImport,
+                                $csvData[$i + 1],
+                                $user,
+                                __('An error occurred while importing this transaction')
+                            );
                             Log::error($e);
                         } finally {
                             $i += 1;
                         }
                     } else {
-                        $this->saveFailedImport($fileImport, $data, $user, __('Corresponding -Transfer transaction not found'));
+                        $this->saveFailedImport(
+                            $fileImport,
+                            $data,
+                            $user,
+                            __('Corresponding -Transfer transaction not found')
+                        );
                     }
                 } else {
                     $this->saveFailedImport($fileImport, $data, $user, __('Invalid transaction type'));
@@ -112,9 +137,9 @@ class FileImportService
     public function isValidDate(string $date): bool
     {
         try {
-            $d = Carbon::createFromFormat('Y-m-d', $date);
+            $newDate = Carbon::createFromFormat('Y-m-d', $date);
 
-            return $d && $d->format('Y-m-d') === $date;
+            return $newDate && $newDate->format('Y-m-d') === $date;
         } catch (Exception $e) {
             return false;
         }
@@ -138,6 +163,8 @@ class FileImportService
 
     /**
      * @throws Exception
+     *
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function importTransaction(array $data, string $transactionType, User $user): void
     {
@@ -210,7 +237,10 @@ class FileImportService
         });
     }
 
-    public function importTransfer(array $fromData, array $toData, string $transactionType, User $user): void
+    /**
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
+    public function importTransfer(array $fromData, array $toData, User $user): void
     {
         DB::transaction(function () use ($fromData, $toData, $user) {
 
@@ -231,7 +261,10 @@ class FileImportService
                 if (empty($fromCurrency)) {
                     $existingFromWallet = $user->wallets()->where('name', $fromWallet)->first();
                 } else {
-                    $existingFromWallet = $user->wallets()->where('name', $fromWallet)->where('currency', $fromCurrency)->first();
+                    $existingFromWallet = $user->wallets()
+                        ->where('name', $fromWallet)
+                        ->where('currency', $fromCurrency)
+                        ->first();
                 }
 
                 if (is_null($existingFromWallet) && ! empty($fromCurrency)) {
@@ -248,7 +281,9 @@ class FileImportService
                 if (empty($toCurrency)) {
                     $existingToWallet = $user->wallets()->where('name', $toWallet)->first();
                 } else {
-                    $existingToWallet = $user->wallets()->where('name', $toWallet)->where('currency', $toCurrency)->first();
+                    $existingToWallet = $user->wallets()
+                        ->where('name', $toWallet)
+                        ->where('currency', $toCurrency)->first();
                 }
 
                 if (is_null($existingToWallet) && ! empty($toCurrency)) {
@@ -269,7 +304,14 @@ class FileImportService
             $exchangeRate = $toAmount / $fromAmount;
 
             // create transfer
-            return $this->transferService->transfer($fromAmount, $existingFromWallet, $toAmount, $existingToWallet, $user, $exchangeRate);
+            return $this->transferService->transfer(
+                $fromAmount,
+                $existingFromWallet,
+                $toAmount,
+                $existingToWallet,
+                $user,
+                $exchangeRate
+            );
         });
     }
 }
