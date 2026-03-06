@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Events\AccountDeleted;
 use App\Listeners\PasswordResetCodeGeneratedListener;
 use App\Listeners\PasswordResetCompleteListener;
+use App\Listeners\SendAccountDeletedNotifications;
 use App\Listeners\UserRegistered;
 use App\Models\Transaction;
 use App\Observers\TransactionObserver;
@@ -33,6 +35,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         UserRegisteredEvent::class => [
             UserRegistered::class,
+        ],
+        AccountDeleted::class => [
+            SendAccountDeletedNotifications::class,
         ],
     ];
 

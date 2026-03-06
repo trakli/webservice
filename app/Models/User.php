@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
+use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable
@@ -17,6 +18,7 @@ class User extends Authenticatable
     use HasApiTokens;
     use HasDevices;
     use HasFactory;
+    use HasRoles;
     use Notifiable;
 
     /**
