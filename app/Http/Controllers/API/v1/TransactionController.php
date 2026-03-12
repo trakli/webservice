@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
+use App\Services\TransferService;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 class TransactionController extends ApiController
@@ -24,7 +25,8 @@ class TransactionController extends ApiController
     use ApiQueryable;
 
     public function __construct(
-        private RecurringTransactionService $recurringTransactionService
+        private RecurringTransactionService $recurringTransactionService,
+        private TransferService $transferService
     ) {
     }
 
@@ -265,6 +267,8 @@ class TransactionController extends ApiController
             'categories.*' => 'integer|exists:categories,id',
             'files' => 'nullable|array',
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
+
+            'from_wallet_id' => 'required_if:convert_myself_to_transfer,true|integer|exists:wallets,id',
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -273,6 +277,38 @@ class TransactionController extends ApiController
 
         $data = $validationResult['data'];
         $user = $request->user();
+
+        //check if party has been set to 'myself' and convert to transfer if config is enabled
+        $party = isset($data['party_id']) ? \App\Models\Party::find($data['party_id']) : null;
+        if (
+            config('app.convert_myself_to_transfer') &&
+            $party &&
+            $party->is_myself &&
+            $request->has('from_wallet_id')
+        ) {
+            $fromWallet = $user->wallets()->findOrFail($request['from_wallet_id']);
+            $toWallet = $user->wallets()->findOrFail($data['wallet_id']);
+
+            $transfer = $this->transferService->transfer(
+                amountToSend: (float) $data['amount'],
+                fromWallet: $fromWallet,
+                amountToReceive: (float) $data['amount'],
+                toWallet: $toWallet,
+                user: $user,
+                exchangeRate: 1.0,
+                datetime: $data['datetime'] ?? null,
+                transactionClientIds: [
+                    'income_transaction_client_id' => $data['client_id'] ?? null
+                ]
+            );
+
+            //return response here to prevent controller from creating a third transaction below
+            return $this->success($transfer, statusCode: 201);
+        }
+
+
+
+
 
         if (! empty($data['client_id'])) {
             $existingTransaction = Transaction::findByClientId($data['client_id'], $user);

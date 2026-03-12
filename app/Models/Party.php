@@ -21,6 +21,7 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'id', description: 'ID of the icon', type: 'integer'),
             new OA\Property(property: 'path', description: 'Image of the icon', type: 'string'),
             new OA\Property(property: 'type', description: 'type of icon( image or icon or emoji)', type: 'string'),
+            new OA\Property(property: 'is_myself', description: 'Whether this party represents the user themselves', type: 'boolean'),
         ], type: 'object'),
     ],
     type: 'object'
@@ -43,6 +44,7 @@ class Party extends Model
         'description',
         'user_id',
         'type',
+        'is_myself'
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
