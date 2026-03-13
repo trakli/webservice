@@ -7,26 +7,32 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Transaction;
 use App\Models\Transfer;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class MyselfTransferTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_income_from_myself_is_handled_as_transfer()
     {
         // 1. Setup Data
         $user = User::factory()->create();
+        //create the myself party
+        $myselfParty = Party::factory()->create([ 'user_id' => $user->id]);
         $walletSource = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
         $walletDest = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
-        
-        // Create the "Myself" Party
-        $myselfParty = Party::factory()->create([
-            'user_id' => $user->id,
-            'is_myself' => true,
-            'name' => 'My Personal Cash'
+
+        config(['app.convert_myself_to_transfer' => true]); // Ensure the feature is enabled for the test
+
+        //manually set the configuration for this user
+        \App\Models\Configuration::create([
+            'configurable_id' => $user->id,
+            'configurable_type' => User::class,
+            'key' => 'myself-party-id',
+            'value' => $myselfParty->id,
         ]);
+
 
         $fakeClientId = \Illuminate\Support\Str::uuid() . ':' . \Illuminate\Support\Str::uuid();
         // 2. The Payload
@@ -58,7 +64,7 @@ class MyselfTransferTest extends TestCase
         // Check balances
         $this->assertEquals(800, $walletSource->fresh()->balance);
         $this->assertEquals(200, $walletDest->fresh()->balance);
-        
+
         // Ensure the transaction is linked to a transfer
         $this->assertNotNull(Transaction::where('amount', 200)->first()->transfer_id);
     }
@@ -68,7 +74,6 @@ class MyselfTransferTest extends TestCase
         $user = User::factory()->create();
         $wallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
         $normalParty = Party::factory()->create([
-            'is_myself' => false,
             'user_id' => $user->id,
             ]);
 

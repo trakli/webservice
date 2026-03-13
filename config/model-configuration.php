@@ -23,6 +23,8 @@ return [
         'notifications-insights' => 'boolean',
         'notifications-inactivity' => 'boolean',
         'insights-frequency' => 'string|in:daily,weekly,monthly',
+
+        'myself-party-id' => 'integer', // store the "Myself" Party ID
     ],
     'model' => \App\Models\Configuration::class,
     'hooks' => [ModelConfigurationFilterHook::class],

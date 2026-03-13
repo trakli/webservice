@@ -44,7 +44,6 @@ class Party extends Model
         'description',
         'user_id',
         'type',
-        'is_myself'
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];

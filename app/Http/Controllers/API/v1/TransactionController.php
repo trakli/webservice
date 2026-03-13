@@ -278,12 +278,20 @@ class TransactionController extends ApiController
         $data = $validationResult['data'];
         $user = $request->user();
 
-        //check if party has been set to 'myself' and convert to transfer if config is enabled
-        $party = isset($data['party_id']) ? \App\Models\Party::find($data['party_id']) : null;
+        // find the user's "myself" party ID from configuration
+        // $party = isset($data['party_id']) ? \App\Models\Party::find($data['party_id']) : null;
+        $myselfPartyId = \App\Models\Configuration::where('configurable_id', $user->id)
+            ->where('configurable_type', User::class)
+            ->where('key', 'myself-party-id')
+            ->value('value');
+
+        $isMyself = isset($data['party_id']) && (string)$data['party_id'] === (string)$myselfPartyId;
+
+        //check if feature is enabled and IDs match
         if (
             config('app.convert_myself_to_transfer') &&
-            $party &&
-            $party->is_myself &&
+            $isMyself &&
+            // (int) $data['party_id'] === (int) $myselfPartyId &&
             $request->has('from_wallet_id')
         ) {
             $fromWallet = $user->wallets()->findOrFail($request['from_wallet_id']);

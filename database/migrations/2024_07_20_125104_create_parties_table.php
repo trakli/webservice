@@ -16,7 +16,6 @@ return new class () extends Migration {
             $table->string('type')->nullable();
             $table->text('description')->nullable();
             $table->unsignedBigInteger('user_id');
-            $table->boolean('is_myself')->default(false);
             $table->timestamps();
             $table->softDeletes();
 
