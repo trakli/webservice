@@ -844,7 +844,6 @@ class TransactionController extends ApiController
 
             'from_wallet_id' => 'required_if:convert_myself_to_transfer,true|integer|exists:wallets,id',
         ]);
-
     }
 
     private function isMyselfTransfer($data, $user, $request): bool
@@ -860,7 +859,6 @@ class TransactionController extends ApiController
         return config('app.convert_myself_to_transfer') &&
             $isMyself &&
             $request->has('from_wallet_id');
-
     }
 
     private function handleMyselfTransfer($data, $user, $request)
