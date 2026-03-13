@@ -249,27 +249,7 @@ class TransactionController extends ApiController
      */
     public function store(Request $request): JsonResponse
     {
-        $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'required|numeric|min:0.01',
-            'type' => 'required|string|in:income,expense',
-            'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'created_at' => ['nullable', new Iso8601DateTime()],
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'required|integer|exists:wallets,id',
-            'categories' => 'nullable|array',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
-            'categories.*' => 'integer|exists:categories,id',
-            'files' => 'nullable|array',
-            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
-
-            'from_wallet_id' => 'required_if:convert_myself_to_transfer,true|integer|exists:wallets,id',
-        ]);
+        $validationResult = $this->validateRequestData($request);
 
         if (! $validationResult['isValidated']) {
             return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
@@ -278,40 +258,12 @@ class TransactionController extends ApiController
         $data = $validationResult['data'];
         $user = $request->user();
 
-        // find the user's "myself" party ID from configuration
-        // $party = isset($data['party_id']) ? \App\Models\Party::find($data['party_id']) : null;
-        $myselfPartyId = \App\Models\Configuration::where('configurable_id', $user->id)
-            ->where('configurable_type', User::class)
-            ->where('key', 'myself-party-id')
-            ->value('value');
-
-        $isMyself = isset($data['party_id']) && (string)$data['party_id'] === (string)$myselfPartyId;
-
         //check if feature is enabled and IDs match
         if (
-            config('app.convert_myself_to_transfer') &&
-            $isMyself &&
-            // (int) $data['party_id'] === (int) $myselfPartyId &&
-            $request->has('from_wallet_id')
+            $this->isMyselfTransfer($data, $user)
         ) {
-            $fromWallet = $user->wallets()->findOrFail($request['from_wallet_id']);
-            $toWallet = $user->wallets()->findOrFail($data['wallet_id']);
-
-            $transfer = $this->transferService->transfer(
-                amountToSend: (float) $data['amount'],
-                fromWallet: $fromWallet,
-                amountToReceive: (float) $data['amount'],
-                toWallet: $toWallet,
-                user: $user,
-                exchangeRate: 1.0,
-                datetime: $data['datetime'] ?? null,
-                transactionClientIds: [
-                    'income_transaction_client_id' => $data['client_id'] ?? null
-                ]
-            );
-
             //return response here to prevent controller from creating a third transaction below
-            return $this->success($transfer, statusCode: 201);
+            return $this->handleMyselfTransfer($data, $user, $request);
         }
 
 
@@ -867,5 +819,66 @@ class TransactionController extends ApiController
                 );
             }
         }
+    }
+
+    private function validateRequestData(Request $request): array
+    {
+        return $this->validateRequest($request, [
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
+            'amount' => 'required|numeric|min:0.01',
+            'type' => 'required|string|in:income,expense',
+            'description' => 'nullable|string',
+            'datetime' => ['nullable', new Iso8601DateTime()],
+            'created_at' => ['nullable', new Iso8601DateTime()],
+            'group_id' => 'nullable|integer|exists:groups,id',
+            'party_id' => 'nullable|integer|exists:parties,id',
+            'wallet_id' => 'required|integer|exists:wallets,id',
+            'categories' => 'nullable|array',
+            'is_recurring' => 'nullable|boolean',
+            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
+            'recurrence_interval' => 'nullable|integer|min:1',
+            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
+            'categories.*' => 'integer|exists:categories,id',
+            'files' => 'nullable|array',
+            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
+
+            'from_wallet_id' => 'required_if:convert_myself_to_transfer,true|integer|exists:wallets,id',
+        ]);
+
+    }
+
+    private function isMyselfTransfer($data, $user, $request): bool
+    {
+        // find the user's "myself" party ID from configuration
+        $myselfPartyId = \App\Models\Configuration::where('configurable_id', $user->id)
+            ->where('configurable_type', User::class)
+            ->where('key', 'myself-party-id')
+            ->value('value');
+
+        $isMyself = isset($data['party_id']) && (string)$data['party_id'] === (string)$myselfPartyId;
+
+        return config('app.convert_myself_to_transfer') &&
+            $isMyself &&
+            $request->has('from_wallet_id');
+
+    }
+
+    private function handleMyselfTransfer($data, $user, $request)
+    {
+        $fromWallet = $user->wallets()->findOrFail($request['from_wallet_id']);
+        $toWallet = $user->wallets()->findOrFail($data['wallet_id']);
+
+        return $this->transferService->transfer(
+            amountToSend: (float) $data['amount'],
+            fromWallet: $fromWallet,
+            amountToReceive: (float) $data['amount'],
+            toWallet: $toWallet,
+            user: $user,
+            exchangeRate: 1.0,
+            datetime: $data['datetime'] ?? null,
+            transactionClientIds: [
+                'income_transaction_client_id' => $data['client_id'] ?? null
+            ]
+        );
     }
 }

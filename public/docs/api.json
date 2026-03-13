@@ -4111,6 +4111,10 @@
                             "type": {
                                 "description": "type of icon( image or icon or emoji)",
                                 "type": "string"
+                            },
+                            "is_myself": {
+                                "description": "Whether this party represents the user themselves",
+                                "type": "boolean"
                             }
                         },
                         "type": "object"
