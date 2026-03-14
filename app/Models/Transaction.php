@@ -132,8 +132,10 @@ class Transaction extends Model
         'client_generated_id',
         'wallet_client_generated_id',
         'party_client_generated_id',
+        'transfer_client_generated_id',
         'files',
         'recurring_rules',
+        'transfer'
     ];
 
     public function getWalletClientGeneratedIdAttribute()
@@ -144,6 +146,16 @@ class Transaction extends Model
     public function getPartyClientGeneratedIdAttribute()
     {
         return $this->party ? $this->party->client_generated_id : null;
+    }
+
+    public function getTransferAttribute()
+    {
+        // makeHidden prevents cyclic dependency since transactions references transfers and transfers references transactions
+        return $this->transfer()->first()?->makeHidden('transactions');
+    }
+    public function getTransferClientGeneratedIdAttribute()
+    {
+        return $this->transfer ? $this->transfer->client_generated_id : null;
     }
 
     public function getCategoriesAttribute()
@@ -159,6 +171,11 @@ class Transaction extends Model
     public function getWalletAttribute()
     {
         return $this->wallet()->first();
+    }
+
+    public function transfer()
+    {
+        return $this->belongsTo(Transfer::class);
     }
 
     public function wallet()

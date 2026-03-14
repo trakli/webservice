@@ -7,6 +7,7 @@ use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -52,7 +53,7 @@ class Transfer extends Model
         'datetime' => 'datetime',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id'];
+    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id', 'transactions'];
 
     public function user(): BelongsTo
     {
@@ -69,6 +70,12 @@ class Transfer extends Model
         return $this->belongsTo(Wallet::class, 'to_wallet_id');
     }
 
+    public function getTransactionsAttribute()
+    {
+        // makeHidden prevents cyclic dependency since transactions references transfers and transfers references transactions
+        return $this->transactions()->get()->makeHidden('transfer');
+    }
+
     public function getSourceWalletAttribute()
     {
         return $this->sourceWallet()->first();
@@ -77,5 +84,10 @@ class Transfer extends Model
     public function getDestinationWalletAttribute()
     {
         return $this->destinationWallet()->first();
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
     }
 }
