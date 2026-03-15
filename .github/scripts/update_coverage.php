@@ -7,13 +7,12 @@ if (!is_dir('.github')) mkdir('.github', 0777, true);
 
 if (file_exists($baselineFile)) {
     $data = json_decode(file_get_contents($baselineFile), true);
-} else {
-    $data = ['exempt' => 90];
 }
 
 
 $data['coverage'] = round($current, 2);
 $data['updated_at'] = gmdate('c');
+$data['exempt'] = $data['exempt'] ?? 90;
 
 file_put_contents($baselineFile, json_encode($data, JSON_PRETTY_PRINT));
 
