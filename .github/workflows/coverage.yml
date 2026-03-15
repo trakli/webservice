@@ -1,0 +1,91 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - devx
+      - delete-me
+
+permissions:
+  contents: write
+
+jobs:
+  coverage:
+    name: Update Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Read current baseline
+      - name: Read current baseline
+        id: baseline
+        run: |
+          BASELINE_FILE=".github/coverage-baseline.json"
+          if [ ! -f "$BASELINE_FILE" ]; then
+            mkdir -p .github
+            echo '{"coverage":0}' > "$BASELINE_FILE"
+          fi
+          CURRENT=$(php -r "echo json_decode(file_get_contents('$BASELINE_FILE'), true)['coverage'] ?? 0;")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+
+      # Step 2: Try to get coverage from PR comment (same-repo PRs)
+      - name: Get coverage from last PR comment
+        id: pr-comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commitSha = process.env.GITHUB_SHA;
+            const prs = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha
+            });
+            if (!prs.data.length) return;
+            const prNumber = prs.data[0].number;
+            const pr = prs.data[0];
+            if (pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) return;
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            const coverageComment = comments.data.find(c => c.body.includes('**Coverage Report**'));
+            if (!coverageComment) return;
+            const match = coverageComment.body.match(/PR coverage: ([0-9.]+)%/);
+            if (!match) return;
+            return match[1];
+
+      # Step 3: If no PR coverage, run tests on main
+      - name: Get coverage on main if needed
+        id: main-coverage
+        run: |
+          if [ -n "${{ steps.pr-comment.outputs.result }}" ]; then
+            echo "coverage=${{ steps.pr-comment.outputs.result }}" >> $GITHUB_OUTPUT
+          else
+            echo "coverage=0" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 4: Update baseline if coverage is higher
+      - name: Update baseline JSON if higher
+        run: |
+          CURRENT=${{ steps.baseline.outputs.current }}
+          PR_COVERAGE=${{ steps.main-coverage.outputs.coverage }}
+          echo "Current baseline: $CURRENT%"
+          echo "New coverage: $PR_COVERAGE%"
+
+          COMP=$(php -r "echo ($PR_COVERAGE > $CURRENT) ? 1 : 0;")
+          if [ "$COMP" -eq 1 ]; then
+            php .github/scripts/update_coverage.php $PR_COVERAGE
+          else
+            echo "Baseline already higher. Skipping update."
+            exit 0
+          fi
+
+      # Step 5: Commit updated baseline if updated
+      - name: Commit updated baseline
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .github/coverage-baseline.json
+          git diff --staged --quiet || git commit -m "Update coverage baseline to $PR_COVERAGE%"
+          git push
