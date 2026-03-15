@@ -37,7 +37,7 @@ jobs:
             # Use the GITHUB_SHA (the commit that triggered the workflow) to find the associated PR
             PR_NUMBER=$(gh pr list --state merged --search "$GITHUB_SHA" --json number -q '.[0].number')
             echo "we have $PR_NUMBER"
-            echo "pull_request_number=190" >> $GITHUB_OUTPUT
+            echo "pull_request_number=100" >> $GITHUB_OUTPUT
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
