@@ -123,6 +123,8 @@ class Transaction extends Model
         'amount' => 'decimal:2',
     ];
 
+    protected $hidden = ['transfer'];
+
     protected $appends = [
         'wallet',
         'party',
@@ -135,7 +137,6 @@ class Transaction extends Model
         'transfer_client_generated_id',
         'files',
         'recurring_rules',
-        'transfer'
     ];
 
     public function getWalletClientGeneratedIdAttribute()
@@ -148,14 +149,13 @@ class Transaction extends Model
         return $this->party ? $this->party->client_generated_id : null;
     }
 
-    public function getTransferAttribute()
-    {
-        // makeHidden prevents cyclic dependency since transactions references transfers and transfers references transactions
-        return $this->transfer()->first()?->makeHidden('transactions');
-    }
     public function getTransferClientGeneratedIdAttribute()
     {
-        return $this->transfer ? $this->transfer->client_generated_id : null;
+        if (! $this->transfer_id) {
+            return null;
+        }
+
+        return $this->transfer?->client_generated_id;
     }
 
     public function getCategoriesAttribute()
