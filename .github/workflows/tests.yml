@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - dev
-      - delete-mev
+      - delete-me
 
 permissions:
   contents: write
