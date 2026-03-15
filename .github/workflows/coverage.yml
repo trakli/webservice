@@ -1,7 +1,7 @@
 name: Tests
 
 on:
-  pull_request:
+  push:
     branches:
       - devx
       - delete-me
@@ -35,9 +35,9 @@ jobs:
         id: get_pr_id
         run: |
             # Use the GITHUB_SHA (the commit that triggered the workflow) to find the associated PR
-            PR_NUMBER=$(gh pr list --state merged --search "c70e23e905e1b87343754cbcd8e982b0e7722108" --json number -q '.[0].number')
-            echo "we have $PR_NUMBER"
-            echo "pull_request_number=100" >> $GITHUB_OUTPUT
+            PR_NUMBER=$(gh pr list --state merged --search "$GITHUB_SHA" --json number -q '.[0].number')
+            echo "PR number is $PR_NUMBER"
+            echo "pull_request_number=$PR_NUMBER" >> $GITHUB_OUTPUT
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -83,5 +83,4 @@ jobs:
           git config user.email "github-actions@github.com"
           git add .github/coverage-baseline.json
           git diff --staged --quiet || git commit -m "enh: Update coverage baseline to $PR_COVERAGE%"
-          echo "enh: Update coverage baseline to $PR_COVERAGE%"
-#          git push
+          git push
