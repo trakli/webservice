@@ -72,8 +72,7 @@ class Transfer extends Model
 
     public function getTransactionsAttribute()
     {
-        // makeHidden prevents cyclic dependency since transactions references transfers and transfers references transactions
-        return $this->transactions()->get()->makeHidden('transfer');
+        return $this->getRelationValue('transactions')->makeHidden('transfer_client_generated_id');
     }
 
     public function getSourceWalletAttribute()
