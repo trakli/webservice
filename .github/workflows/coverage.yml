@@ -54,7 +54,7 @@ jobs:
         run: |
           if [ -n "${{ steps.fc.outputs.comment-body }}" ]; then
             COV=$(echo "${{ steps.fc.outputs.comment-body }}" | grep "PR coverage:" | awk '{print $3}' | tr -d '%')
-            echo "coverage=COV" >> $GITHUB_OUTPUT
+            echo "coverage=$COV" >> $GITHUB_OUTPUT
           else
             echo "coverage=0" >> $GITHUB_OUTPUT
           fi
