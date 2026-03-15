@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v3
 
       # Step 1: Read current baseline
       - name: Read current baseline
@@ -33,7 +33,7 @@ jobs:
       # Step 2: Try to get coverage from PR comment (same-repo PRs)
       - name: Get coverage from last PR comment
         id: pr-comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -87,9 +87,8 @@ jobs:
       # Step 5: Commit updated baseline if updated
       - name: Commit updated baseline
         run: |
-          PR_COVERAGE=${{ steps.main-coverage.outputs.coverage }}
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .github/coverage-baseline.json
-          git diff --staged --quiet || git commit -m "enh: Update coverage baseline to $PR_COVERAGE%"
+          git diff --staged --quiet || git commit -m "Update coverage baseline to $PR_COVERAGE%"
           git push
