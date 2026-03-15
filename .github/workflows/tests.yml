@@ -88,6 +88,3 @@ jobs:
 
       - name: Check Coverage
         uses: whilesmart/workflows/php/coverage/check@coverage
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          php_version: 8.2
