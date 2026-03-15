@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v3
 
       # Step 1: Read current baseline
       - name: Read current baseline
@@ -31,30 +31,39 @@ jobs:
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
 
       # Step 2: Try to get coverage from PR comment (same-repo PRs)
-      - name: Get Pull Request Number
-        id: get_pr_id
-        run: |
-            # Use the GITHUB_SHA (the commit that triggered the workflow) to find the associated PR
-            PR_NUMBER=$(gh pr list --state merged --search "$GITHUB_SHA" --json number -q '.[0].number')
-            echo "PR number is $PR_NUMBER"
-            echo "pull_request_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Find Comment
-        uses: peter-evans/find-comment@v4
-        id: fc
+      - name: Get coverage from last PR comment
+        id: pr-comment
+        uses: actions/github-script@v7
         with:
-            issue-number: ${{ steps.get_pr_id.outputs.pull_request_number }}
-            body-includes: Coverage Report
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commitSha = process.env.GITHUB_SHA;
+            const prs = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commitSha
+            });
+            if (!prs.data.length) return;
+            const prNumber = prs.data[0].number;
+            const pr = prs.data[0];
+            if (pr.head.repo.full_name !== context.repo.owner + '/' + context.repo.repo) return;
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+            const coverageComment = comments.data.find(c => c.body.includes('**Coverage Report**'));
+            if (!coverageComment) return;
+            const match = coverageComment.body.match(/PR coverage: ([0-9.]+)%/);
+            if (!match) return;
+            return match[1];
 
       # Step 3: If no PR coverage, run tests on main
       - name: Get coverage on main if needed
         id: main-coverage
         run: |
-          if [ -n "${{ steps.fc.outputs.comment-body }}" ]; then
-            COV=$(echo "${{ steps.fc.outputs.comment-body }}" | grep "PR coverage:" | awk '{print $3}' | tr -d '%')
-            echo "coverage=$COV" >> $GITHUB_OUTPUT
+          if [ -n "${{ steps.pr-comment.outputs.result }}" ]; then
+            echo "coverage=${{ steps.pr-comment.outputs.result }}" >> $GITHUB_OUTPUT
           else
             echo "coverage=0" >> $GITHUB_OUTPUT
           fi
@@ -78,9 +87,8 @@ jobs:
       # Step 5: Commit updated baseline if updated
       - name: Commit updated baseline
         run: |
-          PR_COVERAGE=${{ steps.main-coverage.outputs.coverage }}
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .github/coverage-baseline.json
-          git diff --staged --quiet || git commit -m "enh: Update coverage baseline to $PR_COVERAGE%"
+          git diff --staged --quiet || git commit -m "Update coverage baseline to $PR_COVERAGE%"
           git push
