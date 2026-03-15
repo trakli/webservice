@@ -25,4 +25,4 @@ jobs:
           tools: composer
 
       - name: Check Coverage
-        uses: whilesmart/workflows/php/coverage/update@coverage
+        uses: whilesmart/workflows/php/coverage/update@main
