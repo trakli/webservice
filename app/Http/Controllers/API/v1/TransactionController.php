@@ -850,21 +850,23 @@ class TransactionController extends ApiController
 
     private function isMyselfTransfer($data, $user, $request): bool
     {
-        // find the user's "myself" party ID from configuration
-        $myselfPartyId = \App\Models\Configuration::where('configurable_id', $user->id)
-                ->whereIn('configurable_type', [
-                get_class($user),
-                $user->getMorphClass(),
-                'User'                  // fallback
-            ])
-            ->where('key', 'myself-party-id')
-            ->value('value');
+        //get user preferences (boolean)
+        $featureEnabled = $user->getConfigValue('create-transfers-for-myself-transactions');
 
-        $isMyself = isset($data['party_id']) && (string)$data['party_id'] === (string)$myselfPartyId;
+        //identify the party and check its 'is_myself' property;
+        $partyId = $data['party_id'] ?? null;
+        $party = \App\Models\Party::find($partyId);
 
-        return config('app.convert_myself_to_transfer') &&
-            $isMyself &&
-            $request->has('from_wallet_id');
+        // DEBUG: See what is actually being compared
+        // dd([
+        //    'isMyselfParty' => $party->getConfigValue('is-myself'),
+        //    'feature_enabled' => $user->getConfigValue('create-transfers-for-myself-transactions'),
+        //    'has_from_wallet' => $request->has('from_wallet_id')
+        // ]);
+
+        $isMyselfParty = $party && $party->getConfigValue('is-myself');
+
+        return $featureEnabled && $isMyselfParty && $request->has('from_wallet_id');
     }
 
     private function handleMyselfTransfer($data, $user, $request)

@@ -9,6 +9,8 @@ use App\Models\Transaction;
 use App\Models\Transfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Whilesmart\ModelConfiguration\Models\Configuration;
+use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
 class MyselfTransferTest extends TestCase
 {
@@ -18,20 +20,23 @@ class MyselfTransferTest extends TestCase
     {
         // 1. Setup Data
         $user = User::factory()->create();
+        $party = Party::factory()->create(['user_id' => $user->id]);
+
+        //set user preference to use "myself" party
+        $user->setConfigValue('create-transfers-for-myself-transactions', 
+            true, 
+            ConfigValueType::Boolean
+        );
+        //set party flag
+        $party->setConfigValue('is-myself', 
+            true, 
+            ConfigValueType::Boolean
+        );
+
         //create the myself party
-        $myselfParty = Party::factory()->create([ 'user_id' => $user->id]);
         $walletSource = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
         $walletDest = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
 
-        config(['app.convert_myself_to_transfer' => true]); // Ensure the feature is enabled for the test
-
-        //manually set the configuration for this user
-        \App\Models\Configuration::create([
-            'configurable_id' => $user->id,
-            'configurable_type' => User::class,
-            'key' => 'myself-party-id',
-            'value' => $myselfParty->id,
-        ]);
 
 
         $fakeClientId = \Illuminate\Support\Str::uuid() . ':' . \Illuminate\Support\Str::uuid();
@@ -39,7 +44,7 @@ class MyselfTransferTest extends TestCase
         $payload = [
             'amount' => 200,                // Validator needs 'amount'
             'type' => 'income',             // Validator needs 'type'
-            'party_id' => $myselfParty->id, // Triggers the 'is_myself' logic
+            'party_id' => $party->id, // Triggers the 'is_myself' logic
             'wallet_id' => $walletDest->id, // Becomes 'toWallet'
             'from_wallet_id' => $walletSource->id, // Becomes 'fromWallet'
             'client_id' => $fakeClientId, // To ensure idempotency in tests

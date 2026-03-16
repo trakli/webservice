@@ -114,4 +114,13 @@ class User extends Authenticatable
     {
         return $this->getConfigValue('avatar');
     }
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // Automatically enable this setting for every new user
+            $user->setConfigValue('create-transfers-for-myself-transactions', 
+            true, 
+            \Whilesmart\ModelConfiguration\Enums\ConfigValueType::Boolean);
+        });
+    }
 }

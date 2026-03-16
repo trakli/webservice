@@ -194,5 +194,4 @@ return [
     | Toggle feature to convert "myself" party to "transfer" type when creating a transaction. This is useful for users who want to track their own transactions without creating a separate party for themselves.
     |
     */
-    'convert_myself_to_transfer' => env('CONVERT_MYSELF_TO_TRANSFER', true),
 ];

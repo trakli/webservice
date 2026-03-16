@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\ModelConfiguration\Traits\Configurable;
+
 
 #[OA\Schema(
     schema: 'Party',
@@ -28,6 +30,7 @@ use OpenApi\Attributes as OA;
 )]
 class Party extends Model
 {
+    use configurable;
     use HasClientCreatedAt;
     use HasFactory;
     use Iconable;
