@@ -118,9 +118,11 @@ class User extends Authenticatable
     {
         static::created(function ($user) {
             // Automatically enable this setting for every new user
-            $user->setConfigValue('create-transfers-for-myself-transactions', 
-            true, 
-            \Whilesmart\ModelConfiguration\Enums\ConfigValueType::Boolean);
+            $user->setConfigValue(
+                'create-transfers-for-myself-transactions',
+                true,
+                \Whilesmart\ModelConfiguration\Enums\ConfigValueType::Boolean
+            );
         });
     }
 }

@@ -9,7 +9,6 @@ use App\Models\Transaction;
 use App\Models\Transfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Whilesmart\ModelConfiguration\Models\Configuration;
 use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
 class MyselfTransferTest extends TestCase
@@ -23,13 +22,15 @@ class MyselfTransferTest extends TestCase
         $party = Party::factory()->create(['user_id' => $user->id]);
 
         //set user preference to use "myself" party
-        $user->setConfigValue('create-transfers-for-myself-transactions', 
-            true, 
+        $user->setConfigValue(
+            'create-transfers-for-myself-transactions',
+            true,
             ConfigValueType::Boolean
         );
         //set party flag
-        $party->setConfigValue('is-myself', 
-            true, 
+        $party->setConfigValue(
+            'is-myself',
+            true,
             ConfigValueType::Boolean
         );
 

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class ConfigurationSeeder extends Seeder
@@ -17,7 +16,7 @@ class ConfigurationSeeder extends Seeder
             $user->setConfigValue('create-transfers-for-myself-transactions', true, ConfigValueType::BOOLEAN);
         }
 
-        
+
 
 
     }

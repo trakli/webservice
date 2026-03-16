@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 
-
 #[OA\Schema(
     schema: 'Party',
     properties: [
