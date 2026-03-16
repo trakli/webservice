@@ -262,8 +262,9 @@ class TransactionController extends ApiController
         if (
             $this->isMyselfTransfer($data, $user, $request)
         ) {
+            $transfer = $this->handleMyselfTransfer($data, $user, $request);
             //return response here to prevent controller from creating a third transaction below
-            return $this->handleMyselfTransfer($data, $user, $request);
+            return $this->success($transfer, statusCode: 201);
         }
 
 
@@ -850,7 +851,11 @@ class TransactionController extends ApiController
     {
         // find the user's "myself" party ID from configuration
         $myselfPartyId = \App\Models\Configuration::where('configurable_id', $user->id)
-            ->where('configurable_type', User::class)
+                ->whereIn('configurable_type', [
+                get_class($user),
+                $user->getMorphClass(),
+                'User'                  // fallback
+            ])
             ->where('key', 'myself-party-id')
             ->value('value');
 
