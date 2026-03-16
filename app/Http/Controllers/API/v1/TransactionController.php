@@ -258,7 +258,8 @@ class TransactionController extends ApiController
         $data = $validationResult['data'];
         $user = $request->user();
 
-        //check if party_id is the user's "myself" party and if convert_myself_to_transfer is enabled in configuration. If so, create a transfer instead of a regular transaction
+        //check if party_id is the user's "myself" party
+        //and if convert_myself_to_transfer is enabled in configuration. If so, create a transfer instead of a regular transaction
         if (
             $this->isMyselfTransfer($data, $user, $request)
         ) {
