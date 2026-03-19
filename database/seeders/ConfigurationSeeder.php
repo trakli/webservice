@@ -13,7 +13,7 @@ class ConfigurationSeeder extends Seeder
     {
         //enable feature for all existing users by default, can be turned off by user if they want
         foreach (\App\Models\User::all() as $user) {
-            $user->setConfigValue('create-transfers-for-myself-transactions', true, ConfigValueType::BOOLEAN);
+            $user->setConfigValue('create-transfers-for-myself-transactions', true, \Whilesmart\ModelConfiguration\Enums\ConfigValueType::Boolean);
         }
 
 

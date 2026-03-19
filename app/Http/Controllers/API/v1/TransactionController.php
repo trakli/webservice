@@ -855,7 +855,7 @@ class TransactionController extends ApiController
 
         //identify the party and check its 'is_myself' property;
         $partyId = $data['party_id'] ?? null;
-        $party = \App\Models\Party::find($partyId);
+        $party = $user->parties()->find($partyId);
 
         // DEBUG: See what is actually being compared
         // dd([
