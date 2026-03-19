@@ -124,7 +124,7 @@ class TransferController extends ApiController
         $validationResult = $this->validateRequest($request, [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
-            'exchange_rate' => 'sometimes|numeric|min:0.01',
+            'exchange_rate' => 'sometimes|numeric|gt:0',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
             'datetime' => ['nullable', new Iso8601DateTime()],
