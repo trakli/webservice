@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\TransactionType;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -53,7 +54,7 @@ class Transfer extends Model
         'datetime' => 'datetime',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id', 'transactions'];
+    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id', 'transactions', 'expense_transaction_client_id', 'income_transaction_client_id'];
 
     public function user(): BelongsTo
     {
@@ -83,6 +84,20 @@ class Transfer extends Model
     public function getDestinationWalletAttribute()
     {
         return $this->destinationWallet()->first();
+    }
+
+    public function getExpenseTransactionClientIdAttribute(): ?string
+    {
+        return $this->getRelationValue('transactions')
+            ->firstWhere('type', TransactionType::EXPENSE->value)
+            ?->client_generated_id;
+    }
+
+    public function getIncomeTransactionClientIdAttribute(): ?string
+    {
+        return $this->getRelationValue('transactions')
+            ->firstWhere('type', TransactionType::INCOME->value)
+            ?->client_generated_id;
     }
 
     public function transactions(): HasMany

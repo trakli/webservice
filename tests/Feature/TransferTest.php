@@ -213,6 +213,8 @@ class TransferTest extends TestCase
 
         $this->assertNotNull($syncState);
         $this->assertEquals($randomId, $syncState->client_generated_id);
+
+        $this->assertEquals($clientId, $response->json('data.client_generated_id'));
     }
 
     public function test_duplicate_transfer_request_returns_existing_transfer()
@@ -456,6 +458,8 @@ class TransferTest extends TestCase
 
         $this->assertNotNull($syncState);
         $this->assertEquals($randomId, $syncState->client_generated_id);
+
+        $this->assertEquals($clientId, $updateResponse->json('data.client_generated_id'));
     }
 
     public function test_api_user_cannot_overwrite_existing_client_id()
@@ -641,6 +645,36 @@ class TransferTest extends TestCase
 
         $types = collect($transferData['transactions'])->pluck('type')->sort()->values()->all();
         $this->assertEquals(['expense', 'income'], $types);
+    }
+
+    public function test_transfer_response_includes_transaction_client_ids()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transferData = $response->json('data');
+        $this->assertArrayHasKey('expense_transaction_client_id', $transferData);
+        $this->assertArrayHasKey('income_transaction_client_id', $transferData);
+        $this->assertNotNull($transferData['expense_transaction_client_id']);
+        $this->assertNotNull($transferData['income_transaction_client_id']);
+        $this->assertNotEquals(
+            $transferData['expense_transaction_client_id'],
+            $transferData['income_transaction_client_id']
+        );
     }
 
     public function test_transfer_transactions_do_not_include_transfer_client_generated_id()
