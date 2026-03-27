@@ -809,4 +809,135 @@ class TransferTest extends TestCase
         $transactions = Transaction::where('transfer_id', $transfer->id)->get();
         $this->assertCount(2, $transactions);
     }
+
+    public function test_api_user_can_show_a_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user)->getJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(200);
+        $this->assertEquals($transferId, $response->json('data.id'));
+        $this->assertEquals(100, $response->json('data.amount'));
+    }
+
+    public function test_api_user_cannot_show_another_users_transfer()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user1->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user1->id]);
+
+        $createResponse = $this->actingAs($user1)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user2)->getJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(404);
+    }
+
+    public function test_api_user_can_delete_a_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(200);
+
+        $this->assertSoftDeleted('transfers', ['id' => $transferId]);
+    }
+
+    public function test_deleting_a_transfer_also_deletes_its_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+        $transactionIds = Transaction::where('transfer_id', $transferId)->pluck('id');
+        $this->assertCount(2, $transactionIds);
+
+        $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        foreach ($transactionIds as $id) {
+            $this->assertSoftDeleted('transactions', ['id' => $id]);
+        }
+    }
+
+    public function test_api_user_cannot_delete_another_users_transfer()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user1->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user1->id]);
+
+        $createResponse = $this->actingAs($user1)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user2)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(404);
+        $this->assertDatabaseHas('transfers', ['id' => $transferId, 'deleted_at' => null]);
+    }
+
+    public function test_deleted_transfers_appear_in_sync_query()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+        $syncedBefore = urlencode(now()->subSecond()->toIso8601String());
+
+        $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response = $this->actingAs($user)->getJson("/api/v1/transfers?synced_since={$syncedBefore}");
+
+        $response->assertStatus(200);
+        $transfers = $response->json('data.data');
+        $this->assertCount(1, $transfers);
+        $this->assertNotNull($transfers[0]['deleted_at']);
+    }
 }
