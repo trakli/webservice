@@ -56,7 +56,22 @@ class Transfer extends Model
         'datetime' => 'datetime',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id', 'transactions', 'expense_transaction_client_id', 'income_transaction_client_id'];
+    protected $appends = [
+        'source_wallet',
+        'destination_wallet',
+        'last_synced_at',
+        'client_generated_id',
+        'transactions',
+        'expense_transaction_client_id',
+        'income_transaction_client_id',
+    ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Transfer $transfer) {
+            $transfer->transactions->each->delete();
+        });
+    }
 
     public function user(): BelongsTo
     {
@@ -75,30 +90,33 @@ class Transfer extends Model
 
     public function getTransactionsAttribute()
     {
-        return $this->getRelationValue('transactions')->makeHidden('transfer_client_generated_id');
+        return $this->getRelationValue('transactions')
+            ->makeHidden('transfer_client_generated_id');
     }
 
     public function getSourceWalletAttribute()
     {
-        return $this->sourceWallet()->first();
+        return $this->getRelationValue('sourceWallet');
     }
 
     public function getDestinationWalletAttribute()
     {
-        return $this->destinationWallet()->first();
+        return $this->getRelationValue('destinationWallet');
     }
 
     public function getExpenseTransactionClientIdAttribute(): ?string
     {
-        return $this->getRelationValue('transactions')
-            ->firstWhere('type', TransactionType::EXPENSE->value)
+        return $this->transactions
+            ->where('type', TransactionType::EXPENSE->value)
+            ->first()
             ?->client_generated_id;
     }
 
     public function getIncomeTransactionClientIdAttribute(): ?string
     {
-        return $this->getRelationValue('transactions')
-            ->firstWhere('type', TransactionType::INCOME->value)
+        return $this->transactions
+            ->where('type', TransactionType::INCOME->value)
+            ->first()
             ?->client_generated_id;
     }
 
