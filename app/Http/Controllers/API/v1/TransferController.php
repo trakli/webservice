@@ -60,12 +60,49 @@ class TransferController extends ApiController
         $query = $user->transfers()->orderBy('datetime', 'desc')->orderBy('created_at', 'desc');
 
         try {
-            $data = $this->applyApiQuery($request, $query, with_deleted: false);
+            $data = $this->applyApiQuery($request, $query);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
             return $this->failure($e->getMessage(), 422);
         }
+    }
+
+    #[OA\Get(
+        path: '/transfers/{id}',
+        summary: 'Get a specific transfer',
+        tags: ['Transfers'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transfer',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(ref: '#/components/schemas/Transfer')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Transfer not found'
+            ),
+        ]
+    )]
+    public function show(Request $request, int $transferId): JsonResponse
+    {
+        $user = $request->user();
+        $transfer = $user->transfers()->find($transferId);
+
+        if (! $transfer) {
+            return $this->failure(__('Transfer not found'), 404);
+        }
+
+        return $this->success($transfer);
     }
 
     #[OA\Post(
@@ -291,6 +328,47 @@ class TransferController extends ApiController
         $transfer->load('syncState');
 
         return $this->success($transfer);
+    }
+
+    #[OA\Delete(
+        path: '/transfers/{id}',
+        summary: 'Delete a specific transfer',
+        tags: ['Transfers'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transfer',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Transfer deleted successfully'
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Transfer not found'
+            ),
+        ]
+    )]
+    public function destroy(Request $request, int $transferId): JsonResponse
+    {
+        $user = $request->user();
+        $transfer = $user->transfers()->find($transferId);
+
+        if (! $transfer) {
+            return $this->failure(__('Transfer not found'), 404);
+        }
+
+        DB::transaction(function () use ($transfer) {
+            $transfer->transactions()->each(fn ($transaction) => $transaction->delete());
+            $transfer->delete();
+        });
+
+        return $this->success(null, __('Transfer deleted successfully'));
     }
 
     private function findTransferByClientId(string $clientId, User $user): ?Transfer
