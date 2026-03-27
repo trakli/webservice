@@ -287,6 +287,8 @@ class TransferController extends ApiController
         $this->updateClientId($transfer, $request);
         $transfer->markAsSynced();
 
+        $transfer->refresh();
+
         return $this->success($transfer);
     }
 
