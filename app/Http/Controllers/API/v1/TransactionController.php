@@ -382,6 +382,8 @@ class TransactionController extends ApiController
             return $this->failure(__('Failed to create transaction'), 500, [$e->getMessage()]);
         }
 
+        $transaction->load('syncState');
+
         return $this->success($transaction, statusCode: 201);
     }
 
@@ -724,6 +726,8 @@ class TransactionController extends ApiController
 
                 return $transaction;
             });
+
+            $transaction->load('syncState');
 
             return $this->success($transaction, 200);
         } catch (HttpException $e) {

@@ -217,6 +217,8 @@ class TransferController extends ApiController
             return $transfer;
         });
 
+        $transfer->load('syncState');
+
         return $this->success($transfer, statusCode: 201);
     }
 
@@ -286,6 +288,7 @@ class TransferController extends ApiController
 
         $this->updateClientId($transfer, $request);
         $transfer->markAsSynced();
+        $transfer->load('syncState');
 
         return $this->success($transfer);
     }

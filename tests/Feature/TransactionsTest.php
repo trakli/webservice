@@ -122,6 +122,10 @@ class TransactionsTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('transactions', ['id' => $response->json('data.id')]);
+        $this->assertEquals(
+            '245cb3df-df3a-428b-a908-e5f74b8d58a4:245cb3df-df3a-428b-a908-e5f74b8d58a4',
+            $response->json('data.client_generated_id')
+        );
     }
 
     public function test_api_user_can_create_transactions_with_files()
@@ -790,6 +794,7 @@ class TransactionsTest extends TestCase
 
         $transaction = Transaction::find($expense['id']);
         $this->assertEquals($transaction->syncState->client_generated_id, $clientId);
+        $this->assertEquals("$deviceToken:$clientId", $response->json('data.client_generated_id'));
     }
 
     public function test_api_user_cannot_create_transaction_with_invalid_client_id_format()
