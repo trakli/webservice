@@ -20,6 +20,13 @@ class TransferController extends ApiController
 {
     use ApiQueryable;
 
+    private const EAGER_LOAD = [
+        'transactions.syncState',
+        'sourceWallet',
+        'destinationWallet',
+        'syncState',
+    ];
+
     private TransferService $transferService;
 
     public function __construct(TransferService $transferService)
@@ -57,10 +64,13 @@ class TransferController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = $user->transfers()->orderBy('datetime', 'desc')->orderBy('created_at', 'desc');
+        $query = $user->transfers()
+            ->with(self::EAGER_LOAD)
+            ->orderBy('datetime', 'desc')
+            ->orderBy('created_at', 'desc');
 
         try {
-            $data = $this->applyApiQuery($request, $query);
+            $data = $this->applyApiQuery($request, $query, with_deleted: true);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -96,7 +106,7 @@ class TransferController extends ApiController
     public function show(Request $request, int $transferId): JsonResponse
     {
         $user = $request->user();
-        $transfer = $user->transfers()->find($transferId);
+        $transfer = $user->transfers()->with(self::EAGER_LOAD)->find($transferId);
 
         if (! $transfer) {
             return $this->failure(__('Transfer not found'), 404);
@@ -254,7 +264,7 @@ class TransferController extends ApiController
             return $transfer;
         });
 
-        $transfer->load('syncState');
+        $transfer->load(self::EAGER_LOAD);
 
         return $this->success($transfer, statusCode: 201);
     }
@@ -325,7 +335,7 @@ class TransferController extends ApiController
 
         $this->updateClientId($transfer, $request);
         $transfer->markAsSynced();
-        $transfer->load('syncState');
+        $transfer->load(self::EAGER_LOAD);
 
         return $this->success($transfer);
     }
@@ -363,10 +373,7 @@ class TransferController extends ApiController
             return $this->failure(__('Transfer not found'), 404);
         }
 
-        DB::transaction(function () use ($transfer) {
-            $transfer->transactions()->each(fn ($transaction) => $transaction->delete());
-            $transfer->delete();
-        });
+        $transfer->delete();
 
         return $this->success(null, __('Transfer deleted successfully'));
     }
