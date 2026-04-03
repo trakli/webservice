@@ -221,6 +221,14 @@ class Transaction extends Model
         return $this->hasOne(RecurringTransactionRule::class);
     }
 
+    /**
+     * Scope to exclude transfer transactions.
+     */
+    public function scopeNonTransfer($query)
+    {
+        return $query->whereNull($this->getTable() . '.transfer_id');
+    }
+
     public static function findByClientId(string $clientId, User $user): ?self
     {
         $parts = explode(':', $clientId);
