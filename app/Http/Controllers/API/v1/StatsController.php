@@ -236,9 +236,12 @@ class StatsController extends ApiController
                     (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
                 }
 
+                $activityMetrics = $this->getActivityMetrics($user, $startDate, $endDate, $walletIds);
+
                 return [
                     'currency' => $defaultCurrency,
                     'overview' => $overview,
+                    'activity' => $activityMetrics,
                     'comparisons' => $this->getComparisons($user, $startDate, $endDate, $walletIds, $defaultCurrency),
                     'top_categories' => $this->getTopCategories(
                         $user,
@@ -435,7 +438,7 @@ class StatsController extends ApiController
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
             ->where('transactions.type', $type)
-            ->whereNull('transactions.transfer_id')
+            ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
 
@@ -526,7 +529,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
-            ->whereNull('transactions.transfer_id')
+            ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.type', 'wallets.currency');
 
@@ -575,7 +578,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {
@@ -605,7 +608,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->whereBetween('datetime', [$startDate, $endDate]);
 
         if (! empty($walletIds)) {
@@ -703,7 +706,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
-            ->whereNull('transactions.transfer_id')
+            ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->where('transactions.type', 'expense')
             ->select('transactions.amount', 'transactions.datetime', 'wallets.currency');
@@ -752,7 +755,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->where('type', 'expense')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -880,7 +883,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['party', 'wallet'])
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -941,7 +944,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with(['categories', 'wallet'])
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->where('type', $type)
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -1023,7 +1026,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $user->id)
-            ->whereNull('transactions.transfer_id')
+            ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.type', 'transactions.datetime', 'wallets.currency');
 
@@ -1079,7 +1082,7 @@ class StatsController extends ApiController
     ): array {
         $query = Transaction::with('wallet')
             ->where('user_id', $user->id)
-            ->whereNull('transfer_id')
+            ->nonTransfer()
             ->where('type', 'expense')
             ->whereBetween('datetime', [$startDate, $endDate]);
 
@@ -1124,5 +1127,106 @@ class StatsController extends ApiController
             ->sortByDesc('amount')
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Get activity metrics: counts, frequencies, busiest day, top party/category by frequency.
+     */
+    private function getActivityMetrics(
+        $user,
+        Carbon $startDate,
+        Carbon $endDate,
+        array $walletIds = []
+    ): array {
+        $baseQuery = Transaction::where('transactions.user_id', $user->id)
+            ->nonTransfer()
+            ->whereBetween('transactions.datetime', [$startDate, $endDate]);
+
+        if (! empty($walletIds)) {
+            $baseQuery->whereIn('transactions.wallet_id', $walletIds);
+        }
+
+        $stats = (clone $baseQuery)->selectRaw('
+            count(*) as total_count,
+            count(distinct party_id) as unique_parties,
+            sum(case when type = "income" then amount else 0 end) as total_income,
+            count(case when type = "income" then 1 end) as income_count,
+            sum(case when type = "expense" then amount else 0 end) as total_expenses,
+            count(case when type = "expense" then 1 end) as expense_count
+        ')->first();
+
+        $transactionCount = (int) $stats->total_count;
+        $periodDays = max(1, $startDate->diffInDays($endDate));
+
+        $avgIncome = $stats->income_count > 0 ? round($stats->total_income / $stats->income_count, 2) : 0;
+        $avgExpense = $stats->expense_count > 0 ? round($stats->total_expenses / $stats->expense_count, 2) : 0;
+
+        return [
+            'transaction_count' => $transactionCount,
+            'unique_parties' => (int) $stats->unique_parties,
+            'average_income_transaction' => $avgIncome,
+            'average_expense_transaction' => $avgExpense,
+            'frequency' => [
+                'per_day' => round($transactionCount / $periodDays, 2),
+                'per_week' => round($transactionCount / max(1, $periodDays / 7), 2),
+                'per_month' => round($transactionCount / max(1, $periodDays / 30), 2),
+            ],
+            'busiest_day' => $this->getBusiestDay($baseQuery),
+            'most_frequent_party' => $this->getMostFrequentParty($baseQuery),
+            'most_used_category' => $this->getMostUsedCategory($baseQuery),
+        ];
+    }
+
+    private function getBusiestDay($baseQuery): ?string
+    {
+        $row = (clone $baseQuery)
+            ->selectRaw('DAYNAME(datetime) as day_name, count(*) as cnt')
+            ->groupByRaw('DAYNAME(datetime)')
+            ->orderByDesc('cnt')
+            ->first();
+
+        return $row?->day_name;
+    }
+
+    private function getMostFrequentParty($baseQuery): ?array
+    {
+        $row = (clone $baseQuery)
+            ->join('parties', 'transactions.party_id', '=', 'parties.id')
+            ->selectRaw('parties.id, parties.name, count(*) as transaction_count')
+            ->groupBy('parties.id', 'parties.name')
+            ->orderByDesc('transaction_count')
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        return [
+            'id' => $row->id,
+            'name' => $row->name,
+            'transaction_count' => (int) $row->transaction_count,
+        ];
+    }
+
+    private function getMostUsedCategory($baseQuery): ?array
+    {
+        $row = \DB::table('categorizables')
+            ->join('categories', 'categorizables.category_id', '=', 'categories.id')
+            ->where('categorizables.categorizable_type', Transaction::class)
+            ->whereIn('categorizables.categorizable_id', (clone $baseQuery)->select('transactions.id'))
+            ->selectRaw('categories.id, categories.name, count(*) as transaction_count')
+            ->groupBy('categories.id', 'categories.name')
+            ->orderByDesc('transaction_count')
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        return [
+            'id' => $row->id,
+            'name' => $row->name,
+            'transaction_count' => (int) $row->transaction_count,
+        ];
     }
 }
