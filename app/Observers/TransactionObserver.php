@@ -2,8 +2,8 @@
 
 namespace App\Observers;
 
-use App\Http\Controllers\API\v1\StatsController;
 use App\Models\Transaction;
+use App\Services\StatsService;
 
 class TransactionObserver
 {
@@ -45,7 +45,7 @@ class TransactionObserver
     protected function invalidateStatsCache(Transaction $transaction): void
     {
         if ($transaction->user_id) {
-            StatsController::invalidateUserCache($transaction->user_id);
+            StatsService::invalidateUserCache($transaction->user_id);
         }
     }
 
