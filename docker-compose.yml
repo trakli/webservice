@@ -3,13 +3,6 @@ name: trakli
 services:
     app:
         image: ghcr.io/whilesmartphp/laravel-dev:8.2
-        build:
-            context: .
-            dockerfile_inline: |
-                FROM ghcr.io/whilesmartphp/laravel-dev:8.2
-            args:
-                HOST_UID: '${HOST_UID:-1000}'
-                HOST_GID: '${HOST_GID:-1000}'
         ports:
             - '${APP_PORT:-8000}:80'
         tty: true
