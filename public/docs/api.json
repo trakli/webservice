@@ -1153,6 +1153,134 @@
                 }
             }
         },
+        "/import/analyze": {
+            "post": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Analyze a document and return transaction suggestions",
+                "operationId": "dbd8a0e3c1510b8dcaa9f3dbab7683f0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "document_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "bank_statement",
+                                            "receipt",
+                                            "invoice",
+                                            "pay_stub",
+                                            "utility_bill"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Suggestions returned"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                }
+            }
+        },
+        "/import/confirm": {
+            "post": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Confirm and create transactions from reviewed suggestions",
+                "operationId": "1fdb80050f2d675d2bc4bd942a6958c3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "session_id": {
+                                        "type": "integer"
+                                    },
+                                    "accepted": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transactions created"
+                    },
+                    "404": {
+                        "description": "Session not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/import/sessions": {
+            "get": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Get all import sessions",
+                "operationId": "4b1fd8aaf51c6886128c91724557bb6a",
+                "responses": {
+                    "200": {
+                        "description": "Sessions list"
+                    }
+                }
+            }
+        },
+        "/import/sessions/{id}": {
+            "get": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Get a specific import session",
+                "operationId": "01f697986c3877e4c2d6b72b0970aaf6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session details"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
         "/notifications": {
             "get": {
                 "tags": [

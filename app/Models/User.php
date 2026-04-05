@@ -100,6 +100,11 @@ class User extends Authenticatable
         return $this->hasMany(FileImport::class);
     }
 
+    public function importSessions(): HasMany
+    {
+        return $this->hasMany(ImportSession::class);
+    }
+
     public function reminders(): HasMany
     {
         return $this->hasMany(Reminder::class);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\FileImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -47,7 +48,7 @@ class ImportTest extends TestCase
         // Create a fake CSV file
         $csvFile = UploadedFile::fake()->createWithContent(
             'test.csv',
-            $content ?? "amount,currency,type,party,wallet,category,description,date\n".
+            $content ?: "amount,currency,type,party,wallet,category,description,date\n".
         "100,USD,expense,John Doe,Wallet1,Food,Lunch,2023-01-01\n".
         '200,USD,income,Jane Doe,Wallet2,Salary,Monthly Salary,2023-01-02'
         );
@@ -59,7 +60,16 @@ class ImportTest extends TestCase
 
         $response->assertStatus(200);
 
-        return $response->json('data');
+        $data = $response->json('data');
+
+        // Manually run the import job since dispatchAfterResponse doesn't execute in tests
+        $fileImport = $this->user->fileImports()->find($data['id']);
+        if ($fileImport) {
+            $path = Storage::disk('local')->path($fileImport->file_path);
+            app(FileImportService::class)->processImports($path, $fileImport);
+        }
+
+        return $data;
     }
 
     public function test_api_user_can_get_scheduled_imports()
