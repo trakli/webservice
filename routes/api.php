@@ -51,7 +51,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('categories/seed-defaults', [CategoryController::class, 'seedDefaults']);
     Route::apiResource('categories', CategoryController::class);
 
-    // Import routes
+    // Advanced import routes (analyze → review → confirm)
+    Route::post('import/analyze', [ImportController::class, 'analyze']);
+    Route::post('import/confirm', [ImportController::class, 'confirm']);
+    Route::get('import/sessions', [ImportController::class, 'getSessions']);
+    Route::get('import/sessions/{id}', [ImportController::class, 'getSession']);
+
+    // Import routes (legacy CSV auto-import)
     Route::post('import', [ImportController::class, 'import']);
     Route::get('imports', [ImportController::class, 'getImports']);
     Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);

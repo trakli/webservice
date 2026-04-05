@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\DocumentProcessorManager;
+use App\Services\DocumentProcessors\CsvProcessor;
+use App\Services\DocumentProcessors\RemoteDocumentProcessor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Kreait\Firebase\Contract\Messaging;
@@ -16,6 +19,14 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(PluginServiceProvider::class);
+
+        $this->app->singleton(DocumentProcessorManager::class, function ($app) {
+            $manager = new DocumentProcessorManager();
+            $manager->register($app->make(CsvProcessor::class));
+            $manager->register($app->make(RemoteDocumentProcessor::class));
+
+            return $manager;
+        });
 
         $this->app->bind(Messaging::class, function () {
             $credentials = config('firebase.credentials') ?? env('FIREBASE_CREDENTIALS');

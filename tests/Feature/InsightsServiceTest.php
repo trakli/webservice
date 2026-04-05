@@ -26,6 +26,15 @@ class InsightsServiceTest extends TestCase
         $notificationService = new NotificationService(null);
         $this->service = new InsightsService($notificationService);
         Mail::fake();
+
+        // Disable insights for any pre-existing users to isolate test counts
+        foreach (User::all() as $existingUser) {
+            $existingUser->setConfigValue(
+                InsightsService::CONFIG_KEY,
+                InsightsService::DISABLED_VALUE,
+                ConfigValueType::String
+            );
+        }
     }
 
     public function test_sends_weekly_insights_to_opted_in_users()
