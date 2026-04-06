@@ -23,7 +23,7 @@ EXTRA_UP_INFO = \
 	echo "  MySQL:      localhost:$$FORWARD_DB_PORT"
 
 TEST_CMD = php artisan test --coverage
-LINT_CMD = composer phpcs:test && composer phpmd && composer pint:test
+LINT_CMD = sh -c "composer phpcs:test && composer phpmd && composer pint:test && composer openapi:test"
 
 # ──────────────────────────────────────────────
 # Include shared targets from laravel.mk
@@ -34,7 +34,9 @@ include laravel.mk
 # Trakli-specific targets
 # ──────────────────────────────────────────────
 
-.PHONY: phpmd phpstan format format-fix openapi openapi-test prod-build prod-push prod-up prod-down
+.PHONY: phpmd phpstan format format-fix openapi openapi-test ci prod-build prod-push prod-up prod-down
+
+ci: lint test ## Run every check that CI runs (lint + tests with coverage)
 
 phpmd: ## Run mess detector
 	$(EXEC) composer phpmd
