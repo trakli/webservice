@@ -2351,13 +2351,66 @@
                         "name": "type",
                         "in": "query",
                         "description": "Type of transaction (income/expense)",
-                        "required": true,
+                        "required": false,
                         "schema": {
                             "type": "string",
                             "enum": [
                                 "income",
                                 "expense"
                             ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Filter transactions from this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Filter transactions up to this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "wallet_ids[]",
+                        "in": "query",
+                        "description": "Filter by wallet IDs",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "category_ids[]",
+                        "in": "query",
+                        "description": "Filter by category IDs",
+                        "required": false,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search transactions by description",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     {
