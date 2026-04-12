@@ -857,13 +857,6 @@ class TransactionController extends ApiController
         $partyId = $data['party_id'] ?? null;
         $party = $user->parties()->find($partyId);
 
-        // DEBUG: See what is actually being compared
-        // dd([
-        //    'isMyselfParty' => $party->getConfigValue('is-myself'),
-        //    'feature_enabled' => $user->getConfigValue('create-transfers-for-myself-transactions'),
-        //    'has_from_wallet' => $request->has('from_wallet_id')
-        // ]);
-
         $isMyselfParty = $party && $party->getConfigValue('is-myself');
 
         return $featureEnabled && $isMyselfParty && $request->has('from_wallet_id');
