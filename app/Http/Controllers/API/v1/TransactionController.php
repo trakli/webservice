@@ -268,10 +268,6 @@ class TransactionController extends ApiController
             return $this->success($transfer, statusCode: 201);
         }
 
-
-
-
-
         if (! empty($data['client_id'])) {
             $existingTransaction = Transaction::findByClientId($data['client_id'], $user);
             if ($existingTransaction) {
@@ -279,25 +275,7 @@ class TransactionController extends ApiController
             }
         }
 
-        $recurringTransactionData = [];
-
-        if (isset($data['is_recurring']) && $data['is_recurring']) {
-            $result = $this->validateRequest($request, [
-                'recurrence_period' => 'required',
-            ]);
-            if (! $result['isValidated']) {
-                return $this->failure($result['message'], $result['code'], $result['errors']);
-            }
-
-            $recurringTransactionData['recurrence_period'] = $data['recurrence_period'];
-            $recurringTransactionData['recurrence_interval'] = $data['recurrence_interval'] ?? null;
-            $recurringTransactionData['recurrence_ends_at'] = $data['recurrence_ends_at'] ?? null;
-        }
-        // remove recurring transaction data from $data
-        unset($data['recurrence_ends_at']);
-        unset($data['recurrence_interval']);
-        unset($data['recurrence_period']);
-        unset($data['is_recurring']);
+        $recurringTransactionData = $this->extractAndValidateRecurringData($request, $data);
 
         if (isset($recurringTransactionData['recurrence_ends_at'])) {
             $recurringTransactionData['recurrence_ends_at'] =
@@ -306,70 +284,14 @@ class TransactionController extends ApiController
                 );
         }
 
-        if (isset($data['datetime'])) {
-            $data['datetime'] = format_iso8601_to_sql($data['datetime']);
-        }
-
-        if (isset($data['created_at'])) {
-            $data['created_at'] = format_iso8601_to_sql($data['created_at']);
-        }
-
-        $categories = [];
-        if (isset($data['categories'])) {
-            $categories = $data['categories'];
-            unset($data['categories']);
-        }
+        $this->formatTransactionDates($data);
+        $categories = $this->extractCategories($data);
 
         try {
             // Validate ownership of all resources before creating the transaction
             $this->validateResourceOwnership($data, $categories);
 
-            $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData, $user) {
-                /** @var Transaction $transaction */
-                $transaction = $user->transactions()->create($data);
-
-                if (isset($data['client_id'])) {
-                    $transaction->setClientGeneratedId($data['client_id'], $user);
-                }
-
-                $transaction->markAsSynced();
-
-                if (! empty($categories)) {
-                    $transaction->categories()->sync($categories);
-                }
-
-                if (isset($data['group_id'])) {
-                    $transaction->groups()->sync($data['group_id']);
-                }
-
-                if ($request->hasFile('files')) {
-                    foreach ($request->file('files') as $file) {
-                        $path = $file->store('transactions');
-                        $transaction->files()->create([
-                            'path' => $path,
-                            'type' => 'file',
-                        ]);
-                    }
-                }
-
-                // check if this transaction is recurring
-                if (! empty($recurringTransactionData)) {
-                    // Create recurring transaction
-                    $recurring_transaction = new RecurringTransactionRule($recurringTransactionData);
-                    $recurring_transaction->next_scheduled_at =
-                        $this->recurringTransactionService->getNextScheduleDate(
-                            $recurring_transaction
-                        );
-                    $recurring_transaction->transaction_id = $transaction->id;
-                    $recurring_transaction->save();
-
-                    RecurrentTransactionJob::dispatch(
-                        (int) $recurring_transaction->id
-                    )->delay($recurring_transaction->next_scheduled_at);
-                }
-
-                return $transaction;
-            });
+            $transaction = $this->createTransaction($user, $data, $categories, $recurringTransactionData, $request);
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
         } catch (Throwable $e) {
@@ -579,26 +501,8 @@ class TransactionController extends ApiController
         }
 
         $validatedData = $validationResult['data'];
-        $recurringTransactionData = [];
 
-        if (isset($validatedData['is_recurring']) && $validatedData['is_recurring']) {
-            $result = $this->validateRequest($request, [
-                'recurrence_period' => 'required',
-            ]);
-            if (! $result['isValidated']) {
-                return $this->failure($result['message'], $result['code'], $result['errors']);
-            }
-
-            $recurringTransactionData['recurrence_period'] = $validatedData['recurrence_period'];
-            $recurringTransactionData['recurrence_interval'] = $validatedData['recurrence_interval'] ?? null;
-            $recurringTransactionData['recurrence_ends_at'] = $validatedData['recurrence_ends_at'] ?? null;
-        }
-
-        // remove recurring transaction data from $data
-        unset($validatedData['recurrence_ends_at']);
-        unset($validatedData['recurrence_interval']);
-        unset($validatedData['recurrence_period']);
-        unset($validatedData['is_recurring']);
+        $recurringTransactionData = $this->extractAndValidateRecurringData($request, $validatedData);
 
         if (isset($recurringTransactionData['recurrence_ends_at'])) {
             $recurringTransactionData['recurrence_ends_at'] = format_iso8601_to_sql(
@@ -606,13 +510,7 @@ class TransactionController extends ApiController
             );
         }
 
-        if (isset($validatedData['datetime'])) {
-            $validatedData['datetime'] = format_iso8601_to_sql($validatedData['datetime']);
-        }
-
-        if (isset($validatedData['updated_at'])) {
-            $validatedData['updated_at'] = format_iso8601_to_sql($validatedData['updated_at']);
-        }
+        $this->formatTransactionDates($validatedData);
 
         /** @var Transaction */
         $transaction = Transaction::find($transactionId);
@@ -628,85 +526,14 @@ class TransactionController extends ApiController
         }
 
         // Extract categories before validation
-        $categories = $validatedData['categories'] ?? [];
+        $categories = $this->extractCategories($validatedData);
 
         try {
             // Validate ownership of all resources before updating the transaction
             $this->validateResourceOwnership($validatedData, $categories);
             $this->checkUpdatedAt($transaction, $validatedData);
 
-            $transaction = DB::transaction(function () use (
-                $validatedData,
-                $transaction,
-                $recurringTransactionData,
-                $request
-            ) {
-
-                $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
-                $transaction->markAsSynced();
-
-                if (isset($validatedData['categories'])) {
-                    $transaction->categories()->sync($validatedData['categories']);
-                }
-
-                if (isset($validatedData['group_id'])) {
-                    $transaction->groups()->sync([$validatedData['group_id']]);
-                }
-
-                $user = $request->user();
-                if (isset($request['client_id']) && ! $transaction->client_id) {
-                    $transaction->setClientGeneratedId($request['client_id'], $user);
-                }
-
-                $recurring_transaction = $transaction->recurringTransactionRule()->first();
-
-                // check if this transaction is recurring
-                if (empty($recurringTransactionData)) {
-                    if (! is_null($recurring_transaction)) {
-                        $recurring_transaction->delete();
-                    }
-                } else {
-                    $schedule_job = true;
-
-                    if (is_null($recurring_transaction)) {
-                        $recurring_transaction = new RecurringTransactionRule(
-                            $recurringTransactionData
-                        ); // create temporay instance from data array
-                        $recurring_transaction->next_scheduled_at =
-                            $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
-                        $recurring_transaction->transaction_id = $transaction->id;
-                        $recurring_transaction->save();
-                    } else {
-                        // Check if details have changed. If not, do not reschedule the job
-                        if (
-                            (
-                                $recurringTransactionData['recurrence_period']
-                                ==
-                                $recurring_transaction->recurrence_period
-                            )
-                            &&
-                            (
-                                $recurringTransactionData['recurrence_interval']
-                                ==
-                                $recurring_transaction->recurrence_interval
-                            )
-                        ) {
-                            $schedule_job = false;
-                        } else {
-                            $recurringTransactionData['next_scheduled_at'] =
-                                $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
-                        }
-                        $recurring_transaction->update($recurringTransactionData);
-                    }
-                    if ($schedule_job) {
-                        RecurrentTransactionJob::dispatch(
-                            (int) $recurring_transaction->id
-                        )->delay($recurring_transaction->next_scheduled_at);
-                    }
-                }
-
-                return $transaction;
-            });
+            $transaction = $this->updateTransaction($transaction, $validatedData, $categories, $recurringTransactionData, $request);
 
             return $this->success($transaction, 200);
         } catch (HttpException $e) {
@@ -883,5 +710,177 @@ class TransactionController extends ApiController
                 'income_transaction_client_id' => $data['client_id'] ?? null
             ]
         );
+    }
+
+    private function extractAndValidateRecurringData(Request $request, array &$data): array
+    {
+        $recurringTransactionData = [];
+
+        if (isset($data['is_recurring']) && $data['is_recurring']) {
+            $result = $this->validateRequest($request, [
+                'recurrence_period' => 'required',
+            ]);
+            if (! $result['isValidated']) {
+                return $this->failure($result['message'], $result['code'], $result['errors']);
+            }
+
+            $recurringTransactionData['recurrence_period'] = $data['recurrence_period'];
+            $recurringTransactionData['recurrence_interval'] = $data['recurrence_interval'] ?? null;
+            $recurringTransactionData['recurrence_ends_at'] = $data['recurrence_ends_at'] ?? null;
+        }
+        // remove recurring transaction data from $data
+        unset($data['recurrence_ends_at']);
+        unset($data['recurrence_interval']);
+        unset($data['recurrence_period']);
+        unset($data['is_recurring']);
+
+        return $recurringTransactionData;
+    }
+
+    private function formatTransactionDates(array &$data): void
+    {
+        if (isset($data['datetime'])) {
+            $data['datetime'] = format_iso8601_to_sql($data['datetime']);
+        }
+
+        if (isset($data['created_at'])) {
+            $data['created_at'] = format_iso8601_to_sql($data['created_at']);
+        }
+
+        if (isset($data['updated_at'])) {
+            $data['updated_at'] = format_iso8601_to_sql($data['updated_at']);
+        }
+    }
+
+    private function extractCategories(array &$data): array
+    {
+        $categories = [];
+        if (isset($data['categories'])) {
+            $categories = $data['categories'];
+            unset($data['categories']);
+        }
+
+        return $categories;
+    }
+
+    private function createTransaction($user, array $data, array $categories, array $recurringTransactionData, Request $request)
+    {
+        return DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData, $user) {
+            /** @var Transaction $transaction */
+            $transaction = $user->transactions()->create($data);
+
+            if (isset($data['client_id'])) {
+                $transaction->setClientGeneratedId($data['client_id'], $user);
+            }
+
+            $transaction->markAsSynced();
+
+            if (! empty($categories)) {
+                $transaction->categories()->sync($categories);
+            }
+
+            if (isset($data['group_id'])) {
+                $transaction->groups()->sync($data['group_id']);
+            }
+
+            if ($request->hasFile('files')) {
+                foreach ($request->file('files') as $file) {
+                    $path = $file->store('transactions');
+                    $transaction->files()->create([
+                        'path' => $path,
+                        'type' => 'file',
+                    ]);
+                }
+            }
+
+            // check if this transaction is recurring
+            if (! empty($recurringTransactionData)) {
+                // Create recurring transaction
+                $recurring_transaction = new RecurringTransactionRule($recurringTransactionData);
+                $recurring_transaction->next_scheduled_at =
+                    $this->recurringTransactionService->getNextScheduleDate(
+                        $recurring_transaction
+                    );
+                $recurring_transaction->transaction_id = $transaction->id;
+                $recurring_transaction->save();
+
+                RecurrentTransactionJob::dispatch(
+                    (int) $recurring_transaction->id
+                )->delay($recurring_transaction->next_scheduled_at);
+            }
+
+            return $transaction;
+        });
+    }
+
+
+    private function updateTransaction(Transaction $transaction, array $validatedData, array $recurringTransactionData, Request $request)
+    {
+        return DB::transaction(function () use ($validatedData, $transaction, $recurringTransactionData, $request) {
+            $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
+            $transaction->markAsSynced();
+
+            if (isset($validatedData['categories'])) {
+                $transaction->categories()->sync($validatedData['categories']);
+            }
+
+            if (isset($validatedData['group_id'])) {
+                $transaction->groups()->sync([$validatedData['group_id']]);
+            }
+
+            $user = $request->user();
+            if (isset($request['client_id']) && ! $transaction->client_id) {
+                $transaction->setClientGeneratedId($request['client_id'], $user);
+            }
+
+            $recurring_transaction = $transaction->recurringTransactionRule()->first();
+
+            // check if this transaction is recurring
+            if (empty($recurringTransactionData)) {
+                if (! is_null($recurring_transaction)) {
+                    $recurring_transaction->delete();
+                }
+            } else {
+                $schedule_job = true;
+
+                if (is_null($recurring_transaction)) {
+                    $recurring_transaction = new RecurringTransactionRule(
+                        $recurringTransactionData
+                    ); // create temporary instance from data array
+                    $recurring_transaction->next_scheduled_at =
+                        $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
+                    $recurring_transaction->transaction_id = $transaction->id;
+                    $recurring_transaction->save();
+                } else {
+                    // Check if details have changed. If not, do not reschedule the job
+                    if (
+                        (
+                            $recurringTransactionData['recurrence_period']
+                            ==
+                            $recurring_transaction->recurrence_period
+                        )
+                        &&
+                        (
+                            $recurringTransactionData['recurrence_interval']
+                            ==
+                            $recurring_transaction->recurrence_interval
+                        )
+                    ) {
+                        $schedule_job = false;
+                    } else {
+                        $recurringTransactionData['next_scheduled_at'] =
+                            $this->recurringTransactionService->getNextScheduleDate($recurring_transaction);
+                    }
+                    $recurring_transaction->update($recurringTransactionData);
+                }
+                if ($schedule_job) {
+                    RecurrentTransactionJob::dispatch(
+                        (int) $recurring_transaction->id
+                    )->delay($recurring_transaction->next_scheduled_at);
+                }
+            }
+
+            return $transaction;
+        });
     }
 }
