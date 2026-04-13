@@ -112,6 +112,9 @@ class AdvancedImportTest extends TestCase
                 ['index' => 0],
                 ['index' => 1],
             ],
+            'auto_create_wallets' => true,
+            'auto_create_parties' => true,
+            'auto_create_categories' => true,
         ]);
 
         $response->assertStatus(200);
@@ -329,6 +332,9 @@ class AdvancedImportTest extends TestCase
                     'description' => 'Edited description',
                 ],
             ],
+            'auto_create_wallets' => true,
+            'auto_create_parties' => true,
+            'auto_create_categories' => true,
         ]);
 
         $response->assertStatus(200);
@@ -416,6 +422,9 @@ class AdvancedImportTest extends TestCase
                     'amount' => 80.00,
                 ],
             ],
+            'auto_create_wallets' => true,
+            'auto_create_parties' => true,
+            'auto_create_categories' => true,
         ]);
 
         $response->assertStatus(200);
@@ -556,6 +565,9 @@ class AdvancedImportTest extends TestCase
                     'type' => 'income',
                 ],
             ],
+            'auto_create_wallets' => true,
+            'auto_create_parties' => true,
+            'auto_create_categories' => true,
         ]);
 
         $response->assertStatus(200);
@@ -563,5 +575,162 @@ class AdvancedImportTest extends TestCase
         $transaction = $this->user->transactions()->first();
         $this->assertNotNull($transaction);
         $this->assertEquals('income', $transaction->type);
+    }
+
+    public function test_confirm_does_not_auto_create_entities_by_default(): void
+    {
+        $session = $this->user->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [
+                [
+                    'amount' => 50.00,
+                    'currency' => 'USD',
+                    'type' => 'expense',
+                    'party' => 'New Store',
+                    'wallet' => 'New Wallet',
+                    'category' => 'New Category',
+                    'description' => 'Test purchase',
+                    'date' => '2025-03-01',
+                    'confidence' => 1.0,
+                    'document_type' => 'csv',
+                    'duplicate' => null,
+                ],
+            ],
+        ]);
+
+        // No auto_create flags — defaults to false
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+        ]);
+
+        // Import should fail because wallet doesn't exist and wasn't auto-created
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertNotEmpty($data['errors']);
+
+        // No entities should have been created
+        $this->assertEquals(0, $this->user->wallets()->count());
+        $this->assertEquals(0, $this->user->parties()->count());
+        $this->assertEquals(0, $this->user->categories()->count());
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_respects_granular_auto_create_flags(): void
+    {
+        $session = $this->user->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [
+                [
+                    'amount' => 75.00,
+                    'currency' => 'USD',
+                    'type' => 'expense',
+                    'party' => 'New Party',
+                    'wallet' => 'New Wallet',
+                    'category' => 'New Category',
+                    'description' => 'Granular test',
+                    'date' => '2025-03-01',
+                    'confidence' => 1.0,
+                    'document_type' => 'csv',
+                    'duplicate' => null,
+                ],
+            ],
+        ]);
+
+        // Enable auto-create for wallets and parties only
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+            'auto_create_wallets' => true,
+            'auto_create_parties' => true,
+            'auto_create_categories' => false,
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+
+        // Wallet should be created and linked
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $this->assertNotNull($transaction->wallet_id);
+
+        // Party should be created and linked
+        $this->assertEquals(1, $this->user->parties()->count());
+        $this->assertNotNull($transaction->party_id);
+        $this->assertEquals('New Party', $this->user->parties()->first()->name);
+
+        // Category should NOT be created
+        $this->assertEquals(0, $this->user->categories()->count());
+        $this->assertEquals(0, $transaction->categories()->count());
+    }
+
+    public function test_confirm_matches_existing_entities_without_auto_create(): void
+    {
+        // Pre-create entities
+        $wallet = $this->user->wallets()->create(['name' => 'My Wallet', 'currency' => 'USD']);
+        $party = $this->user->parties()->create(['name' => 'My Store']);
+        $category = $this->user->categories()->create(['name' => 'Groceries', 'type' => 'expense']);
+
+        $session = $this->user->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [
+                [
+                    'amount' => 30.00,
+                    'currency' => 'USD',
+                    'type' => 'expense',
+                    'party' => 'My Store',
+                    'wallet' => 'My Wallet',
+                    'category' => 'Groceries',
+                    'description' => 'Weekly shop',
+                    'date' => '2025-03-01',
+                    'confidence' => 1.0,
+                    'document_type' => 'csv',
+                    'duplicate' => null,
+                ],
+            ],
+        ]);
+
+        // No auto-create flags — should still match existing entities
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+
+        // Should link to existing entities without creating new ones
+        $this->assertEquals($wallet->id, $transaction->wallet_id);
+        $this->assertEquals($party->id, $transaction->party_id);
+        $this->assertEquals(1, $transaction->categories()->count());
+        $this->assertEquals($category->id, $transaction->categories()->first()->id);
+
+        // No additional entities created
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $this->assertEquals(1, $this->user->parties()->count());
+        $this->assertEquals(1, $this->user->categories()->count());
     }
 }

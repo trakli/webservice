@@ -22,7 +22,7 @@ class SuggestionEnricher
             return [];
         }
 
-        $wallets = $user->wallets()->select('name', 'currency')->get()->toArray();
+        $wallets = $user->wallets()->select('name', 'currency', 'slug')->get()->toArray();
         $categories = $user->categories()->select('name', 'type')->get()->toArray();
         $parties = $user->parties()->select('name')->get()->toArray();
 
@@ -55,7 +55,7 @@ class SuggestionEnricher
             $enriched = $this->parseResponse($response->text);
 
             if (is_array($enriched) && count($enriched) === count($suggestions)) {
-                return $this->mergeEnrichments($suggestions, $enriched);
+                return $this->mergeEnrichments($suggestions, $enriched, $wallets);
             }
 
             Log::warning('SuggestionEnricher: LLM response count mismatch', [
@@ -158,19 +158,35 @@ PROMPT;
      * @param  TransactionSuggestion[]  $suggestions
      * @return TransactionSuggestion[]
      */
-    private function mergeEnrichments(array $suggestions, array $enrichments): array
+    private function mergeEnrichments(array $suggestions, array $enrichments, array $wallets): array
     {
+        $walletsBySlug = [];
+        $slugByName = [];
+        foreach ($wallets as $w) {
+            $walletsBySlug[$w['slug']] = $w;
+            $slugByName[$w['name']] = $w['slug'];
+        }
+
         $result = [];
 
         foreach ($suggestions as $i => $suggestion) {
             $enrichment = $enrichments[$i] ?? [];
+            $assignedWallet = $enrichment['wallet'] ?? $suggestion->wallet;
+
+            $currency = $suggestion->currency;
+            if ($assignedWallet) {
+                $slug = $slugByName[$assignedWallet] ?? null;
+                if ($slug && isset($walletsBySlug[$slug])) {
+                    $currency = $walletsBySlug[$slug]['currency'];
+                }
+            }
 
             $result[] = new TransactionSuggestion(
                 amount: $suggestion->amount,
-                currency: $suggestion->currency,
+                currency: $currency,
                 type: $enrichment['type'] ?? $suggestion->type,
                 party: $enrichment['party'] ?? $suggestion->party,
-                wallet: $enrichment['wallet'] ?? $suggestion->wallet,
+                wallet: $assignedWallet,
                 category: $enrichment['category'] ?? $suggestion->category,
                 description: $enrichment['description'] ?? $suggestion->description,
                 date: $suggestion->date,

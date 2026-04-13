@@ -257,7 +257,10 @@ class ImportController extends ApiController
                         $this->fileImportService->importTransaction(
                             $this->convertImportObjectToArray($importToFix),
                             $transactionType,
-                            $user
+                            $user,
+                            autoCreateWallets: true,
+                            autoCreateParties: true,
+                            autoCreateCategories: true,
                         );
                     } catch (\Exception $e) {
                         $importToFix['reason'] = 'An error occurred while importing this transaction';
@@ -396,6 +399,9 @@ class ImportController extends ApiController
                 properties: [
                     new OA\Property(property: 'session_id', type: 'integer'),
                     new OA\Property(property: 'accepted', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'auto_create_wallets', type: 'boolean', default: false, description: 'Create wallets that do not exist'),
+                    new OA\Property(property: 'auto_create_parties', type: 'boolean', default: false, description: 'Create parties that do not exist'),
+                    new OA\Property(property: 'auto_create_categories', type: 'boolean', default: false, description: 'Create categories that do not exist'),
                 ]
             )
         ),
@@ -421,11 +427,16 @@ class ImportController extends ApiController
 
         $suggestions = $session->suggestions;
         $accepted = $request->input('accepted');
+        $autoCreate = [
+            'wallets' => $request->boolean('auto_create_wallets', false),
+            'parties' => $request->boolean('auto_create_parties', false),
+            'categories' => $request->boolean('auto_create_categories', false),
+        ];
         $createdCount = 0;
         $errors = [];
 
         foreach ($accepted as $item) {
-            $result = $this->processAcceptedItem($item, $suggestions, $user);
+            $result = $this->processAcceptedItem($item, $suggestions, $user, $autoCreate);
 
             if ($result === true) {
                 $createdCount++;
@@ -434,12 +445,16 @@ class ImportController extends ApiController
             }
         }
 
-        $session->update(['status' => 'confirmed']);
-
         $data = [
             'created_count' => $createdCount,
             'errors' => $errors,
         ];
+
+        if ($createdCount === 0 && ! empty($errors)) {
+            return $this->success($data, __('Import failed. No transactions were created.'), 206);
+        }
+
+        $session->update(['status' => 'confirmed']);
 
         if (! empty($errors)) {
             return $this->success($data, __('Import completed with some errors.'), 206);
@@ -453,7 +468,7 @@ class ImportController extends ApiController
      *
      * @return true|string True on success, error message string on failure
      */
-    private function processAcceptedItem(array $item, array $suggestions, $user): true|string
+    private function processAcceptedItem(array $item, array $suggestions, $user, array $autoCreate = []): true|string
     {
         $index = $item['index'];
 
@@ -473,7 +488,10 @@ class ImportController extends ApiController
             $this->fileImportService->importTransaction(
                 $suggestionObj->toImportArray(),
                 $transactionType,
-                $user
+                $user,
+                autoCreateWallets: $autoCreate['wallets'],
+                autoCreateParties: $autoCreate['parties'],
+                autoCreateCategories: $autoCreate['categories'],
             );
 
             return true;

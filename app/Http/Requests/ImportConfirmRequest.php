@@ -20,6 +20,9 @@ class ImportConfirmRequest extends FormRequest
             'accepted.*.category' => 'nullable|string',
             'accepted.*.description' => 'nullable|string',
             'accepted.*.date' => 'nullable|date_format:Y-m-d',
+            'auto_create_wallets' => 'nullable|boolean',
+            'auto_create_parties' => 'nullable|boolean',
+            'auto_create_categories' => 'nullable|boolean',
         ];
     }
 }
