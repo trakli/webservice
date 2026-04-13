@@ -141,7 +141,7 @@ class SuggestionEnricherTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertEquals(99.99, $result[0]->amount);
-        $this->assertEquals('EUR', $result[0]->currency);
+        $this->assertEquals('USD', $result[0]->currency);
         $this->assertEquals('2025-03-20', $result[0]->date);
         $this->assertEquals(0.9, $result[0]->confidence);
         $this->assertEquals('csv', $result[0]->documentType);

@@ -68,7 +68,14 @@ class FileImportService
                 $transactionType = strtolower(trim($data[2]));
                 if (in_array($transactionType, [TransactionType::EXPENSE->value, TransactionType::INCOME->value])) {
                     try {
-                        $this->importTransaction($data, $transactionType, $user);
+                        $this->importTransaction(
+                            $data,
+                            $transactionType,
+                            $user,
+                            autoCreateWallets: true,
+                            autoCreateParties: true,
+                            autoCreateCategories: true,
+                        );
                     } catch (FileImportException $e) {
                         $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                         Log::error($e);
@@ -166,9 +173,15 @@ class FileImportService
      *
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function importTransaction(array $data, string $transactionType, User $user): void
-    {
-        DB::transaction(function () use ($user, $transactionType, $data) {
+    public function importTransaction(
+        array $data,
+        string $transactionType,
+        User $user,
+        bool $autoCreateWallets = false,
+        bool $autoCreateParties = false,
+        bool $autoCreateCategories = false,
+    ): void {
+        DB::transaction(function () use ($user, $transactionType, $data, $autoCreateWallets, $autoCreateParties, $autoCreateCategories) {
             // get the data we need
 
             $amount = floatval($data[0]);
@@ -182,14 +195,13 @@ class FileImportService
             $existingParty = null;
 
             if (! empty($wallet)) {
-                // check if the wallet exists, if not create a new wallet
                 if (empty($currency)) {
                     $existingWallet = $user->wallets()->where('name', $wallet)->first();
                 } else {
                     $existingWallet = $user->wallets()->where('name', $wallet)->where('currency', $currency)->first();
                 }
 
-                if (is_null($existingWallet) && ! empty($currency)) {
+                if (is_null($existingWallet) && ! empty($currency) && $autoCreateWallets) {
                     $existingWallet = $user->wallets()->create([
                         'name' => $wallet,
                         'currency' => $currency,
@@ -198,9 +210,8 @@ class FileImportService
             }
 
             if (! empty($party)) {
-                // check if the party exists, if not create a new party
                 $existingParty = $user->parties()->where('name', $party)->first();
-                if (is_null($existingParty)) {
+                if (is_null($existingParty) && $autoCreateParties) {
                     $existingParty = $user->parties()->create([
                         'name' => $party,
                     ]);
@@ -223,16 +234,17 @@ class FileImportService
             $transaction = $user->transactions()->create($transactionData);
 
             if (! empty($category)) {
-                // check if the category exists, if not create a new category
                 $existingCategory = $user->categories()->where('name', $category)->first();
-                if (is_null($existingCategory)) {
+                if (is_null($existingCategory) && $autoCreateCategories) {
                     $existingCategory = $user->categories()->create([
                         'type' => $transactionType,
                         'name' => $category,
                     ]);
                 }
 
-                $transaction->categories()->sync([$existingCategory->id]);
+                if (! is_null($existingCategory)) {
+                    $transaction->categories()->sync([$existingCategory->id]);
+                }
             }
         });
     }

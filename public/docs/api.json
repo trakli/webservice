@@ -1220,6 +1220,21 @@
                                         "items": {
                                             "type": "object"
                                         }
+                                    },
+                                    "auto_create_wallets": {
+                                        "description": "Create wallets that do not exist",
+                                        "type": "boolean",
+                                        "default": false
+                                    },
+                                    "auto_create_parties": {
+                                        "description": "Create parties that do not exist",
+                                        "type": "boolean",
+                                        "default": false
+                                    },
+                                    "auto_create_categories": {
+                                        "description": "Create categories that do not exist",
+                                        "type": "boolean",
+                                        "default": false
                                     }
                                 },
                                 "type": "object"
