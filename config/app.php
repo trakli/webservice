@@ -185,13 +185,4 @@ return [
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Convert Myself to Transfer
-    |--------------------------------------------------------------------------
-    |
-    | Toggle feature to convert "myself" party to "transfer" type when creating a transaction. This is useful for users who want to track their own transactions without creating a separate party for themselves.
-    |
-    */
 ];
