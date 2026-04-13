@@ -249,7 +249,7 @@ class TransactionController extends ApiController
      */
     public function store(Request $request): JsonResponse
     {
-        $validationResult = $this->validateStoreData($request);
+        $validationResult = $this->validateRequestData($request);
 
         if (! $validationResult['isValidated']) {
             return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
@@ -571,8 +571,23 @@ class TransactionController extends ApiController
      */
     public function update(Request $request, $transactionId): JsonResponse
     {
-
-        $validationResult = $this->validateUpdateData($request);
+        $validationResult = $this->validateRequest($request, [
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
+            'amount' => 'nullable|numeric|min:0.01',
+            'type' => 'nullable|string|in:income,expense',
+            'datetime' => ['nullable', new Iso8601DateTime()],
+            'description' => 'nullable|string',
+            'party_id' => 'nullable|integer|exists:parties,id',
+            'wallet_id' => 'sometimes|integer|exists:wallets,id',
+            'group_id' => 'nullable|integer|exists:groups,id',
+            'categories' => 'nullable|array',
+            'categories.*' => 'integer|exists:categories,id',
+            'is_recurring' => 'nullable|boolean',
+            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
+            'recurrence_interval' => 'nullable|integer|min:1',
+            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
+            'updated_at' => ['nullable', new Iso8601DateTime()],
+        ]);
 
         if (! $validationResult['isValidated']) {
             return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
@@ -808,7 +823,7 @@ class TransactionController extends ApiController
         }
     }
 
-    private function validateStoreData(Request $request): array
+    private function validateRequestData(Request $request): array
     {
         return $this->validateRequest($request, [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
@@ -830,25 +845,6 @@ class TransactionController extends ApiController
             'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
 
             'from_wallet_id' => 'required_if:convert_myself_to_transfer,true|integer|exists:wallets,id',
-        ]);
-    }
-
-    private function validateUpdateData(Request $request): array
-    {
-        return $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'nullable|numeric|min:0.01',
-            'type' => 'nullable|string|in:income,expense',
-            'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'nullable|integer|exists:wallets,id',
-            'categories' => 'nullable|array',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-
         ]);
     }
 
