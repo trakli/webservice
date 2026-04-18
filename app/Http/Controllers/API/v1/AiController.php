@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\AiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -70,7 +69,7 @@ class AiController extends ApiController
         $user = $request->user();
 
         $session = new ChatSession([
-            'title' => $validated['title'] ?? Str::limit($validated['message'], 60),
+            'title' => $validated['title'] ?? null,
         ]);
         $session->owner()->associate($user);
         $session->save();

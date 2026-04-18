@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ProcessChatMessageJob implements ShouldQueue
@@ -48,6 +49,7 @@ class ProcessChatMessageJob implements ShouldQueue
 
         if ($route === AiRouter::ROUTE_GENERAL) {
             $this->answerGeneral($router, $userMessage->content);
+            $this->maybeGenerateTitle($router, $userMessage->content);
 
             return;
         }
@@ -67,6 +69,7 @@ class ProcessChatMessageJob implements ShouldQueue
                 $userMessage->content,
                 $response['error'] ?? __('The data query returned no results.')
             );
+            $this->maybeGenerateTitle($router, $userMessage->content);
 
             return;
         }
@@ -79,6 +82,8 @@ class ProcessChatMessageJob implements ShouldQueue
             'result' => array_merge($data, ['source' => 'smartql']),
             'completed_at' => now(),
         ]);
+
+        $this->maybeGenerateTitle($router, $userMessage->content);
     }
 
     public function failed(?Throwable $exception): void
@@ -125,6 +130,28 @@ class ProcessChatMessageJob implements ShouldQueue
                 'rows' => [],
             ],
             'completed_at' => now(),
+        ]);
+    }
+
+    private function maybeGenerateTitle(AiRouter $router, string $firstQuestion): void
+    {
+        $session = $this->assistantMessage->session;
+
+        if ($session->title !== null) {
+            return;
+        }
+
+        $completedAssistants = $session->messages()
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->where('status', ChatMessage::STATUS_COMPLETED)
+            ->count();
+
+        if ($completedAssistants !== 1) {
+            return;
+        }
+
+        $session->update([
+            'title' => $router->generateTitle($firstQuestion) ?? Str::limit($firstQuestion, 60),
         ]);
     }
 

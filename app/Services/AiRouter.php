@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Prism\Prism\Facades\Prism;
 use Throwable;
 
@@ -64,6 +65,34 @@ class AiRouter
         }
     }
 
+    public function generateTitle(string $firstQuestion): ?string
+    {
+        try {
+            $response = Prism::text()
+                ->using(
+                    config('services.llm.provider'),
+                    config('services.llm.model'),
+                )
+                ->withSystemPrompt($this->titleSystemPrompt())
+                ->withPrompt($firstQuestion)
+                ->usingTemperature(0.3)
+                ->asText();
+
+            $title = trim($response->text);
+            $title = trim($title, "\"'.,;:!?\n\r\t ");
+
+            if ($title === '') {
+                return null;
+            }
+
+            return Str::limit($title, 80, '');
+        } catch (Throwable $e) {
+            Log::warning('AiRouter generateTitle failed', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
     private function classifierSystemPrompt(): string
     {
         return <<<'PROMPT'
@@ -96,5 +125,12 @@ PROMPT;
         }
 
         return $base;
+    }
+
+    private function titleSystemPrompt(): string
+    {
+        return 'Generate a concise chat title (max 6 words) summarizing the '
+            . 'topic of the given question. Respond with only the title — '
+            . 'no quotes, no trailing punctuation, no explanation.';
     }
 }
