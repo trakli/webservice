@@ -6,6 +6,7 @@ use App\Jobs\ProcessChatMessageJob;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\User;
+use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -114,7 +115,7 @@ class AiChatTest extends TestCase
         $this->assertDatabaseMissing('chat_messages', ['chat_session_id' => $session->id]);
     }
 
-    public function test_job_writes_successful_response_into_assistant_message(): void
+    public function test_job_routes_data_question_to_smartql(): void
     {
         [$assistant] = $this->makeTurn('spending last month?');
 
@@ -128,28 +129,80 @@ class AiChatTest extends TestCase
             ],
         ]);
 
-        (new ProcessChatMessageJob($assistant))->handle($ai);
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
         $assistant->refresh();
         $this->assertEquals(ChatMessage::STATUS_COMPLETED, $assistant->status);
         $this->assertEquals('You spent $500.', $assistant->content);
+        $this->assertEquals('smartql', $assistant->result['source']);
     }
 
-    public function test_job_records_failure(): void
+    public function test_job_routes_general_question_to_prism(): void
     {
-        [$assistant] = $this->makeTurn('noop');
+        [$assistant] = $this->makeTurn('What does expense mean?');
+
+        $ai = Mockery::mock(AiService::class);
+        $ai->shouldNotReceive('ask');
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_GENERAL);
+        $router->shouldReceive('answerGeneral')->once()->with('What does expense mean?', null)
+            ->andReturn(['success' => true, 'text' => 'An expense is money you spend.']);
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router);
+
+        $assistant->refresh();
+        $this->assertEquals(ChatMessage::STATUS_COMPLETED, $assistant->status);
+        $this->assertEquals('An expense is money you spend.', $assistant->content);
+        $this->assertEquals('prism', $assistant->result['source']);
+    }
+
+    public function test_job_falls_back_to_prism_when_smartql_fails(): void
+    {
+        [$assistant] = $this->makeTurn('something SmartQL cannot handle');
 
         $ai = Mockery::mock(AiService::class);
         $ai->shouldReceive('ask')->once()->andReturn([
             'success' => false,
-            'error' => 'boom',
+            'error' => 'SQL generation failed',
         ]);
 
-        (new ProcessChatMessageJob($assistant))->handle($ai);
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('answerGeneral')->once()
+            ->with('something SmartQL cannot handle', 'SQL generation failed')
+            ->andReturn(['success' => true, 'text' => "I couldn't query your data for that."]);
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
         $assistant->refresh();
-        $this->assertEquals(ChatMessage::STATUS_FAILED, $assistant->status);
-        $this->assertEquals('boom', $assistant->error);
+        $this->assertEquals(ChatMessage::STATUS_COMPLETED, $assistant->status);
+        $this->assertEquals("I couldn't query your data for that.", $assistant->content);
+        $this->assertEquals('prism_fallback', $assistant->result['source']);
+    }
+
+    public function test_job_falls_back_when_smartql_returns_empty_rows(): void
+    {
+        [$assistant] = $this->makeTurn('weird question');
+
+        $ai = Mockery::mock(AiService::class);
+        $ai->shouldReceive('ask')->once()->andReturn([
+            'success' => true,
+            'data' => ['rows' => [], 'format_type' => 'table'],
+        ]);
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('answerGeneral')->once()
+            ->andReturn(['success' => true, 'text' => 'No data matched.']);
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router);
+
+        $assistant->refresh();
+        $this->assertEquals('prism_fallback', $assistant->result['source']);
     }
 
     private function makeSession(): ChatSession
