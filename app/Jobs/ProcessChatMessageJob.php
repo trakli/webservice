@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\ChatMessage;
+use App\Services\AiService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+class ProcessChatMessageJob implements ShouldQueue
+{
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
+
+    public int $timeout = 120;
+
+    public int $tries = 2;
+
+    public function __construct(public ChatMessage $assistantMessage)
+    {
+    }
+
+    public function handle(AiService $aiService): void
+    {
+        $this->assistantMessage->update(['status' => ChatMessage::STATUS_PROCESSING]);
+
+        $userMessage = ChatMessage::query()
+            ->where('chat_session_id', $this->assistantMessage->chat_session_id)
+            ->where('role', ChatMessage::ROLE_USER)
+            ->where('id', '<', $this->assistantMessage->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($userMessage === null) {
+            $this->markFailed(__('No question found for this assistant message.'));
+
+            return;
+        }
+
+        $response = $aiService->ask(
+            question: $userMessage->content,
+            userId: (int) $userMessage->user_id,
+            execute: true,
+            formatHint: $userMessage->format_hint,
+            generateResponse: true,
+            language: $userMessage->language,
+        );
+
+        if (! ($response['success'] ?? false)) {
+            $this->markFailed($response['error']);
+
+            return;
+        }
+
+        $data = $response['data'];
+
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => $data['human_response'] ?? $data['explanation'] ?? null,
+            'result' => $data,
+            'completed_at' => now(),
+        ]);
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        Log::error('ProcessChatMessageJob failed', [
+            'message_id' => $this->assistantMessage->id,
+            'message' => $exception?->getMessage(),
+        ]);
+
+        $this->markFailed(
+            $exception?->getMessage() ?? __('AI service is currently unavailable. Please try again later.')
+        );
+    }
+
+    private function markFailed(string $error): void
+    {
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_FAILED,
+            'error' => $error,
+            'completed_at' => now(),
+        ]);
+    }
+}
