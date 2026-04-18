@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ChatMessage;
+use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +28,7 @@ class ProcessChatMessageJob implements ShouldQueue
     {
     }
 
-    public function handle(AiService $aiService): void
+    public function handle(AiService $aiService, AiRouter $router): void
     {
         $this->assistantMessage->update(['status' => ChatMessage::STATUS_PROCESSING]);
 
@@ -44,6 +45,14 @@ class ProcessChatMessageJob implements ShouldQueue
             return;
         }
 
+        $route = $router->classify($userMessage->content);
+
+        if ($route === AiRouter::ROUTE_GENERAL) {
+            $this->answerGeneral($router, $userMessage->content);
+
+            return;
+        }
+
         $response = $aiService->ask(
             question: $userMessage->content,
             userId: (int) $userMessage->user_id,
@@ -53,8 +62,12 @@ class ProcessChatMessageJob implements ShouldQueue
             language: $userMessage->language,
         );
 
-        if (! ($response['success'] ?? false)) {
-            $this->markFailed($response['error']);
+        if ($this->isSoftFailure($response)) {
+            $this->answerGeneral(
+                $router,
+                $userMessage->content,
+                $response['error'] ?? __('The data query returned no results.')
+            );
 
             return;
         }
@@ -64,7 +77,7 @@ class ProcessChatMessageJob implements ShouldQueue
         $this->assistantMessage->update([
             'status' => ChatMessage::STATUS_COMPLETED,
             'content' => $data['human_response'] ?? $data['explanation'] ?? null,
-            'result' => $data,
+            'result' => array_merge($data, ['source' => 'smartql']),
             'completed_at' => now(),
         ]);
     }
@@ -79,6 +92,41 @@ class ProcessChatMessageJob implements ShouldQueue
         $this->markFailed(
             $exception?->getMessage() ?? __('AI service is currently unavailable. Please try again later.')
         );
+    }
+
+    private function isSoftFailure(array $response): bool
+    {
+        if (! ($response['success'] ?? false)) {
+            return true;
+        }
+
+        $rows = $response['data']['rows'] ?? null;
+
+        return is_array($rows) && $rows === [];
+    }
+
+    private function answerGeneral(AiRouter $router, string $question, ?string $hint = null): void
+    {
+        $answer = $router->answerGeneral($question, $hint);
+
+        if (! $answer['success']) {
+            $this->markFailed($answer['error']);
+
+            return;
+        }
+
+        $source = $hint === null ? 'prism' : 'prism_fallback';
+
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => $answer['text'],
+            'result' => [
+                'source' => $source,
+                'format_type' => 'raw',
+                'rows' => [],
+            ],
+            'completed_at' => now(),
+        ]);
     }
 
     private function markFailed(string $error): void
