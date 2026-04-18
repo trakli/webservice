@@ -300,16 +300,16 @@
                 }
             }
         },
-        "/ai/chats/{id}": {
+        "/ai/chats/{chat}": {
             "get": {
                 "tags": [
                     "AI"
                 ],
                 "summary": "Get a chat session with all its messages",
-                "operationId": "a6283d6c8cf01c4123dec760e977c984",
+                "operationId": "43de850ed23ade09efd2d19ddcb892d3",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "chat",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -331,10 +331,10 @@
                     "AI"
                 ],
                 "summary": "Delete a chat session",
-                "operationId": "3445b2916c7eb1ad9bd183c5ee78a9b8",
+                "operationId": "26e5ea4c03e41d5913d1c98b5a862acd",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "chat",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -352,16 +352,16 @@
                 }
             }
         },
-        "/ai/chats/{id}/messages": {
+        "/ai/chats/{chat}/messages": {
             "post": {
                 "tags": [
                     "AI"
                 ],
                 "summary": "Add a follow-up message to an existing chat session",
-                "operationId": "4d3cc93ae53add98e271a7bed43b7c74",
+                "operationId": "55ee4451e6daaf1f2fd92560b45e6840",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "chat",
                         "in": "path",
                         "required": true,
                         "schema": {

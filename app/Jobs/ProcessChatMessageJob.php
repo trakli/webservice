@@ -32,11 +32,10 @@ class ProcessChatMessageJob implements ShouldQueue
     {
         $this->assistantMessage->update(['status' => ChatMessage::STATUS_PROCESSING]);
 
-        $userMessage = ChatMessage::query()
-            ->where('chat_session_id', $this->assistantMessage->chat_session_id)
+        $userMessage = $this->assistantMessage->session->messages()
             ->where('role', ChatMessage::ROLE_USER)
             ->where('id', '<', $this->assistantMessage->id)
-            ->orderByDesc('id')
+            ->latest('id')
             ->first();
 
         if ($userMessage === null) {
@@ -59,7 +58,7 @@ class ProcessChatMessageJob implements ShouldQueue
             execute: true,
             formatHint: $userMessage->format_hint,
             generateResponse: true,
-            language: $userMessage->language,
+            language: $userMessage->language ?? app()->getLocale(),
         );
 
         if ($this->isSoftFailure($response)) {

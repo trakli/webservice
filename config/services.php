@@ -42,8 +42,8 @@ return [
     ],
 
     'llm' => [
-        'provider' => env('LLM_PROVIDER', 'groq'),
-        'model' => env('LLM_MODEL', 'llama-3.1-8b-instant'),
+        'provider' => env('LLM_PROVIDER', 'gemini'),
+        'model' => env('LLM_MODEL', 'gemini-2.0-flash'),
     ],
 
     /*
