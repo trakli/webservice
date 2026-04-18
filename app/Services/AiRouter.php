@@ -26,9 +26,16 @@ class AiRouter
                 ->usingTemperature(0)
                 ->asText();
 
-            $label = strtolower(trim($response->text));
+            $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
+            $route = $label === self::ROUTE_GENERAL ? self::ROUTE_GENERAL : self::ROUTE_DATA;
 
-            return $label === self::ROUTE_GENERAL ? self::ROUTE_GENERAL : self::ROUTE_DATA;
+            Log::debug('AiRouter classified question', [
+                'question' => $question,
+                'raw' => $response->text,
+                'route' => $route,
+            ]);
+
+            return $route;
         } catch (Throwable $e) {
             Log::warning('AiRouter classify failed; defaulting to data route', [
                 'message' => $e->getMessage(),
@@ -96,32 +103,58 @@ class AiRouter
     private function classifierSystemPrompt(): string
     {
         return <<<'PROMPT'
-You are a router that classifies user questions for a personal finance assistant.
+Route the user's question for a personal finance assistant. Trakli has
+live access to the user's financial records (transactions, wallets,
+categories, parties, transfers, balances) through a data layer.
 
-Reply with EXACTLY one lowercase word — no punctuation, no explanation:
+Reply with EXACTLY one word: data OR general. No quotes, no punctuation,
+no explanation. Lowercase.
 
-- "data"    → the question requires querying the user's own financial data
-              (their transactions, wallets, categories, balances, spending,
-              income, transfers, parties, dates, amounts, totals, comparisons
-              over time, etc.)
-- "general" → the question does NOT require the user's data (greetings,
-              definitions, general financial advice, how-to questions about
-              the app, conceptual questions, small talk)
+Reply "data" for ANY question that would look up the user's own records:
+  - Spending: "what did I spend on food", "how much did I spend last month"
+  - Income: "my income this year", "how much did I earn in June"
+  - Wallets / balances: "what wallet has the most money", "my balance"
+  - Categories: "top categories", "biggest category last week"
+  - Transactions: "recent transactions", "what did I buy yesterday"
+  - Totals / comparisons: "total expenses", "am I spending more than last month"
+  - Anything using "my", "I", "me", "last", "recent", "most", with a
+    finance term (spend, expense, income, balance, wallet, category,
+    transaction, transfer, budget, savings)
 
-When in doubt, reply "data".
+Reply "general" ONLY for:
+  - Greetings / small talk: "hi", "hello", "how are you"
+  - Definitions of finance terms: "what is compound interest"
+  - How-to questions about the app itself: "how do I add a wallet"
+
+When uncertain, reply "data". The data layer can report "no matching
+results" — that's fine. Missing a real data question is worse than a
+useless data lookup.
 PROMPT;
     }
 
     private function generalSystemPrompt(?string $dataFailureHint): string
     {
-        $base = 'You are Trakli, a helpful personal finance assistant. '
-            . 'Be concise and friendly. If the user asks about their own '
-            . 'financial data and you do not have access to it, say so plainly '
-            . 'and suggest how they might rephrase.';
+        $base = 'You are Trakli, a personal finance assistant. Be concise '
+            . 'and friendly. Trakli has a live data layer with the user\'s '
+            . 'transactions, wallets, categories, parties, transfers and '
+            . 'balances — you do NOT see that data in this conversation, '
+            . 'but it exists and is available through Trakli.';
 
-        if ($dataFailureHint) {
-            $base .= ' Note: a prior attempt to query the user\'s data failed: '
-                . $dataFailureHint;
+        if ($dataFailureHint === null) {
+            $base .= ' The current question was routed to you because it '
+                . 'looked conversational (a greeting, a definition, or app '
+                . 'help). Answer it directly. If it is actually about the '
+                . 'user\'s own records, tell the user to retry rephrasing '
+                . 'clearly (for example: "How much did I spend last month?") '
+                . 'so Trakli can query the data layer — do NOT claim you '
+                . 'lack access to their data.';
+        } else {
+            $base .= ' A prior attempt to query the user\'s data failed with: '
+                . $dataFailureHint
+                . '. Apologise briefly, explain the lookup did not work, and '
+                . 'suggest a rephrasing the user could try. Do NOT claim you '
+                . 'lack access to their data in general — only that this '
+                . 'specific query did not succeed.';
         }
 
         return $base;
