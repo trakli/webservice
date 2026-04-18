@@ -74,11 +74,14 @@ class ProcessChatMessageJob implements ShouldQueue
             return;
         }
 
-        $data = $response['data'];
+        $data = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $content = is_string($data['human_response'] ?? null)
+            ? $data['human_response']
+            : (is_string($data['explanation'] ?? null) ? $data['explanation'] : null);
 
         $this->assistantMessage->update([
             'status' => ChatMessage::STATUS_COMPLETED,
-            'content' => $data['human_response'] ?? $data['explanation'] ?? null,
+            'content' => $content,
             'result' => array_merge($data, ['source' => 'smartql']),
             'completed_at' => now(),
         ]);

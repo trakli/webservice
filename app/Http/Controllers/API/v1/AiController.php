@@ -174,7 +174,7 @@ class AiController extends ApiController
 
     private function authorizeOwnership(User $user, ChatSession $session): void
     {
-        if ($session->owner_type !== $user->getMorphClass() || $session->owner_id !== $user->getKey()) {
+        if (! $session->owner?->is($user)) {
             abort(Response::HTTP_NOT_FOUND, 'Chat session not found.');
         }
     }

@@ -131,6 +131,7 @@ class AiChatTest extends TestCase
 
         $router = Mockery::mock(AiRouter::class);
         $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('generateTitle')->andReturn('Spending summary');
 
         (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
@@ -151,6 +152,7 @@ class AiChatTest extends TestCase
         $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_GENERAL);
         $router->shouldReceive('answerGeneral')->once()->with('What does expense mean?', null)
             ->andReturn(['success' => true, 'text' => 'An expense is money you spend.']);
+        $router->shouldReceive('generateTitle')->andReturn('Definition of expense');
 
         (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
@@ -175,6 +177,7 @@ class AiChatTest extends TestCase
         $router->shouldReceive('answerGeneral')->once()
             ->with('something SmartQL cannot handle', 'SQL generation failed')
             ->andReturn(['success' => true, 'text' => "I couldn't query your data for that."]);
+        $router->shouldReceive('generateTitle')->andReturn(null);
 
         (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
@@ -198,6 +201,7 @@ class AiChatTest extends TestCase
         $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
         $router->shouldReceive('answerGeneral')->once()
             ->andReturn(['success' => true, 'text' => 'No data matched.']);
+        $router->shouldReceive('generateTitle')->andReturn(null);
 
         (new ProcessChatMessageJob($assistant))->handle($ai, $router);
 
