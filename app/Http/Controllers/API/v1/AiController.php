@@ -69,11 +69,11 @@ class AiController extends ApiController
 
         $user = $request->user();
 
-        $session = ChatSession::create([
-            'owner_type' => $user->getMorphClass(),
-            'owner_id' => $user->getKey(),
+        $session = new ChatSession([
             'title' => $validated['title'] ?? Str::limit($validated['message'], 60),
         ]);
+        $session->owner()->associate($user);
+        $session->save();
 
         $this->dispatchTurn($session, $user, $validated, $request);
 
@@ -85,27 +85,27 @@ class AiController extends ApiController
     }
 
     #[OA\Get(
-        path: '/ai/chats/{id}',
+        path: '/ai/chats/{chat}',
         summary: 'Get a chat session with all its messages',
         tags: ['AI'],
-        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        parameters: [new OA\Parameter(name: 'chat', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Chat session with messages'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function show(Request $request, int $sessionId): JsonResponse
+    public function show(Request $request, ChatSession $chat): JsonResponse
     {
-        $session = $this->findOwnedSession($request, $sessionId);
+        $this->authorizeOwnership($request->user(), $chat);
 
-        return $this->success($session->load('messages'));
+        return $this->success($chat->load('messages'));
     }
 
     #[OA\Post(
-        path: '/ai/chats/{id}/messages',
+        path: '/ai/chats/{chat}/messages',
         summary: 'Add a follow-up message to an existing chat session',
         tags: ['AI'],
-        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        parameters: [new OA\Parameter(name: 'chat', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
@@ -122,18 +122,18 @@ class AiController extends ApiController
         ),
         responses: [new OA\Response(response: 202, description: 'Message queued')]
     )]
-    public function storeMessage(Request $request, int $sessionId): JsonResponse
+    public function storeMessage(Request $request, ChatSession $chat): JsonResponse
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
             'format_hint' => 'nullable|string|in:scalar,pair,record,list,pair_list,table,raw',
         ]);
 
-        $session = $this->findOwnedSession($request, $sessionId);
+        $this->authorizeOwnership($request->user(), $chat);
         $user = $request->user();
 
-        [$userMessage, $assistantMessage] = $this->dispatchTurn($session, $user, $validated, $request);
-        $session->touch();
+        [$userMessage, $assistantMessage] = $this->dispatchTurn($chat, $user, $validated, $request);
+        $chat->touch();
 
         return $this->success(
             ['user' => $userMessage, 'assistant' => $assistantMessage],
@@ -143,19 +143,19 @@ class AiController extends ApiController
     }
 
     #[OA\Delete(
-        path: '/ai/chats/{id}',
+        path: '/ai/chats/{chat}',
         summary: 'Delete a chat session',
         tags: ['AI'],
-        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        parameters: [new OA\Parameter(name: 'chat', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Deleted'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
-    public function destroy(Request $request, int $sessionId): JsonResponse
+    public function destroy(Request $request, ChatSession $chat): JsonResponse
     {
-        $session = $this->findOwnedSession($request, $sessionId);
-        $session->delete();
+        $this->authorizeOwnership($request->user(), $chat);
+        $chat->delete();
 
         return $this->success(null, __('Chat session deleted.'));
     }
@@ -173,17 +173,11 @@ class AiController extends ApiController
         ]);
     }
 
-    private function findOwnedSession(Request $request, int $sessionId): ChatSession
+    private function authorizeOwnership(User $user, ChatSession $session): void
     {
-        $session = ChatSession::query()
-            ->ownedBy($request->user())
-            ->find($sessionId);
-
-        if ($session === null) {
+        if ($session->owner_type !== $user->getMorphClass() || $session->owner_id !== $user->getKey()) {
             abort(Response::HTTP_NOT_FOUND, 'Chat session not found.');
         }
-
-        return $session;
     }
 
     /**

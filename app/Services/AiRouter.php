@@ -17,8 +17,8 @@ class AiRouter
         try {
             $response = Prism::text()
                 ->using(
-                    config('services.llm.provider', 'gemini'),
-                    config('services.llm.model', 'gemini-2.0-flash'),
+                    config('services.llm.provider'),
+                    config('services.llm.model'),
                 )
                 ->withSystemPrompt($this->classifierSystemPrompt())
                 ->withPrompt($question)
@@ -42,8 +42,8 @@ class AiRouter
         try {
             $response = Prism::text()
                 ->using(
-                    config('services.llm.provider', 'gemini'),
-                    config('services.llm.model', 'gemini-2.0-flash'),
+                    config('services.llm.provider'),
+                    config('services.llm.model'),
                 )
                 ->withSystemPrompt($this->generalSystemPrompt($dataFailureHint))
                 ->withPrompt($question)
