@@ -83,7 +83,7 @@ services:
             DB_PASSWORD: '${DB_PASSWORD}'
             LLM_PROVIDER: '${LLM_PROVIDER:-gemini}'
             LLM_MODEL: '${LLM_MODEL:-gemini-2.0-flash}'
-            LLM_API_KEY: '${LLM_API_KEY:-}'
+            LLM_API_KEY: '${LLM_API_KEY:?LLM_API_KEY must be set for SmartQL}'
             LLM_TEMPERATURE: '${LLM_TEMPERATURE:-0.1}'
             LLM_RETRIES: '${LLM_RETRIES:-3}'
         volumes:
