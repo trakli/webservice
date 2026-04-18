@@ -34,9 +34,9 @@ class ProcessChatMessageJob implements ShouldQueue
         $this->assistantMessage->update(['status' => ChatMessage::STATUS_PROCESSING]);
 
         $userMessage = $this->assistantMessage->session->messages()
+            ->reorder('id', 'desc')
             ->where('role', ChatMessage::ROLE_USER)
             ->where('id', '<', $this->assistantMessage->id)
-            ->latest('id')
             ->first();
 
         if ($userMessage === null) {
