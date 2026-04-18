@@ -239,14 +239,25 @@
                 }
             }
         },
-        "/ai/chat": {
+        "/ai/chats": {
+            "get": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "List the authenticated user's chat sessions",
+                "operationId": "722d899aa79103f0cfce43cee9dcebd4",
+                "responses": {
+                    "200": {
+                        "description": "List of chat sessions"
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "AI"
                 ],
-                "summary": "Ask a question about your finances",
-                "description": "Uses AI to answer natural language questions about your financial data",
-                "operationId": "8b995d160e3f5a368710ca7aede3dbf1",
+                "summary": "Start a new chat session with a first question",
+                "operationId": "0475afdf4bbd97324d801b293c66d239",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -260,6 +271,10 @@
                                         "type": "string",
                                         "example": "How much did I spend last month?"
                                     },
+                                    "title": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
                                     "format_hint": {
                                         "type": "string",
                                         "enum": [
@@ -270,8 +285,7 @@
                                             "pair_list",
                                             "table",
                                             "raw"
-                                        ],
-                                        "example": "table"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -280,52 +294,114 @@
                     }
                 },
                 "responses": {
+                    "202": {
+                        "description": "Session created and message queued"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{id}": {
+            "get": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Get a chat session with all its messages",
+                "operationId": "a6283d6c8cf01c4123dec760e977c984",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
                     "200": {
-                        "description": "AI response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "answer": {
-                                                    "type": "string"
-                                                },
-                                                "format_type": {
-                                                    "type": "string",
-                                                    "enum": [
-                                                        "scalar",
-                                                        "pair",
-                                                        "record",
-                                                        "list",
-                                                        "pair_list",
-                                                        "table",
-                                                        "raw"
-                                                    ]
-                                                },
-                                                "results": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "object"
-                                                    }
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
+                        "description": "Chat session with messages"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Delete a chat session",
+                "operationId": "3445b2916c7eb1ad9bd183c5ee78a9b8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{id}/messages": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Add a follow-up message to an existing chat session",
+                "operationId": "4d3cc93ae53add98e271a7bed43b7c74",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string"
                                     },
-                                    "type": "object"
-                                }
+                                    "format_hint": {
+                                        "type": "string",
+                                        "enum": [
+                                            "scalar",
+                                            "pair",
+                                            "record",
+                                            "list",
+                                            "pair_list",
+                                            "table",
+                                            "raw"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
                             }
                         }
-                    },
-                    "422": {
-                        "description": "Validation error"
-                    },
-                    "503": {
-                        "description": "AI service unavailable"
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Message queued"
                     }
                 }
             }
@@ -339,19 +415,7 @@
                 "operationId": "8b6c5af866d0372334377fc2075e29bb",
                 "responses": {
                     "200": {
-                        "description": "Service status",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "available": {
-                                            "type": "boolean"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Service status"
                     }
                 }
             }
@@ -4110,6 +4174,85 @@
                             }
                         },
                         "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ChatMessage": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "user",
+                            "assistant",
+                            "system"
+                        ]
+                    },
+                    "content": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "processing",
+                            "completed",
+                            "failed"
+                        ],
+                        "nullable": true
+                    },
+                    "format_hint": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "result": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "ChatSession": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
                     }
                 },
                 "type": "object"

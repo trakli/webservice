@@ -64,7 +64,11 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
 
     // AI routes
-    Route::post('ai/chat', [AiController::class, 'chat']);
+    Route::get('ai/chats', [AiController::class, 'index']);
+    Route::post('ai/chats', [AiController::class, 'store']);
+    Route::get('ai/chats/{id}', [AiController::class, 'show']);
+    Route::delete('ai/chats/{id}', [AiController::class, 'destroy']);
+    Route::post('ai/chats/{id}/messages', [AiController::class, 'storeMessage']);
     Route::get('ai/health', [AiController::class, 'health']);
 
     // Reminder routes
