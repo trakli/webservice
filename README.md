@@ -1,6 +1,11 @@
-<p align="center"><a href="#" target="_blank"><img src="https://github.com/whilesmart/trakli/blob/main/logo.svg" width="400" alt="Trakli Logo"></a></p>
+<p align="center"><a href="#" target="_blank"><img src="./.github/assets/logo.svg" width="400" alt="Trakli Logo"></a></p>
 
-# Trakli Webservice [![Checks](https://github.com/trakli/trakli-webservice/actions/workflows/checks.yml/badge.svg)](https://github.com/trakli/trakli-webservice/actions/workflows/checks.yml)
+<p align="center"><img src="./.github/assets/trakli-dashboard-showcase.png" alt="Trakli dashboard and mobile preview" width="820"></p>
+
+# Trakli Webservice
+
+[![Tests](https://github.com/trakli/webservice/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/tests.yml)
+[![Lint & Sniffs](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml)
 
 ## Overview
 
@@ -8,14 +13,14 @@ Trakli is a personal income tracking application built using Laravel. The applic
 
 ## Features
 
-- Register and log in to the application
-- Manage user profile information
-- Create, view, update, and delete groups (e.g., Home, Office, Personal)
-- Manage income categories (e.g., Sales, Salary, Gift, Bonus, Interest)
-- Manage expense categories (e.g., Utilities, Transport, Electricity, Rent, Tax, Health)
-- Manage parties (e.g., individuals or entities from which money comes or goes)
-- Manage wallets and bank accounts (e.g., cash, bank accounts)
-- Record income and expense entries with details such as date, party, description, source/target wallet, and optional attachments
+- **Transactions:** Income and expenses across multiple wallets, with attachments and recurring rules.
+- **Transfers:** Move money between wallets, including cross-currency at user-set rates.
+- **Budgets:** Scoped to categories, groups, or wallets; weekly / monthly / yearly / custom range; optional rollover; threshold and forecast alerts.
+- **Refunds:** Mark an income as refunding an earlier expense; matching budgets adjust automatically.
+- **Reminders:** Bills, budget alerts, and custom events with pause, resume, and snooze.
+- **Imports:** Pull transactions from CSVs, PDFs, and photos of receipts.
+- **Insights & AI:** Dashboard stats, digest emails, and a chat assistant for your finances.
+- **Offline-first:** Changes made on mobile sync cleanly when the device reconnects.
 
 ## Setup instructions
 
