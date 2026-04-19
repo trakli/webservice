@@ -70,7 +70,13 @@ class BudgetController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Budget::query()->visibleTo($user);
+        $query = Budget::query()
+            ->visibleTo($user)
+            ->with([
+                'categories.syncState.device',
+                'groups.syncState.device',
+                'wallets.syncState.device',
+            ]);
 
         if ($request->boolean('active')) {
             $query->active();

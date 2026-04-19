@@ -56,9 +56,9 @@ class BudgetProgressService
         [$periodStart, $periodEnd] = $this->resolvePeriodWindow($budget, $reference);
 
         $userIds = $this->ownerResolver->resolveUserIds($budget->owner);
-        $categoryIds = $budget->categories()->pluck('categories.id')->all();
-        $groupIds = $budget->groups()->pluck('groups.id')->all();
-        $walletIds = $budget->wallets()->pluck('wallets.id')->all();
+        $categoryIds = $this->targetIds($budget, 'categories');
+        $groupIds = $this->targetIds($budget, 'groups');
+        $walletIds = $this->targetIds($budget, 'wallets');
 
         $limit = (float) $budget->amount;
 
@@ -233,17 +233,31 @@ class BudgetProgressService
         return (float) $query->sum('amount');
     }
 
+    /**
+     * Linear projection: netSpent × (totalDays / elapsed). The first few
+     * days of a period are too noisy — a single large early transaction
+     * can multiply into an unrealistic projection and false-flag a
+     * forecast breach. Below a three-day floor we return netSpent
+     * directly, which lets status logic still trigger `over_budget` on
+     * real overspend but never `forecast_breach` prematurely.
+     */
+    protected const PROJECTION_MIN_ELAPSED_DAYS = 3;
+
     protected function projectSpend(
         float $netSpent,
         CarbonImmutable $periodStart,
         CarbonImmutable $periodEnd,
         CarbonImmutable $reference,
     ): float {
+        if ($reference->lt($periodStart)) {
+            return 0.0;
+        }
+
         $totalDays = max(1, $periodStart->diffInDays($periodEnd) + 1);
         $elapsed = max(1, $periodStart->diffInDays(min($reference, $periodEnd)) + 1);
 
-        if ($reference->lt($periodStart)) {
-            return 0.0;
+        if ($elapsed < self::PROJECTION_MIN_ELAPSED_DAYS) {
+            return $netSpent;
         }
 
         return $netSpent * ($totalDays / $elapsed);
@@ -266,6 +280,23 @@ class BudgetProgressService
         }
 
         return self::STATUS_ON_TRACK;
+    }
+
+    /**
+     * Pull target IDs without re-querying when the caller (typically
+     * BudgetController::index) has already eager-loaded the relation.
+     * Callers that pass a single Budget with lazy relations still work
+     * — they just pay the three usual queries.
+     */
+    protected function targetIds(Budget $budget, string $relation): array
+    {
+        if ($budget->relationLoaded($relation)) {
+            return $budget->{$relation}->pluck('id')->all();
+        }
+
+        $table = $budget->{$relation}()->getRelated()->getTable();
+
+        return $budget->{$relation}()->pluck($table . '.id')->all();
     }
 
     protected function emptyProgress(CarbonImmutable $periodStart, CarbonImmutable $periodEnd, float $limit, float $rolloverIn): array

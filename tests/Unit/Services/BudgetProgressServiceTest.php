@@ -158,6 +158,37 @@ class BudgetProgressServiceTest extends TestCase
         $this->assertTrue($progress['is_forecast_breach']);
     }
 
+    public function test_forecast_does_not_breach_in_first_two_days(): void
+    {
+        $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+
+        $startOfMonth = CarbonImmutable::now()->startOfMonth();
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'amount' => 100,
+            'threshold_percent' => 80,
+            'forecast_alerts_enabled' => true,
+            'period_type' => Budget::PERIOD_MONTHLY,
+            'start_date' => $startOfMonth->toDateString(),
+        ]);
+        $budget->categories()->attach($category);
+
+        // Day 1 of the month, user spends 60 (60% of limit). A naive
+        // linear projection (60 * 30 / 1 = 1800) would trip the forecast
+        // breach; the stability floor should suppress it.
+        $txn = $this->txn(walletId: $this->wallet->id, type: 'expense', amount: 60);
+        $txn->categories()->attach($category);
+        $txn->datetime = $startOfMonth;
+        $txn->save();
+
+        $progress = $this->service->compute($budget, $startOfMonth);
+
+        $this->assertFalse($progress['is_forecast_breach']);
+        $this->assertSame(60.0, $progress['projected_spend']);
+    }
+
     public function test_custom_period_uses_explicit_end_date(): void
     {
         $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
