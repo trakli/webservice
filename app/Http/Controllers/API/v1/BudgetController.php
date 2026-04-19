@@ -33,6 +33,40 @@ class BudgetController extends ApiController
         'wallet' => Wallet::class,
     ];
 
+    #[OA\Get(
+        path: '/budgets',
+        summary: 'List all budgets visible to the user',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(
+                name: 'active',
+                description: 'If true, only return active budgets',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'boolean')
+            ),
+            new OA\Parameter(ref: '#/components/parameters/limitParam'),
+            new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
+            new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Budget')
+                        ),
+                    ],
+                    type: 'object'
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -51,6 +85,22 @@ class BudgetController extends ApiController
         }
     }
 
+    #[OA\Get(
+        path: '/budgets/{id}',
+        summary: 'Show a single budget with its targets and progress',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(ref: '#/components/schemas/Budget')
+            ),
+            new OA\Response(response: 404, description: 'Budget not found'),
+        ]
+    )]
     public function show(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
@@ -62,6 +112,53 @@ class BudgetController extends ApiController
         return $this->success($budget);
     }
 
+    #[OA\Post(
+        path: '/budgets',
+        summary: 'Create a new budget',
+        tags: ['Budget'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'amount', 'currency', 'period_type', 'start_date'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', nullable: true),
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'description', type: 'string', nullable: true),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'currency', type: 'string', example: 'USD'),
+                    new OA\Property(property: 'period_type', type: 'string', enum: ['weekly', 'monthly', 'yearly', 'custom']),
+                    new OA\Property(property: 'start_date', type: 'string', format: 'date'),
+                    new OA\Property(property: 'end_date', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'rollover_enabled', type: 'boolean'),
+                    new OA\Property(property: 'threshold_percent', type: 'integer', minimum: 0, maximum: 100),
+                    new OA\Property(property: 'forecast_alerts_enabled', type: 'boolean'),
+                    new OA\Property(property: 'is_active', type: 'boolean'),
+                    new OA\Property(
+                        property: 'targets',
+                        type: 'array',
+                        items: new OA\Items(properties: [
+                            new OA\Property(property: 'type', type: 'string', enum: ['category', 'group', 'wallet']),
+                            new OA\Property(property: 'id', type: 'integer'),
+                        ], type: 'object')
+                    ),
+                    new OA\Property(property: 'owner', nullable: true, properties: [
+                        new OA\Property(property: 'type', type: 'string', enum: ['user']),
+                        new OA\Property(property: 'id', type: 'integer'),
+                    ], type: 'object'),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Budget created',
+                content: new OA\JsonContent(ref: '#/components/schemas/Budget')
+            ),
+            new OA\Response(response: 403, description: 'Forbidden owner'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
     public function store(Request $request): JsonResponse
     {
         $validator = $this->baseValidator($request, false);
@@ -119,6 +216,49 @@ class BudgetController extends ApiController
         }
     }
 
+    #[OA\Put(
+        path: '/budgets/{id}',
+        summary: 'Update a budget (fields are all optional)',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'description', type: 'string', nullable: true),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'currency', type: 'string'),
+                    new OA\Property(property: 'period_type', type: 'string', enum: ['weekly', 'monthly', 'yearly', 'custom']),
+                    new OA\Property(property: 'start_date', type: 'string', format: 'date'),
+                    new OA\Property(property: 'end_date', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'rollover_enabled', type: 'boolean'),
+                    new OA\Property(property: 'threshold_percent', type: 'integer', minimum: 0, maximum: 100),
+                    new OA\Property(property: 'forecast_alerts_enabled', type: 'boolean'),
+                    new OA\Property(property: 'is_active', type: 'boolean'),
+                    new OA\Property(
+                        property: 'targets',
+                        type: 'array',
+                        items: new OA\Items(properties: [
+                            new OA\Property(property: 'type', type: 'string', enum: ['category', 'group', 'wallet']),
+                            new OA\Property(property: 'id', type: 'integer'),
+                        ], type: 'object')
+                    ),
+                    new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Budget updated',
+                content: new OA\JsonContent(ref: '#/components/schemas/Budget')
+            ),
+            new OA\Response(response: 404, description: 'Budget not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
     public function update(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
@@ -172,6 +312,18 @@ class BudgetController extends ApiController
         }
     }
 
+    #[OA\Delete(
+        path: '/budgets/{id}',
+        summary: 'Soft-delete a budget',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Budget deleted'),
+            new OA\Response(response: 404, description: 'Budget not found'),
+        ]
+    )]
     public function destroy(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
@@ -185,6 +337,22 @@ class BudgetController extends ApiController
         return $this->success(null, __('Budget deleted successfully'), 204);
     }
 
+    #[OA\Get(
+        path: '/budgets/{id}/progress',
+        summary: 'Recompute and return a budget\'s progress for the current period',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Progress snapshot',
+                content: new OA\JsonContent(ref: '#/components/schemas/BudgetProgress')
+            ),
+            new OA\Response(response: 404, description: 'Budget not found'),
+        ]
+    )]
     public function progress(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
@@ -204,6 +372,40 @@ class BudgetController extends ApiController
      * current period window. Ordered latest-first. Accepts `limit` query
      * (default 50, max 200).
      */
+    #[OA\Get(
+        path: '/budgets/{id}/transactions',
+        summary: 'List transactions counted toward a budget\'s current period',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(
+                name: 'limit',
+                description: 'Number of transactions to return (1-200, default 50)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 200, default: 50)
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Transactions within the period',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'period_start', type: 'string', format: 'date'),
+                        new OA\Property(property: 'period_end', type: 'string', format: 'date'),
+                        new OA\Property(
+                            property: 'data',
+                            type: 'array',
+                            items: new OA\Items(ref: '#/components/schemas/Transaction')
+                        ),
+                    ],
+                    type: 'object'
+                )
+            ),
+            new OA\Response(response: 404, description: 'Budget not found'),
+        ]
+    )]
     public function transactions(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
@@ -270,6 +472,23 @@ class BudgetController extends ApiController
         ]);
     }
 
+    #[OA\Post(
+        path: '/budgets/{id}/close-period',
+        summary: 'Manually close the current period of a rollover-enabled budget',
+        tags: ['Budget'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Period closed',
+                content: new OA\JsonContent(ref: '#/components/schemas/Budget')
+            ),
+            new OA\Response(response: 404, description: 'Budget not found'),
+            new OA\Response(response: 422, description: 'Rollover not enabled'),
+        ]
+    )]
     public function closePeriod(Request $request, int $budgetId): JsonResponse
     {
         $budget = Budget::query()->visibleTo($request->user())->find($budgetId);
