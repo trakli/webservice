@@ -8,6 +8,7 @@ use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 use RRule\RRule;
@@ -60,6 +61,9 @@ class Reminder extends Model
         'title',
         'description',
         'type',
+        'source',
+        'remindable_type',
+        'remindable_id',
         'trigger_at',
         'due_at',
         'repeat_rule',
@@ -89,6 +93,11 @@ class Reminder extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function remindable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function isRecurring(): bool
