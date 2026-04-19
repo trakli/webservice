@@ -4,6 +4,7 @@ use App\Http\Controllers\API\v1\AccountController;
 use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\BudgetController;
+use App\Http\Controllers\API\v1\BudgetPeriodStateController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
@@ -49,6 +50,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::get('/refunds', [TransactionRefundController::class, 'index']);
     Route::post('/transactions/{id}/refund', [TransactionRefundController::class, 'mark']);
     Route::delete('/transactions/{id}/refund', [TransactionRefundController::class, 'unmark']);
     Route::get('/files/{id}', [FileController::class, 'show']);
@@ -85,6 +87,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::get('budgets/{id}/progress', [BudgetController::class, 'progress']);
     Route::get('budgets/{id}/transactions', [BudgetController::class, 'transactions']);
     Route::post('budgets/{id}/close-period', [BudgetController::class, 'closePeriod']);
+    Route::get('budget-period-states', [BudgetPeriodStateController::class, 'index']);
     Route::apiResource('budgets', BudgetController::class);
 
     // Notification routes

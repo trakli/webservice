@@ -15,7 +15,63 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use OpenApi\Attributes as OA;
 
+#[OA\Schema(
+    schema: 'Budget',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'owner_id', type: 'integer'),
+        new OA\Property(property: 'owner_type', type: 'string', example: 'App\\Models\\User'),
+        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'slug', type: 'string'),
+        new OA\Property(property: 'description', type: 'string', nullable: true),
+        new OA\Property(property: 'amount', type: 'number', format: 'float'),
+        new OA\Property(property: 'currency', type: 'string', example: 'USD'),
+        new OA\Property(property: 'period_type', type: 'string', enum: ['weekly', 'monthly', 'yearly', 'custom']),
+        new OA\Property(property: 'start_date', type: 'string', format: 'date'),
+        new OA\Property(property: 'end_date', type: 'string', format: 'date', nullable: true),
+        new OA\Property(property: 'rollover_enabled', type: 'boolean'),
+        new OA\Property(property: 'threshold_percent', type: 'integer', example: 80),
+        new OA\Property(property: 'forecast_alerts_enabled', type: 'boolean'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(
+            property: 'targets',
+            type: 'array',
+            items: new OA\Items(properties: [
+                new OA\Property(property: 'type', type: 'string', enum: ['category', 'group', 'wallet']),
+                new OA\Property(property: 'id', type: 'integer'),
+                new OA\Property(property: 'client_generated_id', type: 'string', nullable: true),
+                new OA\Property(property: 'name', type: 'string'),
+            ], type: 'object')
+        ),
+        new OA\Property(property: 'progress', ref: '#/components/schemas/BudgetProgress'),
+        new OA\Property(property: 'client_generated_id', type: 'string', nullable: true),
+        new OA\Property(property: 'last_synced_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'deleted_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+    type: 'object'
+)]
+#[OA\Schema(
+    schema: 'BudgetProgress',
+    properties: [
+        new OA\Property(property: 'period_start', type: 'string', format: 'date'),
+        new OA\Property(property: 'period_end', type: 'string', format: 'date'),
+        new OA\Property(property: 'limit', type: 'number', format: 'float'),
+        new OA\Property(property: 'gross_spent', type: 'number', format: 'float'),
+        new OA\Property(property: 'refunds', type: 'number', format: 'float'),
+        new OA\Property(property: 'net_spent', type: 'number', format: 'float'),
+        new OA\Property(property: 'rollover_in', type: 'number', format: 'float'),
+        new OA\Property(property: 'effective_limit', type: 'number', format: 'float'),
+        new OA\Property(property: 'remaining', type: 'number', format: 'float'),
+        new OA\Property(property: 'percent_used', type: 'integer'),
+        new OA\Property(property: 'projected_spend', type: 'number', format: 'float'),
+        new OA\Property(property: 'status', type: 'string', enum: ['on_track', 'near_limit', 'over_budget', 'forecast_breach']),
+    ],
+    type: 'object'
+)]
 class Budget extends Model
 {
     use HasClientCreatedAt;

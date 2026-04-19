@@ -420,6 +420,542 @@
                 }
             }
         },
+        "/budgets": {
+            "get": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "List all budgets visible to the user",
+                "operationId": "ccf54b26a3b827d7f92b439df5244574",
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "description": "If true, only return active budgets",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Budget"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Create a new budget",
+                "operationId": "17654d96eb06128e7aa61d7a82743dcf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "amount",
+                                    "currency",
+                                    "period_type",
+                                    "start_date"
+                                ],
+                                "properties": {
+                                    "client_id": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "example": "USD"
+                                    },
+                                    "period_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "weekly",
+                                            "monthly",
+                                            "yearly",
+                                            "custom"
+                                        ]
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "rollover_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "threshold_percent": {
+                                        "type": "integer",
+                                        "maximum": 100,
+                                        "minimum": 0
+                                    },
+                                    "forecast_alerts_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    },
+                                    "targets": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "category",
+                                                        "group",
+                                                        "wallet"
+                                                    ]
+                                                },
+                                                "id": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "owner": {
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "user"
+                                                ]
+                                            },
+                                            "id": {
+                                                "type": "integer"
+                                            }
+                                        },
+                                        "type": "object",
+                                        "nullable": true
+                                    },
+                                    "created_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Budget created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Budget"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden owner"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/budgets/{id}": {
+            "get": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Show a single budget with its targets and progress",
+                "operationId": "bc56a5a4bfcb8496d803653d5a7ca002",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Budget"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Update a budget (fields are all optional)",
+                "operationId": "9e65743fa5adc7df9a6fe02b7f9bf1a8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float"
+                                    },
+                                    "currency": {
+                                        "type": "string"
+                                    },
+                                    "period_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "weekly",
+                                            "monthly",
+                                            "yearly",
+                                            "custom"
+                                        ]
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "rollover_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "threshold_percent": {
+                                        "type": "integer",
+                                        "maximum": 100,
+                                        "minimum": 0
+                                    },
+                                    "forecast_alerts_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    },
+                                    "targets": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "category",
+                                                        "group",
+                                                        "wallet"
+                                                    ]
+                                                },
+                                                "id": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "updated_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Budget updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Budget"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Soft-delete a budget",
+                "operationId": "f076ccc1ccac7e65ea24481c47a5fe4e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Budget deleted"
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/progress": {
+            "get": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Recompute and return a budget's progress for the current period",
+                "operationId": "bd3c3edc339ba9f1ed103afe2cbc6a41",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Progress snapshot",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BudgetProgress"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/transactions": {
+            "get": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "List transactions counted toward a budget's current period",
+                "description": "Transactions that match the budget's targets and fall inside the\ncurrent period window. Ordered latest-first. Accepts `limit` query\n(default 50, max 200).",
+                "operationId": "68624916db184854818d747fc8f64b74",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of transactions to return (1-200, default 50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50,
+                            "maximum": 200,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transactions within the period",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "period_start": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "period_end": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Transaction"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    }
+                }
+            }
+        },
+        "/budgets/{id}/close-period": {
+            "post": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "Manually close the current period of a rollover-enabled budget",
+                "operationId": "9b96aa68348ba78678a471715247cbf7",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Period closed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Budget"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Budget not found"
+                    },
+                    "422": {
+                        "description": "Rollover not enabled"
+                    }
+                }
+            }
+        },
+        "/budget-period-states": {
+            "get": {
+                "tags": [
+                    "Budget"
+                ],
+                "summary": "List closed-period snapshots for rollover-enabled budgets",
+                "operationId": "ad85542f2c8ac9d48fdff3cad24fd35f",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Period states visible to the user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/BudgetPeriodState"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/categories": {
             "get": {
                 "tags": [
@@ -2932,6 +3468,135 @@
                 }
             }
         },
+        "/transactions/{id}/refund": {
+            "post": {
+                "tags": [
+                    "Refund"
+                ],
+                "summary": "Mark an income transaction as a refund",
+                "description": "Mark an income transaction as a refund, optionally linking it to\nthe original expense it refunded. Only income transactions can be\nrefunds; the original (if provided) must be an expense owned by\nthe same user.",
+                "operationId": "5959613501f804afb5537d99ba4826f5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "description": "Client-generated ID for the new refund row",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "original_transaction_id": {
+                                        "description": "Server id of the expense being refunded",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "original_client_id": {
+                                        "description": "Client id of the expense being refunded (used when original has not synced yet)",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Refund marked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Refund"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Transaction not found"
+                    },
+                    "422": {
+                        "description": "Only income transactions can be refunds, or invalid original"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Refund"
+                ],
+                "summary": "Remove the refund flag from a transaction",
+                "operationId": "2b60c273ca7c3e126897baf8515e4beb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Refund flag removed"
+                    },
+                    "404": {
+                        "description": "Transaction not found"
+                    }
+                }
+            }
+        },
+        "/refunds": {
+            "get": {
+                "tags": [
+                    "Refund"
+                ],
+                "summary": "List refunds (paginated, supports sync filters)",
+                "operationId": "c4970907d4d800de5f0f400dd30cfbd1",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/syncedSinceParam"
+                    },
+                    {
+                        "$ref": "#/components/parameters/noClientIdParam"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Refunds visible to the user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Refund"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/transfers": {
             "get": {
                 "tags": [
@@ -4098,6 +4763,231 @@
     },
     "components": {
         "schemas": {
+            "Budget": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "integer"
+                    },
+                    "owner_type": {
+                        "type": "string",
+                        "example": "App\\Models\\User"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "USD"
+                    },
+                    "period_type": {
+                        "type": "string",
+                        "enum": [
+                            "weekly",
+                            "monthly",
+                            "yearly",
+                            "custom"
+                        ]
+                    },
+                    "start_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "rollover_enabled": {
+                        "type": "boolean"
+                    },
+                    "threshold_percent": {
+                        "type": "integer",
+                        "example": 80
+                    },
+                    "forecast_alerts_enabled": {
+                        "type": "boolean"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "category",
+                                        "group",
+                                        "wallet"
+                                    ]
+                                },
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "client_generated_id": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "progress": {
+                        "$ref": "#/components/schemas/BudgetProgress"
+                    },
+                    "client_generated_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "BudgetProgress": {
+                "properties": {
+                    "period_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "period_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "gross_spent": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "refunds": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "net_spent": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "rollover_in": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "effective_limit": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "remaining": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "percent_used": {
+                        "type": "integer"
+                    },
+                    "projected_spend": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "on_track",
+                            "near_limit",
+                            "over_budget",
+                            "forecast_breach"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "BudgetPeriodState": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "budget_id": {
+                        "type": "integer"
+                    },
+                    "period_start": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "period_end": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "net_spent": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "rollover_in": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "rollover_out": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "closed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "client_generated_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "Category": {
                 "properties": {
                     "id": {
@@ -4547,6 +5437,41 @@
                 },
                 "type": "object"
             },
+            "Refund": {
+                "properties": {
+                    "id": {
+                        "description": "A Refund row marks an income transaction as refunding money received\nback from a prior expense. The `original_transaction_id` link is\noptional — users sometimes log a refund without remembering or caring\nwhich specific expense it came from. See the `Refundable` trait on\nTransaction for the query helpers.",
+                        "type": "integer"
+                    },
+                    "refund_transaction_id": {
+                        "description": "The income transaction marked as a refund",
+                        "type": "integer"
+                    },
+                    "original_transaction_id": {
+                        "description": "Optional link to the expense being refunded",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "client_generated_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "Reminder": {
                 "properties": {
                     "id": {
@@ -4853,6 +5778,10 @@
             "description": "AI-powered financial insights"
         },
         {
+            "name": "Budget",
+            "description": "Endpoints for managing spending budgets"
+        },
+        {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
         },
@@ -4875,6 +5804,10 @@
         {
             "name": "Transactions",
             "description": "Endpoints for managing transactions"
+        },
+        {
+            "name": "Refund",
+            "description": "Mark income transactions as refunds"
         },
         {
             "name": "Transfers",
