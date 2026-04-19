@@ -141,6 +141,40 @@ class BudgetTest extends TestCase
         Queue::assertPushed(RecomputeBudgetProgressJob::class, fn ($job) => $job->budgetId === 42);
     }
 
+    public function test_target_only_update_touches_parent_timestamp(): void
+    {
+        $original = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+        $replacement = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'period_type' => Budget::PERIOD_MONTHLY,
+            'start_date' => CarbonImmutable::now()->startOfMonth()->toDateString(),
+        ]);
+        $budget->categories()->attach($original);
+        $originalUpdatedAt = $budget->fresh()->updated_at;
+
+        // Nudge the clock forward so a touch would produce a different
+        // timestamp than the original save.
+        CarbonImmutable::setTestNow(CarbonImmutable::now()->addMinute());
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/budgets/{$budget->id}", [
+            'targets' => [
+                ['type' => 'category', 'id' => $replacement->id],
+            ],
+        ]);
+
+        $response->assertOk();
+
+        $this->assertTrue(
+            $budget->fresh()->updated_at->gt($originalUpdatedAt),
+            'Expected budget.updated_at to advance after a target-only change.'
+        );
+
+        CarbonImmutable::setTestNow();
+    }
+
     public function test_update_leaves_unchanged_targets_attached(): void
     {
         $keep = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);

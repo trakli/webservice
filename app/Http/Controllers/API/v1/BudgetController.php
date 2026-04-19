@@ -617,15 +617,27 @@ class BudgetController extends ApiController
             Wallet::class => 'wallets',
         ];
 
+        $pivotChanged = false;
+
         foreach ($byType as $class => $ids) {
             $relation = $relations[$class];
             if ($replace) {
                 // Eloquent sync() diffs the current pivot set against the
                 // new list and only detaches/attaches what changed.
-                $budget->{$relation}()->sync($ids);
+                $changes = $budget->{$relation}()->sync($ids);
+                if ($changes['attached'] || $changes['detached'] || $changes['updated']) {
+                    $pivotChanged = true;
+                }
             } elseif (! empty($ids)) {
                 $budget->{$relation}()->syncWithoutDetaching($ids);
+                $pivotChanged = true;
             }
+        }
+
+        // sync() doesn't touch the parent, so changing only targets
+        // would leave budgets.updated_at stale. Bump it explicitly.
+        if ($pivotChanged) {
+            $budget->touch();
         }
     }
 }
