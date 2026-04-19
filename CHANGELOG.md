@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-19
+
+### Added
+
+- Budgets with polymorphic owner (user today, workspace/couple tomorrow) and polymorphic targets across categories, groups, and wallets; weekly / monthly / yearly / custom period types; opt-in rollover with a `budget_period_states` history and a manual `close-period` endpoint; threshold and forecast alerts surfaced through the existing Reminder pipeline
+- Explicit refund tracking via a `Refund` model and `Refundable` trait — marked refunds reduce net spend on matching budgets
+- Syncable refunds and budget period states with paginated sync endpoints so mobile clients can mirror the tables offline
+- Schema conformance service with `schema:verify` / `schema:conform` commands (auto-applied on migrate) and a middleware that returns 503 on drift
+- AI chat sessions with messages and async processing, a Prism-based classifier that routes questions to SmartQL with a language-model fallback, and AI-generated chat titles after the first reply
+- Advanced document importer with pluggable processors and configurable auto-creation of entities during import
+- Transaction index now supports filtering and returns totals alongside the list
+- Transfers gained `show`, `destroy`, update and soft-delete endpoints; transactions are embedded in Transfer responses and responses include the transfer client-generated id
+- Insights and inactivity emails are now sent by default
+
+### Changed
+
+- Polymorphic `Remindable` trait replaces the one-off `budget_id` column on reminders, so future subjects can opt in without another migration
+- Stats extracted from the controller into a dedicated `StatsService`; transfer transactions are excluded from aggregation
+- Transfer relations are eager-loaded with cascade deletes, and transfer-transaction serialization is optimized
+- Dev Docker setup migrated to the `laravel-docker-dev` image; obsolete dev Docker build CI job removed
+- SmartQL is wired for Gemini and now requires an LLM key; LLM defaults harmonized across AI services; chat plumbing simplified
+- OpenAPI docs regenerated
+
+### Fixed
+
+- Chat authorization hardened and data extraction made null-safe; classifier and fallback prompts made more data-aware; assistant replies are now reliably paired with the correct user question
+- Exchange rates greater than zero are accepted during transfers
+- Transfer and transaction responses return a fresh `syncState` on write
+
 ## [1.0.2] - 2026-03-06
 
 ### Added
