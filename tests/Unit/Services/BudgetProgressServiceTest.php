@@ -158,6 +158,28 @@ class BudgetProgressServiceTest extends TestCase
         $this->assertTrue($progress['is_forecast_breach']);
     }
 
+    public function test_zero_limit_budget_with_spending_reports_full_percent_used(): void
+    {
+        $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'amount' => 0,
+            'period_type' => Budget::PERIOD_MONTHLY,
+            'start_date' => CarbonImmutable::now()->startOfMonth()->toDateString(),
+        ]);
+        $budget->categories()->attach($category);
+
+        $txn = $this->txn(walletId: $this->wallet->id, type: 'expense', amount: 50);
+        $txn->categories()->attach($category);
+
+        $progress = $this->service->compute($budget);
+
+        $this->assertSame(100.0, $progress['percent_used']);
+        $this->assertSame(BudgetProgressService::STATUS_OVER_BUDGET, $progress['status']);
+    }
+
     public function test_forecast_does_not_breach_in_first_two_days(): void
     {
         $category = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);

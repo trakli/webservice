@@ -299,10 +299,7 @@ class BudgetController extends ApiController
                 $budget->update($updatable);
 
                 if (array_key_exists('targets', $data)) {
-                    $budget->categories()->detach();
-                    $budget->groups()->detach();
-                    $budget->wallets()->detach();
-                    $this->syncTargets($budget, $data['targets'] ?? []);
+                    $this->syncTargets($budget, $data['targets'] ?? [], replace: true);
                 }
 
                 $this->updateClientId($budget, $request);
@@ -587,7 +584,13 @@ class BudgetController extends ApiController
         }
     }
 
-    private function syncTargets(Budget $budget, array $targets): void
+    /**
+     * @param  bool  $replace  when true, existing pivots not present in
+     *                         $targets are detached (update semantics).
+     *                         Defaults to false for create-time partial
+     *                         attach.
+     */
+    private function syncTargets(Budget $budget, array $targets, bool $replace = false): void
     {
         $byType = [
             Category::class => [],
@@ -608,14 +611,21 @@ class BudgetController extends ApiController
             }
         }
 
-        if (! empty($byType[Category::class])) {
-            $budget->categories()->syncWithoutDetaching($byType[Category::class]);
-        }
-        if (! empty($byType[Group::class])) {
-            $budget->groups()->syncWithoutDetaching($byType[Group::class]);
-        }
-        if (! empty($byType[Wallet::class])) {
-            $budget->wallets()->syncWithoutDetaching($byType[Wallet::class]);
+        $relations = [
+            Category::class => 'categories',
+            Group::class => 'groups',
+            Wallet::class => 'wallets',
+        ];
+
+        foreach ($byType as $class => $ids) {
+            $relation = $relations[$class];
+            if ($replace) {
+                // Eloquent sync() diffs the current pivot set against the
+                // new list and only detaches/attaches what changed.
+                $budget->{$relation}()->sync($ids);
+            } elseif (! empty($ids)) {
+                $budget->{$relation}()->syncWithoutDetaching($ids);
+            }
         }
     }
 }

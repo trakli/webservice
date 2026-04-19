@@ -140,4 +140,49 @@ class BudgetTest extends TestCase
 
         Queue::assertPushed(RecomputeBudgetProgressJob::class, fn ($job) => $job->budgetId === 42);
     }
+
+    public function test_update_leaves_unchanged_targets_attached(): void
+    {
+        $keep = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+        $drop = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+        $add = Category::factory()->create(['user_id' => $this->user->id, 'type' => 'expense']);
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'period_type' => Budget::PERIOD_MONTHLY,
+            'start_date' => CarbonImmutable::now()->startOfMonth()->toDateString(),
+        ]);
+        $budget->categories()->attach([$keep->id, $drop->id]);
+
+        $keepPivotIdBefore = $budget->categories()
+            ->where('categories.id', $keep->id)
+            ->first()
+            ->pivot
+            ->id;
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/budgets/{$budget->id}", [
+            'targets' => [
+                ['type' => 'category', 'id' => $keep->id],
+                ['type' => 'category', 'id' => $add->id],
+            ],
+        ]);
+
+        $response->assertOk();
+
+        $budget->refresh();
+        $this->assertEqualsCanonicalizing(
+            [$keep->id, $add->id],
+            $budget->categories()->pluck('categories.id')->all()
+        );
+
+        // The unchanged pivot should still carry its original row id —
+        // proof that sync() didn't detach-then-reattach.
+        $keepPivotIdAfter = $budget->categories()
+            ->where('categories.id', $keep->id)
+            ->first()
+            ->pivot
+            ->id;
+        $this->assertSame($keepPivotIdBefore, $keepPivotIdAfter);
+    }
 }
