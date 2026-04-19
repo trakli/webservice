@@ -7,9 +7,8 @@ use App\Events\TransactionRecorded;
 use App\Events\TransactionSnapshot;
 use App\Jobs\RecomputeBudgetProgressJob;
 use App\Models\Budget;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class QueueBudgetRecompute implements ShouldQueue
+class QueueBudgetRecompute
 {
     public function __construct(
         protected OwnerResolver $ownerResolver,
