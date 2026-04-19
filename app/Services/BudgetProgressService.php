@@ -99,7 +99,17 @@ class BudgetProgressService
 
         $effectiveLimit = $limit + $rolloverIn;
         $remaining = $effectiveLimit - $netSpent;
-        $percentUsed = $effectiveLimit > 0 ? min(999.0, ($netSpent / $effectiveLimit) * 100.0) : 0.0;
+
+        if ($effectiveLimit > 0) {
+            $percentUsed = min(999.0, ($netSpent / $effectiveLimit) * 100.0);
+        } elseif ($netSpent > 0) {
+            // Zero-limit budget with spending is, by definition, over. The
+            // alternative of reporting 0% hides the breach from status
+            // logic downstream.
+            $percentUsed = 100.0;
+        } else {
+            $percentUsed = 0.0;
+        }
 
         $projectedSpend = $this->projectSpend($netSpent, $periodStart, $periodEnd, $reference);
 
@@ -269,7 +279,7 @@ class BudgetProgressService
         bool $thresholdCrossed,
         bool $forecastBreach,
     ): string {
-        if ($effectiveLimit > 0 && $netSpent > $effectiveLimit) {
+        if ($effectiveLimit <= 0 ? $netSpent > 0 : $netSpent > $effectiveLimit) {
             return self::STATUS_OVER_BUDGET;
         }
         if ($forecastBreach) {
