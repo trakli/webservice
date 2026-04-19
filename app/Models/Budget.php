@@ -164,35 +164,35 @@ class Budget extends Model
         return $this->hasMany(BudgetPeriodState::class);
     }
 
+    /**
+     * Flatten the three morphedByMany pivots into a single list the
+     * client can display. Reads from already-loaded relations when the
+     * caller eager-loaded them (typically on index endpoints) so a page
+     * of budgets doesn't run three queries per row.
+     */
     public function getTargetsAttribute(): array
     {
+        $typeMap = [
+            'categories' => 'category',
+            'groups' => 'group',
+            'wallets' => 'wallet',
+        ];
+
         $targets = [];
 
-        foreach ($this->categories()->get() as $category) {
-            $targets[] = [
-                'type' => 'category',
-                'id' => $category->id,
-                'client_generated_id' => $category->client_generated_id,
-                'name' => $category->name,
-            ];
-        }
+        foreach ($typeMap as $relation => $typeLabel) {
+            $items = $this->relationLoaded($relation)
+                ? $this->{$relation}
+                : $this->{$relation}()->get();
 
-        foreach ($this->groups()->get() as $group) {
-            $targets[] = [
-                'type' => 'group',
-                'id' => $group->id,
-                'client_generated_id' => $group->client_generated_id,
-                'name' => $group->name,
-            ];
-        }
-
-        foreach ($this->wallets()->get() as $wallet) {
-            $targets[] = [
-                'type' => 'wallet',
-                'id' => $wallet->id,
-                'client_generated_id' => $wallet->client_generated_id,
-                'name' => $wallet->name,
-            ];
+            foreach ($items as $item) {
+                $targets[] = [
+                    'type' => $typeLabel,
+                    'id' => $item->id,
+                    'client_generated_id' => $item->client_generated_id,
+                    'name' => $item->name,
+                ];
+            }
         }
 
         return $targets;
