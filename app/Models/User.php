@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -108,6 +109,11 @@ class User extends Authenticatable
     public function reminders(): HasMany
     {
         return $this->hasMany(Reminder::class);
+    }
+
+    public function budgets(): MorphMany
+    {
+        return $this->morphMany(Budget::class, 'owner');
     }
 
     public function notifications(): HasMany
