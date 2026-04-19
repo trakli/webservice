@@ -834,6 +834,7 @@ class TransactionController extends ApiController
         return $this->success(['message' => __('Transaction deleted successfully')]);
     }
 
+
     /**
      * Apply optional filtering query parameters (date range, wallets,
      * categories, search) to the given transaction query.

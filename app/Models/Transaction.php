@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Groupable;
 use App\Traits\HasClientCreatedAt;
+use App\Traits\Refundable;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -81,6 +82,7 @@ class Transaction extends Model
     use Groupable;
     use HasClientCreatedAt;
     use HasFactory;
+    use Refundable;
     use SoftDeletes;
     use Syncable;
 
@@ -137,6 +139,8 @@ class Transaction extends Model
         'transfer_client_generated_id',
         'files',
         'recurring_rules',
+        'is_refund',
+        'refund_of_transaction_id',
     ];
 
     public function getWalletClientGeneratedIdAttribute()
@@ -219,6 +223,16 @@ class Transaction extends Model
     public function recurringTransactionRule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
+    }
+
+    public function getIsRefundAttribute(): bool
+    {
+        return $this->refund()->exists();
+    }
+
+    public function getRefundOfTransactionIdAttribute(): ?int
+    {
+        return $this->refund?->original_transaction_id;
     }
 
     /**
