@@ -213,6 +213,8 @@ class TransferTest extends TestCase
 
         $this->assertNotNull($syncState);
         $this->assertEquals($randomId, $syncState->client_generated_id);
+
+        $this->assertEquals($clientId, $response->json('data.client_generated_id'));
     }
 
     public function test_duplicate_transfer_request_returns_existing_transfer()
@@ -456,6 +458,8 @@ class TransferTest extends TestCase
 
         $this->assertNotNull($syncState);
         $this->assertEquals($randomId, $syncState->client_generated_id);
+
+        $this->assertEquals($clientId, $updateResponse->json('data.client_generated_id'));
     }
 
     public function test_api_user_cannot_overwrite_existing_client_id()
@@ -621,6 +625,165 @@ class TransferTest extends TestCase
         $this->assertEquals($transfer->id, $incomeTransaction->transfer_id);
     }
 
+    public function test_transfer_response_includes_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transferData = $response->json('data');
+        $this->assertArrayHasKey('transactions', $transferData);
+        $this->assertCount(2, $transferData['transactions']);
+
+        $types = collect($transferData['transactions'])->pluck('type')->sort()->values()->all();
+        $this->assertEquals(['expense', 'income'], $types);
+    }
+
+    public function test_transfer_response_includes_transaction_client_ids()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transferData = $response->json('data');
+        $this->assertArrayHasKey('expense_transaction_client_id', $transferData);
+        $this->assertArrayHasKey('income_transaction_client_id', $transferData);
+        $this->assertNotNull($transferData['expense_transaction_client_id']);
+        $this->assertNotNull($transferData['income_transaction_client_id']);
+        $this->assertNotEquals(
+            $transferData['expense_transaction_client_id'],
+            $transferData['income_transaction_client_id']
+        );
+    }
+
+    public function test_transfer_transactions_do_not_include_transfer_client_generated_id()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response->assertStatus(201);
+
+        $transactions = $response->json('data.transactions');
+        foreach ($transactions as $transaction) {
+            $this->assertArrayNotHasKey('transfer_client_generated_id', $transaction);
+        }
+    }
+
+    public function test_transaction_response_includes_transfer_client_generated_id()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $deviceId = Uuid::uuid4()->toString();
+        $randomId = Uuid::uuid4()->toString();
+        $clientId = $deviceId.':'.$randomId;
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'client_id' => $clientId,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transactions');
+        $response->assertStatus(200);
+
+        $transactions = $response->json('data.data');
+        foreach ($transactions as $transaction) {
+            $this->assertArrayHasKey('transfer_client_generated_id', $transaction);
+            $this->assertEquals($clientId, $transaction['transfer_client_generated_id']);
+        }
+    }
+
+    public function test_transaction_without_transfer_has_null_transfer_client_generated_id()
+    {
+        $user = User::factory()->create();
+        $wallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+
+        $this->actingAs($user)->postJson('/api/v1/transactions', [
+            'amount' => 50,
+            'type' => 'expense',
+            'wallet_id' => $wallet->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transactions');
+        $response->assertStatus(200);
+
+        $transaction = $response->json('data.data.0');
+        $this->assertArrayHasKey('transfer_client_generated_id', $transaction);
+        $this->assertNull($transaction['transfer_client_generated_id']);
+    }
+
+    public function test_transfer_list_response_includes_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transfers');
+        $response->assertStatus(200);
+
+        $transfer = $response->json('data.data.0');
+        $this->assertArrayHasKey('transactions', $transfer);
+        $this->assertCount(2, $transfer['transactions']);
+    }
+
+    public function test_transaction_response_does_not_include_full_transfer_object()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/transactions');
+        $response->assertStatus(200);
+
+        $transactions = $response->json('data.data');
+        foreach ($transactions as $transaction) {
+            $this->assertArrayNotHasKey('transfer', $transaction);
+        }
+    }
+
     public function test_transfer_with_unknown_client_ids_creates_new_transactions()
     {
         $user = User::factory()->create();
@@ -645,5 +808,136 @@ class TransferTest extends TestCase
         $transfer = Transfer::first();
         $transactions = Transaction::where('transfer_id', $transfer->id)->get();
         $this->assertCount(2, $transactions);
+    }
+
+    public function test_api_user_can_show_a_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user)->getJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(200);
+        $this->assertEquals($transferId, $response->json('data.id'));
+        $this->assertEquals(100, $response->json('data.amount'));
+    }
+
+    public function test_api_user_cannot_show_another_users_transfer()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user1->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user1->id]);
+
+        $createResponse = $this->actingAs($user1)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user2)->getJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(404);
+    }
+
+    public function test_api_user_can_delete_a_transfer()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(200);
+
+        $this->assertSoftDeleted('transfers', ['id' => $transferId]);
+    }
+
+    public function test_deleting_a_transfer_also_deletes_its_transactions()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+        $transactionIds = Transaction::where('transfer_id', $transferId)->pluck('id');
+        $this->assertCount(2, $transactionIds);
+
+        $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        foreach ($transactionIds as $id) {
+            $this->assertSoftDeleted('transactions', ['id' => $id]);
+        }
+    }
+
+    public function test_api_user_cannot_delete_another_users_transfer()
+    {
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user1->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user1->id]);
+
+        $createResponse = $this->actingAs($user1)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+
+        $response = $this->actingAs($user2)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response->assertStatus(404);
+        $this->assertDatabaseHas('transfers', ['id' => $transferId, 'deleted_at' => null]);
+    }
+
+    public function test_deleted_transfers_appear_in_sync_query()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $createResponse = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ]);
+
+        $transferId = $createResponse->json('data.id');
+        $syncedBefore = urlencode(now()->subSecond()->toIso8601String());
+
+        $this->actingAs($user)->deleteJson("/api/v1/transfers/{$transferId}");
+
+        $response = $this->actingAs($user)->getJson("/api/v1/transfers?synced_since={$syncedBefore}");
+
+        $response->assertStatus(200);
+        $transfers = $response->json('data.data');
+        $this->assertCount(1, $transfers);
+        $this->assertNotNull($transfers[0]['deleted_at']);
     }
 }

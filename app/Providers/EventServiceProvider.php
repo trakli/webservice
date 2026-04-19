@@ -3,8 +3,13 @@
 namespace App\Providers;
 
 use App\Events\AccountDeleted;
+use App\Events\BudgetForecastBreached;
+use App\Events\BudgetThresholdBreached;
+use App\Events\TransactionRecorded;
+use App\Listeners\CreateBudgetAlertReminder;
 use App\Listeners\PasswordResetCodeGeneratedListener;
 use App\Listeners\PasswordResetCompleteListener;
+use App\Listeners\QueueBudgetRecompute;
 use App\Listeners\SendAccountDeletedNotifications;
 use App\Listeners\UserRegistered;
 use App\Models\Transaction;
@@ -38,6 +43,15 @@ class EventServiceProvider extends ServiceProvider
         ],
         AccountDeleted::class => [
             SendAccountDeletedNotifications::class,
+        ],
+        TransactionRecorded::class => [
+            QueueBudgetRecompute::class,
+        ],
+        BudgetThresholdBreached::class => [
+            [CreateBudgetAlertReminder::class, 'handleThreshold'],
+        ],
+        BudgetForecastBreached::class => [
+            [CreateBudgetAlertReminder::class, 'handleForecast'],
         ],
     ];
 

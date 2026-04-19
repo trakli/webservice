@@ -37,8 +37,43 @@ class TransactionController extends ApiController
                 name: 'type',
                 description: 'Type of transaction (income/expense)',
                 in: 'query',
-                required: true,
+                required: false,
                 schema: new OA\Schema(type: 'string', enum: ['income', 'expense'])
+            ),
+            new OA\Parameter(
+                name: 'date_from',
+                description: 'Filter transactions from this date (YYYY-MM-DD)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', format: 'date')
+            ),
+            new OA\Parameter(
+                name: 'date_to',
+                description: 'Filter transactions up to this date (YYYY-MM-DD)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', format: 'date')
+            ),
+            new OA\Parameter(
+                name: 'wallet_ids[]',
+                description: 'Filter by wallet IDs',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'array', items: new OA\Items(type: 'integer'))
+            ),
+            new OA\Parameter(
+                name: 'category_ids[]',
+                description: 'Filter by category IDs',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'array', items: new OA\Items(type: 'integer'))
+            ),
+            new OA\Parameter(
+                name: 'search',
+                description: 'Search transactions by description',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
             ),
             new OA\Parameter(ref: '#/components/parameters/limitParam'),
             new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
@@ -82,8 +117,19 @@ class TransactionController extends ApiController
             $query->where('type', $type);
         }
 
+        $this->applyTransactionFilters($query, $request);
+
         try {
+            // Compute totals for the filtered query (before pagination)
+            $totalsQuery = clone $query;
+            $totals = [
+                'income' => (float) (clone $totalsQuery)->where('type', 'income')->sum('amount'),
+                'expenses' => (float) (clone $totalsQuery)->where('type', 'expense')->sum('amount'),
+            ];
+            $totals['net'] = $totals['income'] - $totals['expenses'];
+
             $data = $this->applyApiQuery($request, $query);
+            $data['totals'] = $totals;
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
@@ -381,6 +427,8 @@ class TransactionController extends ApiController
 
             return $this->failure(__('Failed to create transaction'), 500, [$e->getMessage()]);
         }
+
+        $transaction->load('syncState');
 
         return $this->success($transaction, statusCode: 201);
     }
@@ -725,6 +773,8 @@ class TransactionController extends ApiController
                 return $transaction;
             });
 
+            $transaction->load('syncState');
+
             return $this->success($transaction, 200);
         } catch (HttpException $e) {
             return $this->failure($e->getMessage(), $e->getStatusCode());
@@ -782,6 +832,56 @@ class TransactionController extends ApiController
         $transaction->delete();
 
         return $this->success(['message' => __('Transaction deleted successfully')]);
+    }
+
+
+    /**
+     * Apply optional filtering query parameters (date range, wallets,
+     * categories, search) to the given transaction query.
+     */
+    private function applyTransactionFilters($query, Request $request): void
+    {
+        if ($request->filled('date_from')) {
+            $query->whereDate('datetime', '>=', $request->query('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('datetime', '<=', $request->query('date_to'));
+        }
+
+        $walletIds = $request->query('wallet_ids');
+        if (! empty($walletIds)) {
+            $walletIds = is_array($walletIds) ? $walletIds : [$walletIds];
+            $query->whereIn('wallet_id', $walletIds);
+        }
+
+        $categoryIds = $request->query('category_ids');
+        if (! empty($categoryIds)) {
+            $categoryIds = is_array($categoryIds) ? $categoryIds : [$categoryIds];
+            $query->whereHas('categories', function ($q) use ($categoryIds) {
+                $q->whereIn('categories.id', $categoryIds);
+            });
+        }
+
+        if ($request->filled('search')) {
+            $this->applySearchFilter($query, (string) $request->query('search'));
+        }
+    }
+
+    /**
+     * Apply a free-text search filter that matches against the description
+     * and, when the query contains a number, also the exact amount.
+     */
+    private function applySearchFilter($query, string $search): void
+    {
+        $query->where(function ($q) use ($search) {
+            $q->where('description', 'LIKE', '%' . $search . '%');
+
+            $numeric = preg_replace('/[^0-9.]/', '', $search);
+            if ($numeric !== '' && is_numeric($numeric)) {
+                $q->orWhere('amount', $numeric);
+            }
+        });
     }
 
     /**

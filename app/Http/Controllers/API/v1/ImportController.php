@@ -6,8 +6,15 @@ use App\Enums\TransactionType;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Requests\FileImportApiRequest;
 use App\Http\Requests\FixFailedImportsRequest;
+use App\Http\Requests\ImportAnalyzeRequest;
+use App\Http\Requests\ImportConfirmRequest;
+use App\Jobs\AnalyzeImportJob;
 use App\Jobs\ImportFileJob;
+use App\Services\DocumentProcessorManager;
+use App\Services\DuplicateDetectionService;
 use App\Services\FileImportService;
+use App\Services\SuggestionEnricher;
+use App\Types\TransactionSuggestion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -18,11 +25,12 @@ use OpenApi\Attributes as OA;
  */
 class ImportController extends ApiController
 {
-    private FileImportService $fileImportService;
-
-    public function __construct(FileImportService $fileImportService)
-    {
-        $this->fileImportService = $fileImportService;
+    public function __construct(
+        private FileImportService $fileImportService,
+        private DocumentProcessorManager $processorManager,
+        private SuggestionEnricher $enricher,
+        private DuplicateDetectionService $duplicateService,
+    ) {
     }
 
     #[OA\Post(
@@ -249,7 +257,10 @@ class ImportController extends ApiController
                         $this->fileImportService->importTransaction(
                             $this->convertImportObjectToArray($importToFix),
                             $transactionType,
-                            $user
+                            $user,
+                            autoCreateWallets: true,
+                            autoCreateParties: true,
+                            autoCreateCategories: true,
                         );
                     } catch (\Exception $e) {
                         $importToFix['reason'] = 'An error occurred while importing this transaction';
@@ -312,5 +323,240 @@ class ImportController extends ApiController
             $import['description'] ?? '',
             $import['date'] ?? '',
         ];
+    }
+
+    #[OA\Post(
+        path: '/import/analyze',
+        summary: 'Analyze a document and return transaction suggestions',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'file', type: 'string', format: 'binary'),
+                    new OA\Property(property: 'document_type', type: 'string', enum: ['bank_statement', 'receipt', 'invoice', 'pay_stub', 'utility_bill']),
+                ]
+            )
+        ),
+        tags: ['Import'],
+        responses: [
+            new OA\Response(response: 200, description: 'Suggestions returned'),
+            new OA\Response(response: 422, description: 'Validation error'),
+            new OA\Response(response: 500, description: 'Server error'),
+        ]
+    )]
+    public function analyze(ImportAnalyzeRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $file = $request->file('file');
+
+        try {
+            $mimeType = $file->getMimeType() ?? '';
+            $extension = strtolower($file->getClientOriginalExtension());
+
+            if (! $this->processorManager->canHandle($mimeType, $extension)) {
+                return $this->failure(__('No processor available for this file type.'), 422);
+            }
+
+            // Store file for background processing
+            $storedPath = $file->store('import-analyze');
+
+            $processor = $this->processorManager->getProcessor($mimeType, $extension);
+            $processorName = class_basename($processor);
+
+            $session = $user->importSessions()->create([
+                'file_name' => $file->getClientOriginalName(),
+                'file_type' => $extension,
+                'document_type' => $request->input('document_type'),
+                'processor' => $processorName,
+                'status' => 'analyzing',
+                'suggestions' => [],
+            ]);
+
+            AnalyzeImportJob::dispatch(
+                $session->id,
+                $storedPath,
+                $file->getClientOriginalName(),
+                $mimeType,
+                $extension,
+            );
+
+            return $this->success($session, __('Document uploaded. Analysis in progress.'));
+        } catch (\RuntimeException $e) {
+            return $this->failure($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            Log::error('Import analyze failed', ['error' => $e->getMessage()]);
+
+            return $this->failure(__('Failed to start document analysis.'));
+        }
+    }
+
+    #[OA\Post(
+        path: '/import/confirm',
+        summary: 'Confirm and create transactions from reviewed suggestions',
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'session_id', type: 'integer'),
+                    new OA\Property(property: 'accepted', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'auto_create_wallets', type: 'boolean', default: false, description: 'Create wallets that do not exist'),
+                    new OA\Property(property: 'auto_create_parties', type: 'boolean', default: false, description: 'Create parties that do not exist'),
+                    new OA\Property(property: 'auto_create_categories', type: 'boolean', default: false, description: 'Create categories that do not exist'),
+                ]
+            )
+        ),
+        tags: ['Import'],
+        responses: [
+            new OA\Response(response: 200, description: 'Transactions created'),
+            new OA\Response(response: 404, description: 'Session not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function confirm(ImportConfirmRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $session = $user->importSessions()->find($request->input('session_id'));
+
+        if (is_null($session)) {
+            return $this->failure(__('Import session not found.'), 404);
+        }
+
+        if ($session->status !== 'ready') {
+            return $this->failure(__('This import session has already been processed.'), 422);
+        }
+
+        $suggestions = $session->suggestions;
+        $accepted = $request->input('accepted');
+        $autoCreate = [
+            'wallets' => $request->boolean('auto_create_wallets', false),
+            'parties' => $request->boolean('auto_create_parties', false),
+            'categories' => $request->boolean('auto_create_categories', false),
+        ];
+        $createdCount = 0;
+        $errors = [];
+
+        foreach ($accepted as $item) {
+            $result = $this->processAcceptedItem($item, $suggestions, $user, $autoCreate);
+
+            if ($result === true) {
+                $createdCount++;
+            } elseif (is_string($result)) {
+                $errors[] = $result;
+            }
+        }
+
+        $data = [
+            'created_count' => $createdCount,
+            'errors' => $errors,
+        ];
+
+        if ($createdCount === 0 && ! empty($errors)) {
+            return $this->success($data, __('Import failed. No transactions were created.'), 206);
+        }
+
+        $session->update(['status' => 'confirmed']);
+
+        if (! empty($errors)) {
+            return $this->success($data, __('Import completed with some errors.'), 206);
+        }
+
+        return $this->success($data, __('All transactions imported successfully.'));
+    }
+
+    /**
+     * Process a single accepted suggestion item.
+     *
+     * @return true|string True on success, error message string on failure
+     */
+    private function processAcceptedItem(array $item, array $suggestions, $user, array $autoCreate = []): true|string
+    {
+        $index = $item['index'];
+
+        if (! isset($suggestions[$index])) {
+            return "Invalid suggestion index: {$index}";
+        }
+
+        $suggestion = $this->mergeUserEdits($suggestions[$index], $item);
+        $transactionType = $suggestion['type'] ?? 'expense';
+
+        if (! in_array($transactionType, [TransactionType::EXPENSE->value, TransactionType::INCOME->value])) {
+            return "Invalid transaction type at index {$index}";
+        }
+
+        try {
+            $suggestionObj = TransactionSuggestion::fromArray($suggestion);
+            $this->fileImportService->importTransaction(
+                $suggestionObj->toImportArray(),
+                $transactionType,
+                $user,
+                autoCreateWallets: $autoCreate['wallets'],
+                autoCreateParties: $autoCreate['parties'],
+                autoCreateCategories: $autoCreate['categories'],
+            );
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Import confirm failed for suggestion', [
+                'index' => $index,
+                'error' => $e->getMessage(),
+            ]);
+
+            return "Failed to import suggestion at index {$index}: {$e->getMessage()}";
+        }
+    }
+
+    /**
+     * Merge user edits into a suggestion array.
+     */
+    private function mergeUserEdits(array $suggestion, array $item): array
+    {
+        foreach (['amount', 'currency', 'type', 'party', 'wallet', 'category', 'description', 'date'] as $field) {
+            if (isset($item[$field])) {
+                $suggestion[$field] = $item[$field];
+            }
+        }
+
+        return $suggestion;
+    }
+
+    #[OA\Get(
+        path: '/import/sessions',
+        summary: 'Get all import sessions',
+        tags: ['Import'],
+        responses: [
+            new OA\Response(response: 200, description: 'Sessions list'),
+        ]
+    )]
+    public function getSessions(Request $request): JsonResponse
+    {
+        $sessions = $request->user()
+            ->importSessions()
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return $this->success($sessions);
+    }
+
+    #[OA\Get(
+        path: '/import/sessions/{id}',
+        summary: 'Get a specific import session',
+        tags: ['Import'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Session details'),
+            new OA\Response(response: 404, description: 'Not found'),
+        ]
+    )]
+    public function getSession(Request $request, string $sessionId): JsonResponse
+    {
+        $session = $request->user()->importSessions()->find($sessionId);
+
+        if (is_null($session)) {
+            return $this->failure(__('Import session not found.'), 404);
+        }
+
+        return $this->success($session);
     }
 }

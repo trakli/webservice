@@ -26,6 +26,15 @@ class InsightsServiceTest extends TestCase
         $notificationService = new NotificationService(null);
         $this->service = new InsightsService($notificationService);
         Mail::fake();
+
+        // Disable insights for any pre-existing users to isolate test counts
+        foreach (User::all() as $existingUser) {
+            $existingUser->setConfigValue(
+                InsightsService::CONFIG_KEY,
+                InsightsService::DISABLED_VALUE,
+                ConfigValueType::String
+            );
+        }
     }
 
     public function test_sends_weekly_insights_to_opted_in_users()
@@ -63,9 +72,32 @@ class InsightsServiceTest extends TestCase
         Mail::assertNothingQueued();
     }
 
-    public function test_does_not_send_to_users_without_preference()
+    public function test_sends_weekly_insights_by_default_when_no_preference_set()
+    {
+        $user = $this->createUserWithTransactions();
+
+        $sent = $this->service->sendInsights('weekly');
+
+        $this->assertEquals(1, $sent);
+        Mail::assertQueued(InsightsMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
+    }
+
+    public function test_does_not_send_monthly_insights_to_users_without_preference()
     {
         $this->createUserWithTransactions();
+
+        $sent = $this->service->sendInsights('monthly');
+
+        $this->assertEquals(0, $sent);
+        Mail::assertNothingQueued();
+    }
+
+    public function test_does_not_send_insights_to_users_who_opted_out()
+    {
+        $user = $this->createUserWithTransactions();
+        $user->setConfigValue(InsightsService::CONFIG_KEY, InsightsService::DISABLED_VALUE, ConfigValueType::String);
 
         $sent = $this->service->sendInsights('weekly');
 

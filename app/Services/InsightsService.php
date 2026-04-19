@@ -13,6 +13,10 @@ class InsightsService
 {
     public const CONFIG_KEY = 'insights-frequency';
 
+    public const DEFAULT_FREQUENCY = 'weekly';
+
+    public const DISABLED_VALUE = 'none';
+
     public function __construct(
         protected NotificationService $notificationService
     ) {
@@ -42,10 +46,23 @@ class InsightsService
 
     protected function getUsersWithFrequency(string $frequency): \Illuminate\Support\Collection
     {
-        return User::whereHas('configurations', function ($query) use ($frequency) {
-            $query->where('key', self::CONFIG_KEY)
-                ->where('value', $frequency);
-        })->get();
+        return User::where(function ($query) use ($frequency) {
+            $query->whereHas('configurations', function ($q) use ($frequency) {
+                $q->where('key', self::CONFIG_KEY)
+                    ->where('value', $frequency);
+            });
+
+            if ($frequency === self::DEFAULT_FREQUENCY) {
+                $query->orWhereDoesntHave('configurations', function ($q) {
+                    $q->where('key', self::CONFIG_KEY);
+                });
+            }
+        })
+            ->whereDoesntHave('configurations', function ($q) {
+                $q->where('key', self::CONFIG_KEY)
+                    ->where('value', self::DISABLED_VALUE);
+            })
+            ->get();
     }
 
     public function generateInsights(User $user, string $frequency = 'weekly'): array

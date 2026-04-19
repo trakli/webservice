@@ -41,4 +41,71 @@ return [
         'url' => env('SMARTQL_URL', 'http://smartql:8000'),
     ],
 
+    'llm' => [
+        'provider' => env('LLM_PROVIDER', 'gemini'),
+        'model' => env('LLM_MODEL', 'gemini-2.0-flash'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remote Document Processor
+    |--------------------------------------------------------------------------
+    |
+    | Configure a remote service to extract transactions from documents.
+    | Any service that accepts a file upload and returns JSON with a
+    | "transactions" array works. Use response_mapping to adapt
+    | services that use different field names.
+    |
+    | Expected response: { "transactions": [{ "date", "description", "amount", "currency" }] }
+    |
+    */
+    'document_processor' => [
+        'url' => env('DOCUMENT_PROCESSOR_URL'),
+        'timeout' => env('DOCUMENT_PROCESSOR_TIMEOUT', 120),
+        'auth_type' => env('DOCUMENT_PROCESSOR_AUTH_TYPE', 'none'),
+        'auth_credentials' => env('DOCUMENT_PROCESSOR_AUTH_CREDENTIALS'),
+        'auth_header' => env('DOCUMENT_PROCESSOR_AUTH_HEADER', 'X-API-Key'),
+        'file_field' => env('DOCUMENT_PROCESSOR_FILE_FIELD', 'file'),
+        'extra_params' => [],
+        /*
+        | Response mapping — tells the processor how to find transactions in the response.
+        |
+        | Two modes:
+        |   "fields" (default) — each item in the array has named keys:
+        |       { "date": "...", "amount": -50, "description": "..." }
+        |
+        |   "text_block" — each item has a text blob split by newlines:
+        |       { "content": "31 Mar, 2024\nCard charge\n-36.12\nEUR" }
+        |       Use line_mapping to say which line index maps to which field.
+        |
+        | Example for a standard API:
+        |   'transactions_path' => 'transactions',
+        |   'mode' => 'fields',
+        |
+        | Example for PageMind (elements as text blocks):
+        |   'transactions_path' => 'elements',
+        |   'mode' => 'text_block',
+        |   'content_field' => 'content',
+        |   'filter' => ['key' => 'subtype', 'value' => 'paragraph'],
+        |   'line_mapping' => ['date' => 0, 'description' => 1, 'amount' => 2, 'currency' => 3, 'status' => 4],
+        */
+        'response_mapping' => [
+            'transactions_path' => env('DOCUMENT_PROCESSOR_TRANSACTIONS_PATH', 'transactions'),
+            'mode' => env('DOCUMENT_PROCESSOR_MODE', 'fields'),
+            'content_field' => 'content',
+            'filter' => env('DOCUMENT_PROCESSOR_FILTER_KEY')
+                ? ['key' => env('DOCUMENT_PROCESSOR_FILTER_KEY'), 'value' => env('DOCUMENT_PROCESSOR_FILTER_VALUE')]
+                : null,
+            'line_mapping' => [
+                'date' => (int) env('DOCUMENT_PROCESSOR_LINE_DATE', 0),
+                'description' => (int) env('DOCUMENT_PROCESSOR_LINE_DESCRIPTION', 1),
+                'amount' => (int) env('DOCUMENT_PROCESSOR_LINE_AMOUNT', 2),
+                'currency' => (int) env('DOCUMENT_PROCESSOR_LINE_CURRENCY', 3),
+                'status' => env('DOCUMENT_PROCESSOR_LINE_STATUS') !== null
+                    ? (int) env('DOCUMENT_PROCESSOR_LINE_STATUS')
+                    : null,
+            ],
+        ],
+    ],
+
 ];

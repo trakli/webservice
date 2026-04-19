@@ -1,6 +1,6 @@
 {
     "name": "trakli/webservice",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "type": "project",
     "description": "Trakli Webservice",
     "keywords": [
@@ -16,6 +16,7 @@
         "laravel/framework": "^11.45.1",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.8",
+        "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-model-configuration": "^1.0.9",

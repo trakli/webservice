@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\TransactionType;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -32,6 +35,7 @@ class Transfer extends Model
 {
     use HasClientCreatedAt;
     use HasFactory;
+    use SoftDeletes;
     use Syncable;
 
     /**
@@ -52,7 +56,22 @@ class Transfer extends Model
         'datetime' => 'datetime',
     ];
 
-    protected $appends = ['source_wallet', 'destination_wallet', 'last_synced_at', 'client_generated_id'];
+    protected $appends = [
+        'source_wallet',
+        'destination_wallet',
+        'last_synced_at',
+        'client_generated_id',
+        'transactions',
+        'expense_transaction_client_id',
+        'income_transaction_client_id',
+    ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Transfer $transfer) {
+            $transfer->transactions->each->delete();
+        });
+    }
 
     public function user(): BelongsTo
     {
@@ -69,13 +88,40 @@ class Transfer extends Model
         return $this->belongsTo(Wallet::class, 'to_wallet_id');
     }
 
+    public function getTransactionsAttribute()
+    {
+        return $this->getRelationValue('transactions')
+            ->makeHidden('transfer_client_generated_id');
+    }
+
     public function getSourceWalletAttribute()
     {
-        return $this->sourceWallet()->first();
+        return $this->getRelationValue('sourceWallet');
     }
 
     public function getDestinationWalletAttribute()
     {
-        return $this->destinationWallet()->first();
+        return $this->getRelationValue('destinationWallet');
+    }
+
+    public function getExpenseTransactionClientIdAttribute(): ?string
+    {
+        return $this->transactions
+            ->where('type', TransactionType::EXPENSE->value)
+            ->first()
+            ?->client_generated_id;
+    }
+
+    public function getIncomeTransactionClientIdAttribute(): ?string
+    {
+        return $this->transactions
+            ->where('type', TransactionType::INCOME->value)
+            ->first()
+            ?->client_generated_id;
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
     }
 }

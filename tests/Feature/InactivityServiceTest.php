@@ -143,6 +143,18 @@ class InactivityServiceTest extends TestCase
         ));
     }
 
+    public function test_sends_reminder_by_default_when_no_preference_set()
+    {
+        $user = $this->createUserWithOldTransaction(10);
+
+        $sent = $this->service->sendInactivityReminders();
+
+        $this->assertEquals(1, $sent);
+        Mail::assertQueued(InactivityReminderMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
+    }
+
     public function test_does_not_send_to_user_with_no_transactions()
     {
         User::factory()->create();
