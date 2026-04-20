@@ -20,6 +20,9 @@ use Throwable;
 use App\Services\TransferService;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class TransactionController extends ApiController
 {
     use ApiQueryable;
