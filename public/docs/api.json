@@ -1805,12 +1805,17 @@
                     "Import"
                 ],
                 "summary": "Confirm and create transactions from reviewed suggestions",
+                "description": "Each accepted item should reference existing wallet/party/category rows by ID. When an ID is omitted and the matching auto_create_* flag is true, the analyzer's suggested name is used to create the resource (wallets additionally need a currency).",
                 "operationId": "1fdb80050f2d675d2bc4bd942a6958c3",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "session_id",
+                                    "accepted"
+                                ],
                                 "properties": {
                                     "session_id": {
                                         "type": "integer"
@@ -1818,21 +1823,68 @@
                                     "accepted": {
                                         "type": "array",
                                         "items": {
+                                            "required": [
+                                                "index"
+                                            ],
+                                            "properties": {
+                                                "index": {
+                                                    "description": "Zero-based position of the suggestion in the session.",
+                                                    "type": "integer"
+                                                },
+                                                "wallet_id": {
+                                                    "description": "Existing wallet owned by the caller. Required unless auto_create_wallets is true and the suggestion has a wallet name and currency.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "party_id": {
+                                                    "description": "Existing party owned by the caller.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "category_id": {
+                                                    "description": "Existing category owned by the caller.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "amount": {
+                                                    "description": "Override the suggested amount.",
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "income",
+                                                        "expense"
+                                                    ],
+                                                    "nullable": true
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                }
+                                            },
                                             "type": "object"
                                         }
                                     },
                                     "auto_create_wallets": {
-                                        "description": "Create wallets that do not exist",
+                                        "description": "Create a wallet from the suggestion when wallet_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     },
                                     "auto_create_parties": {
-                                        "description": "Create parties that do not exist",
+                                        "description": "Create a party from the suggestion when party_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     },
                                     "auto_create_categories": {
-                                        "description": "Create categories that do not exist",
+                                        "description": "Create a category from the suggestion when category_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     }
@@ -1845,6 +1897,9 @@
                 "responses": {
                     "200": {
                         "description": "Transactions created"
+                    },
+                    "206": {
+                        "description": "Some suggestions failed (see errors)"
                     },
                     "404": {
                         "description": "Session not found"

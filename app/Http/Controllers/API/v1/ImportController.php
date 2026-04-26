@@ -14,7 +14,6 @@ use App\Services\DocumentProcessorManager;
 use App\Services\DuplicateDetectionService;
 use App\Services\FileImportService;
 use App\Services\SuggestionEnricher;
-use App\Types\TransactionSuggestion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -393,21 +392,89 @@ class ImportController extends ApiController
     #[OA\Post(
         path: '/import/confirm',
         summary: 'Confirm and create transactions from reviewed suggestions',
+        description: 'Each accepted item should reference existing wallet/party/category rows by ID. '
+            . 'When an ID is omitted and the matching auto_create_* flag is true, the analyzer\'s '
+            . 'suggested name is used to create the resource (wallets additionally need a currency).',
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
+                required: ['session_id', 'accepted'],
                 properties: [
                     new OA\Property(property: 'session_id', type: 'integer'),
-                    new OA\Property(property: 'accepted', type: 'array', items: new OA\Items(type: 'object')),
-                    new OA\Property(property: 'auto_create_wallets', type: 'boolean', default: false, description: 'Create wallets that do not exist'),
-                    new OA\Property(property: 'auto_create_parties', type: 'boolean', default: false, description: 'Create parties that do not exist'),
-                    new OA\Property(property: 'auto_create_categories', type: 'boolean', default: false, description: 'Create categories that do not exist'),
+                    new OA\Property(
+                        property: 'accepted',
+                        type: 'array',
+                        items: new OA\Items(
+                            required: ['index'],
+                            properties: [
+                                new OA\Property(
+                                    property: 'index',
+                                    type: 'integer',
+                                    description: 'Zero-based position of the suggestion in the session.'
+                                ),
+                                new OA\Property(
+                                    property: 'wallet_id',
+                                    type: 'integer',
+                                    nullable: true,
+                                    description: 'Existing wallet owned by the caller. Required unless '
+                                        . 'auto_create_wallets is true and the suggestion has a wallet name and currency.'
+                                ),
+                                new OA\Property(
+                                    property: 'party_id',
+                                    type: 'integer',
+                                    nullable: true,
+                                    description: 'Existing party owned by the caller.'
+                                ),
+                                new OA\Property(
+                                    property: 'category_id',
+                                    type: 'integer',
+                                    nullable: true,
+                                    description: 'Existing category owned by the caller.'
+                                ),
+                                new OA\Property(
+                                    property: 'amount',
+                                    type: 'number',
+                                    format: 'float',
+                                    nullable: true,
+                                    description: 'Override the suggested amount.'
+                                ),
+                                new OA\Property(
+                                    property: 'type',
+                                    type: 'string',
+                                    enum: ['income', 'expense'],
+                                    nullable: true
+                                ),
+                                new OA\Property(property: 'description', type: 'string', nullable: true),
+                                new OA\Property(property: 'date', type: 'string', format: 'date', nullable: true),
+                            ],
+                            type: 'object',
+                        )
+                    ),
+                    new OA\Property(
+                        property: 'auto_create_wallets',
+                        type: 'boolean',
+                        default: false,
+                        description: 'Create a wallet from the suggestion when wallet_id is omitted.'
+                    ),
+                    new OA\Property(
+                        property: 'auto_create_parties',
+                        type: 'boolean',
+                        default: false,
+                        description: 'Create a party from the suggestion when party_id is omitted.'
+                    ),
+                    new OA\Property(
+                        property: 'auto_create_categories',
+                        type: 'boolean',
+                        default: false,
+                        description: 'Create a category from the suggestion when category_id is omitted.'
+                    ),
                 ]
             )
         ),
         tags: ['Import'],
         responses: [
             new OA\Response(response: 200, description: 'Transactions created'),
+            new OA\Response(response: 206, description: 'Some suggestions failed (see errors)'),
             new OA\Response(response: 404, description: 'Session not found'),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
@@ -476,22 +543,21 @@ class ImportController extends ApiController
             return "Invalid suggestion index: {$index}";
         }
 
-        $suggestion = $this->mergeUserEdits($suggestions[$index], $item);
-        $transactionType = $suggestion['type'] ?? 'expense';
+        $merged = $this->mergeUserEdits($suggestions[$index], $item);
+        $transactionType = $merged['type'] ?? 'expense';
 
         if (! in_array($transactionType, [TransactionType::EXPENSE->value, TransactionType::INCOME->value])) {
             return "Invalid transaction type at index {$index}";
         }
 
         try {
-            $suggestionObj = TransactionSuggestion::fromArray($suggestion);
-            $this->fileImportService->importTransaction(
-                $suggestionObj->toImportArray(),
-                $transactionType,
-                $user,
-                autoCreateWallets: $autoCreate['wallets'],
-                autoCreateParties: $autoCreate['parties'],
-                autoCreateCategories: $autoCreate['categories'],
+            $this->fileImportService->importTransactionFromConfirm(
+                merged: $merged,
+                transactionType: $transactionType,
+                user: $user,
+                autoCreateWallets: $autoCreate['wallets'] ?? false,
+                autoCreateParties: $autoCreate['parties'] ?? false,
+                autoCreateCategories: $autoCreate['categories'] ?? false,
             );
 
             return true;
@@ -510,7 +576,11 @@ class ImportController extends ApiController
      */
     private function mergeUserEdits(array $suggestion, array $item): array
     {
-        foreach (['amount', 'currency', 'type', 'party', 'wallet', 'category', 'description', 'date'] as $field) {
+        $fields = [
+            'amount', 'type', 'description', 'date',
+            'wallet_id', 'party_id', 'category_id',
+        ];
+        foreach ($fields as $field) {
             if (isset($item[$field])) {
                 $suggestion[$field] = $item[$field];
             }
