@@ -67,8 +67,8 @@ class TransferTest extends TestCase
             'to_wallet_id' => $toWallet->id,
         ]);
 
-        $response->assertStatus(400);
-        $response->assertJson(['message' => 'Source wallet has insufficient balance']);
+        $response->assertStatus(422);
+        $response->assertJsonPath('errors.setting_key', 'allow-negative-balance');
     }
 
     public function test_api_user_can_not_transfer_from_two_wallets_with_different_currencies_without_an_exchange_rate()
