@@ -19,6 +19,9 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class TransactionController extends ApiController
 {
     use ApiQueryable;
@@ -320,6 +323,14 @@ class TransactionController extends ApiController
         $data = $validationResult['data'];
         $user = $request->user();
 
+        $wallet = \App\Models\Wallet::find($data['wallet_id']);
+        $allowNegative = $user->getConfigValue('allow-negative-balance', false);
+
+        // Only check for expense types; income is always allowed
+        if ($data['type'] === 'expense' && $wallet->balance < $data['amount'] && !$allowNegative) {
+            return $this->failure(__('Insufficient balance in wallet'), 422);
+        }
+
         if (! empty($data['client_id'])) {
             $existingTransaction = Transaction::findByClientId($data['client_id'], $user);
             if ($existingTransaction) {
@@ -416,6 +427,8 @@ class TransactionController extends ApiController
                     )->delay($recurring_transaction->next_scheduled_at);
                 }
 
+
+
                 return $transaction;
             });
         } catch (HttpException $e) {
@@ -430,7 +443,8 @@ class TransactionController extends ApiController
 
         $transaction->load('syncState');
 
-        return $this->success($transaction, statusCode: 201);
+        return $this->transferWithNegativeBalance($transaction);
+        // return $this->success($transaction, statusCode: 201);
     }
 
     #[OA\Delete(
@@ -923,5 +937,21 @@ class TransactionController extends ApiController
                 );
             }
         }
+    }
+
+    /**
+     * Helper to format the success response and inject negative balance warnings.
+     */
+    private function transferWithNegativeBalance(Transaction $transaction): JsonResponse
+    {
+        $transaction->load('wallet');
+
+        $responseData = $transaction->toArray();
+
+        if ($transaction->wallet->balance < 0) {
+            $responseData['warning'] = __('Transaction recorded, but your wallet is now in a negative balance.');
+        }
+
+        return $this->success($responseData, statusCode: 201);
     }
 }
