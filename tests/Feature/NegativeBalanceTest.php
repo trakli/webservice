@@ -12,58 +12,64 @@ class NegativeBalanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test that a transaction fails if balance is insufficient and config is OFF.
-     */
-    public function test_transaction_fails_when_insufficient_funds_and_config_disabled()
+    public function test_transfer_fails_when_insufficient_funds_and_config_disabled()
     {
         $user = User::factory()->create();
-        $wallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 10.00]);
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 10.00]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
 
-        // Explicitly set allow-negative-balance to false
         $user->setConfigValue('allow-negative-balance', false, ConfigValueType::Boolean);
 
         $payload = [
-            'amount' => 50.00, // More than the 10.00 balance
-            'type' => 'expense',
-            'wallet_id' => $wallet->id,
-            'description' => 'Overdraft attempt',
+            'amount' => 50.00,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
         ];
 
-        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/transactions', $payload);
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/transfers', $payload);
 
-        // It should fail because the TransferService (or Controller) throws an error
         $response->assertStatus(422);
-        $this->assertEquals(10.00, $wallet->fresh()->balance);
+        $response->assertJsonPath('errors.setting_key', 'allow-negative-balance');
+        $this->assertEquals(10.00, $fromWallet->fresh()->balance);
+        $this->assertEquals(0.0, (float) $toWallet->fresh()->balance);
     }
 
-    /**
-     * Test that a transaction succeeds if balance is insufficient but config is ON.
-     */
-    public function test_transaction_succeeds_when_insufficient_funds_and_config_enabled()
+    public function test_transfer_fails_when_insufficient_funds_and_config_unset()
     {
         $user = User::factory()->create();
-        $wallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 10.00]);
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 10.00]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
 
-        // Enable negative balance for this user
+        $payload = [
+            'amount' => 50.00,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ];
+
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/transfers', $payload);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('errors.setting_key', 'allow-negative-balance');
+    }
+
+    public function test_transfer_succeeds_when_insufficient_funds_and_config_enabled()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 10.00]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
+
         $user->setConfigValue('allow-negative-balance', true, ConfigValueType::Boolean);
 
         $payload = [
             'amount' => 50.00,
-            'type' => 'expense',
-            'wallet_id' => $wallet->id,
-            'description' => 'Allowed overdraft',
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
         ];
 
-        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/transactions', $payload);
+        $response = $this->actingAs($user, 'sanctum')->postJson('/api/v1/transfers', $payload);
 
-        // Assert success
         $response->assertStatus(201);
-
-        // Assert the warning exists in the response JSON
-        // $response->assertJsonPath('warning', __('Your account is now in a negative balance.'));
-
-        // Assert the database reflects a negative balance (-40)
-        $this->assertEquals(-40.00, (float)$wallet->fresh()->balance);
+        $this->assertEquals(-40.00, (float) $fromWallet->fresh()->balance);
+        $this->assertEquals(50.00, (float) $toWallet->fresh()->balance);
     }
 }

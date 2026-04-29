@@ -7,7 +7,6 @@ use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
-use InvalidArgumentException;
 use Ramsey\Uuid\Uuid;
 
 class TransferService
@@ -26,15 +25,6 @@ class TransferService
         ?string $datetime = null,
         array $transactionClientIds = []
     ) {
-        //check the user allows negative balance only if the balance is low
-        if ($fromWallet->balance < $amountToSend) {
-            $allowNegativeBalance = $user->getConfigValue('allow-negative-balance', false);
-            //only throw the exception if the balance is low and they havent enabled negative transfers
-            if (!$allowNegativeBalance) {
-                throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
-            }
-        }
-
         $transferDatetime = $datetime ?? now();
 
         $transfer = Transfer::create([

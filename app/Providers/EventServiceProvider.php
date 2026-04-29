@@ -20,7 +20,6 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 use Whilesmart\UserAuthentication\Events\PasswordResetCodeGeneratedEvent;
 use Whilesmart\UserAuthentication\Events\PasswordResetCompleteEvent;
 use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
-use Whilesmart\Auth\Listeners\SetDefaultUserConfig;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -32,7 +31,6 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
-            SetDefaultUserConfig::class,
         ],
         PasswordResetCodeGeneratedEvent::class => [
             PasswordResetCodeGeneratedListener::class,

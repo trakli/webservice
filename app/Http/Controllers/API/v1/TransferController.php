@@ -204,7 +204,13 @@ class TransferController extends ApiController
         }
 
         if ($fromWallet->balance < $data['amount']) {
-            return $this->failure(__('Source wallet has insufficient balance'));
+            if (! $user->getConfigValue('allow-negative-balance', false)) {
+                return $this->failure(
+                    __('Source wallet has insufficient balance. Enable allow-negative-balance in your settings to record this transfer anyway.'),
+                    422,
+                    ['setting_key' => 'allow-negative-balance']
+                );
+            }
         }
 
         $exchangeRate = 1;
