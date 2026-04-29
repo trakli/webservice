@@ -68,7 +68,7 @@ class TransferTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonPath('errors.setting_key', 'allow-negative-balance');
+        $response->assertJsonPath('errors.setting_key', 'wallets-allow-negative-balance');
     }
 
     public function test_api_user_can_not_transfer_from_two_wallets_with_different_currencies_without_an_exchange_rate()

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\TransferService;
+use App\Support\ConfigurationKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -203,14 +204,15 @@ class TransferController extends ApiController
             return $this->failure(__('Destination wallet does not exist'));
         }
 
-        if ($fromWallet->balance < $data['amount']) {
-            if (! $user->getConfigValue('allow-negative-balance', false)) {
-                return $this->failure(
-                    __('Source wallet has insufficient balance. Enable allow-negative-balance in your settings to record this transfer anyway.'),
-                    422,
-                    ['setting_key' => 'allow-negative-balance']
-                );
-            }
+        if (
+            $fromWallet->balance < $data['amount']
+            && ! $user->getConfigValue(ConfigurationKeys::WALLETS_ALLOW_NEGATIVE_BALANCE, false)
+        ) {
+            return $this->failure(
+                __('Source wallet has insufficient balance. Enable allowing negative wallet balances in your settings to record this transfer anyway.'),
+                422,
+                ['setting_key' => ConfigurationKeys::WALLETS_ALLOW_NEGATIVE_BALANCE]
+            );
         }
 
         $exchangeRate = 1;

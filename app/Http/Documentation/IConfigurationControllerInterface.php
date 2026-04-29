@@ -2,6 +2,7 @@
 
 namespace App\Http\Documentation;
 
+use App\Support\ConfigurationKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -19,7 +20,12 @@ interface IConfigurationControllerInterface
             content: new OA\JsonContent(
                 required: ['key', 'value', 'type'],
                 properties: [
-                    new OA\Property(property: 'key', type: 'string', example: 'theme_preference'),
+                    new OA\Property(
+                        property: 'key',
+                        type: 'string',
+                        enum: ConfigurationKeys::NAMES,
+                        example: ConfigurationKeys::THEME
+                    ),
                     new OA\Property(
                         property: 'value',
                         type: 'object',
@@ -88,7 +94,7 @@ interface IConfigurationControllerInterface
                 description: 'Configuration key',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string')
+                schema: new OA\Schema(type: 'string', enum: ConfigurationKeys::NAMES)
             ),
         ],
         responses: [
@@ -112,7 +118,7 @@ interface IConfigurationControllerInterface
                 description: 'Configuration key',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string')
+                schema: new OA\Schema(type: 'string', enum: ConfigurationKeys::NAMES)
             ),
         ],
         responses: [
@@ -135,7 +141,7 @@ interface IConfigurationControllerInterface
                 description: 'Configuration key',
                 in: 'path',
                 required: true,
-                schema: new OA\Schema(type: 'string')
+                schema: new OA\Schema(type: 'string', enum: ConfigurationKeys::NAMES)
             ),
         ],
         responses: [
