@@ -34,6 +34,7 @@ class InsightsMail extends Mailable
     {
         return new Content(
             view: 'emails.insights',
+            text: 'emails.insights-text',
             with: [
                 'user' => $this->user,
                 'insights' => $this->insights,

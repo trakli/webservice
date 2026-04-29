@@ -61,13 +61,13 @@ class MailTemplateTest extends TestCase
 
         $mail = new InsightsMail($user, $insights, 'Weekly');
 
-        $mail->assertSeeInHtml('Weekly Insights');
+        $mail->assertSeeInHtml('weekly insights');
         $mail->assertSeeInHtml('5,000.00');
         $mail->assertSeeInHtml('3,200.00');
         $mail->assertSeeInHtml('1,800.00');
-        $mail->assertSeeInHtml('Food & Dining');
+        $mail->assertSeeInHtml('Food &amp; Dining', false);
         $mail->assertSeeInHtml('Monthly Rent Payment');
-        $mail->assertSeeInHtml('View Full Report');
+        $mail->assertSeeInHtml('View full report');
     }
 
     public function test_insights_mail_has_correct_subject(): void
@@ -105,7 +105,7 @@ class MailTemplateTest extends TestCase
         $mail = new InactivityReminderMail($user, $tier, 14);
 
         $mail->assertSeeInHtml('We miss you!');
-        $mail->assertSeeInHtml('14 days since last transaction');
+        $mail->assertSeeInHtml('14 days since your last transaction');
         $mail->assertSeeInHtml('Tracking your expenses regularly');
         $mail->assertSeeInHtml('Even logging just one transaction');
         $mail->assertSeeInHtml('Trakli');
