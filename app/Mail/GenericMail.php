@@ -41,7 +41,11 @@ class GenericMail extends Mailable
     {
         return new Content(
             view: 'emails.generic',
-            with: ['body' => $this->body]
+            text: 'emails.generic-text',
+            with: [
+                'subject' => $this->subject,
+                'body' => $this->body,
+            ]
         );
     }
 }

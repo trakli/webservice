@@ -31,6 +31,7 @@ class AccountDeletedMail extends Mailable
     {
         return new Content(
             view: 'emails.account-deleted',
+            text: 'emails.account-deleted-text',
             with: ['userName' => $this->userName]
         );
     }

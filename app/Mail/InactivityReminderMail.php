@@ -34,6 +34,7 @@ class InactivityReminderMail extends Mailable
     {
         return new Content(
             view: 'emails.inactivity-reminder',
+            text: 'emails.inactivity-reminder-text',
             with: [
                 'user' => $this->user,
                 'tier' => $this->tier,
