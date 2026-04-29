@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -13,7 +14,7 @@ use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     use Configurable;
     use HasApiTokens;
@@ -124,5 +125,12 @@ class User extends Authenticatable
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->getConfigValue('avatar');
+    }
+
+    public function preferredLocale(): ?string
+    {
+        $locale = $this->getConfigValue('default-lang');
+
+        return is_string($locale) && $locale !== '' ? $locale : null;
     }
 }

@@ -1,23 +1,24 @@
 @if (! empty($user?->first_name))
-Hi {{ $user->first_name }},
+{{ __('Hi :name,', ['name' => $user->first_name]) }}
 
 @endif
-{{ $tier['subject'] }}
+{{ __($tier['subject']) }}
 
-It has been {{ $daysInactive }} days since your last transaction.
+{{ __(':days days since your last transaction', ['days' => $daysInactive]) }}.
 
-{{ $tier['message'] }}
+{{ __($tier['message']) }}
 
-CATCH UP FASTER WITH THE IMPORTER
-{{ $tier['encouragement'] }}
+{{ __('Catch up faster with the importer') }}
+{{ __($tier['encouragement']) }}
 
-Open the importer:
+{{ __($tier['cta']) }}:
 {{ config('app.frontend_url', config('app.url')) }}/imports
 
-Prefer to enter them yourself? Log a transaction manually:
+{{ __('Prefer to enter them yourself?') }} {{ __('Log a transaction manually') }}:
 {{ config('app.frontend_url', config('app.url')) }}/transactions
 
 ---
-Manage email preferences: {{ config('app.frontend_url', config('app.url')) }}/settings
-Contact support: support@trakli.app
+{{ __('Manage preferences') }}: {{ config('app.frontend_url', config('app.url')) }}/settings
+{{ __('Blog') }}: https://trakli.app/blog/
+{{ __('Support') }}: support@trakli.app
 (c) {{ date('Y') }} Trakli

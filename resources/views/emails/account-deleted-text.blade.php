@@ -1,14 +1,12 @@
-ACCOUNT DELETED
+{{ strtoupper(__('Account deleted')) }}
 
-Hi {{ $userName }},
+{{ __('Hi :name,', ['name' => $userName]) }}
 
-Your Trakli account and all associated data have been permanently deleted.
-This includes your wallets, transactions, categories, groups, files, and configuration.
+{{ __('Your Trakli account and all associated data have been permanently deleted. This includes your wallets, transactions, categories, groups, files, and configuration.') }}
 
-If you didn't request this, please contact us right away at support@trakli.app.
-After this point the data is no longer recoverable.
+{{ __("If you didn't request this, please contact us right away at :email. After this point the data is no longer recoverable.", ['email' => 'support@trakli.app']) }}
 
-If you ever want to come back, you're always welcome to start fresh.
+{{ __("If you ever want to come back, you're always welcome to start fresh.") }}
 
 ---
 (c) {{ date('Y') }} Trakli

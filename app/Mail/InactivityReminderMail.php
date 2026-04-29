@@ -26,7 +26,7 @@ class InactivityReminderMail extends Mailable
     {
         return new Envelope(
             from: new Address(config('mail.from.address'), config('app.name')),
-            subject: $this->tier['subject']
+            subject: __($this->tier['subject'])
         );
     }
 
