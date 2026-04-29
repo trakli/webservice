@@ -30,6 +30,7 @@ class UserRegistered
 
         $this->createDefaultGroups($user);
         $this->createDefaultWallet($user);
+        $this->setDefaultUserConfig($user);
     }
 
     private function createDefaultGroups($user): void
@@ -84,5 +85,17 @@ class UserRegistered
             $clientId,
             ConfigValueType::String
         );
+    }
+
+    private function setDefaultUserConfig($user): void
+    {
+        // Only set if not already set (important for idempotency)
+        if ($user->getConfigValue('allow-negative-balance') === null) {
+            $user->setConfigValue(
+                'allow-negative-balance',
+                false,
+                ConfigValueType::Boolean
+            );
+        }
     }
 }

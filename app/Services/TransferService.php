@@ -26,8 +26,13 @@ class TransferService
         ?string $datetime = null,
         array $transactionClientIds = []
     ) {
+        //check the user allows negative balance only if the balance is low
         if ($fromWallet->balance < $amountToSend) {
-            throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
+            $allowNegativeBalance = $user->getConfigValue('allow-negative-balance', false);
+            //only throw the exception if the balance is low and they havent enabled negative transfers
+            if (!$allowNegativeBalance) {
+                throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
+            }
         }
 
         $transferDatetime = $datetime ?? now();
