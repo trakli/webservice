@@ -4276,7 +4276,28 @@
                                 "properties": {
                                     "key": {
                                         "type": "string",
-                                        "example": "theme_preference"
+                                        "enum": [
+                                            "default-wallet",
+                                            "default-currency",
+                                            "default-group",
+                                            "default-lang",
+                                            "onboarding-complete",
+                                            "theme",
+                                            "timezone",
+                                            "manual-exchange-rates",
+                                            "notifications-email",
+                                            "notifications-push",
+                                            "notifications-inapp",
+                                            "notifications-reminders",
+                                            "notifications-insights",
+                                            "notifications-inactivity",
+                                            "insights-frequency",
+                                            "inactivity-reminders-enabled",
+                                            "inactivity-reminder-count",
+                                            "last-inactivity-reminder-sent",
+                                            "wallets-allow-negative-balance"
+                                        ],
+                                        "example": "theme"
                                     },
                                     "value": {
                                         "type": "object",
@@ -4336,7 +4357,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],
@@ -4370,7 +4412,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],
@@ -4442,7 +4505,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],
