@@ -66,11 +66,11 @@
                             <div style="margin-bottom:10px;">@yield('footerNote')</div>
                         @endif
                         <div>
-                            <a href="{{ config('app.frontend_url', config('app.url')) }}/settings" style="color:#047844; text-decoration:none;">Manage preferences</a>
+                            <a href="{{ config('app.frontend_url', config('app.url')) }}/settings" style="color:#047844; text-decoration:none;">{{ __('Manage preferences') }}</a>
                             &nbsp;&middot;&nbsp;
-                            <a href="https://trakli.app/blog/" style="color:#047844; text-decoration:none;">Blog</a>
+                            <a href="https://trakli.app/blog/" style="color:#047844; text-decoration:none;">{{ __('Blog') }}</a>
                             &nbsp;&middot;&nbsp;
-                            <a href="mailto:support@trakli.app" style="color:#047844; text-decoration:none;">Support</a>
+                            <a href="mailto:support@trakli.app" style="color:#047844; text-decoration:none;">{{ __('Support') }}</a>
                         </div>
                         <div style="margin-top:8px; color:#9ca3af;">&copy; {{ date('Y') }} Trakli</div>
                     </td>

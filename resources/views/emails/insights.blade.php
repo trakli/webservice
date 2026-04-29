@@ -1,12 +1,15 @@
+@php
+    $periodKey = strtolower($periodLabel);
+@endphp
 @extends('emails.layouts.base', [
-    'title' => $periodLabel . ' insights',
-    'preheader' => 'Your ' . strtolower($periodLabel) . ' financial summary is ready.',
+    'title' => __("Your $periodKey insights"),
+    'preheader' => __("Your $periodKey financial summary is ready."),
 ])
 
 @section('content')
     @if (! empty($user?->first_name))
         <p style="margin:0 0 14px; font-size:15px; line-height:1.6; color:#1f2937;">
-            Hi {{ $user->first_name }},
+            {{ __('Hi :name,', ['name' => $user->first_name]) }}
         </p>
     @endif
 
@@ -14,7 +17,7 @@
         {{ $insights['period']['label'] ?? '' }}
     </p>
     <h1 class="h1 text-heading" style="margin:0 0 24px; font-size:24px; line-height:1.3; color:#0f3a23; font-weight:700;">
-        Your {{ strtolower($periodLabel) }} insights
+        {{ __("Your $periodKey insights") }}
     </h1>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 16px;">
@@ -23,15 +26,15 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="stack">
                     <tr>
                         <td valign="top" width="33.33%" style="padding-right:14px; border-right:1px solid #e5e9e7;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">Income</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('Income') }}</div>
                             <div style="font-size:20px; font-weight:600; color:#047844; line-height:1.2;">{{ number_format($insights['income'], 2) }}</div>
                         </td>
                         <td valign="top" width="33.33%" style="padding:0 14px; border-right:1px solid #e5e9e7;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">Expenses</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('Expenses') }}</div>
                             <div style="font-size:20px; font-weight:600; color:#b91c1c; line-height:1.2;">{{ number_format($insights['expenses'], 2) }}</div>
                         </td>
                         <td valign="top" width="33.33%" style="padding-left:14px;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">Net</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('Net') }}</div>
                             <div style="font-size:22px; font-weight:700; color:#0f3a23; line-height:1.2;">{{ number_format($insights['net'], 2) }}</div>
                         </td>
                     </tr>
@@ -47,15 +50,15 @@
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="stack">
                     <tr>
                         <td valign="top" width="33.33%" style="padding-right:14px; border-right:1px solid #e5e9e7;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">Savings rate</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('Savings rate') }}</div>
                             <div style="font-size:18px; font-weight:600; color:#047844; line-height:1.2;">{{ $insights['savings_rate'] }}%</div>
                         </td>
                         <td valign="top" width="33.33%" style="padding:0 14px; border-right:1px solid #e5e9e7;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">Transactions</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('Transactions') }}</div>
                             <div style="font-size:18px; font-weight:600; color:#1f2937; line-height:1.2;">{{ $insights['transaction_count'] }}</div>
                         </td>
                         <td valign="top" width="33.33%" style="padding-left:14px;">
-                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">vs prior period</div>
+                            <div style="font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; font-weight:500;">{{ __('vs prior period') }}</div>
                             <div style="font-size:18px; font-weight:600; color: {{ $changeColor }}; line-height:1.2;">{{ $insights['expense_change_percent'] > 0 ? '+' : '' }}{{ $insights['expense_change_percent'] }}%</div>
                         </td>
                     </tr>
@@ -66,7 +69,7 @@
 
     @if (! empty($insights['expenses_by_category']))
         <p style="margin:0 0 10px; font-size:12px; color:#374151; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-            Top spending categories
+            {{ __('Top spending categories') }}
         </p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
             <tr>
@@ -89,9 +92,9 @@
             <tr>
                 <td class="panel border-soft" style="background-color:#fafbfa; border:1px solid #e5e9e7; border-left:3px solid #FF9500; border-radius:6px; padding:20px;">
                     <p style="margin:0 0 6px; font-size:12px; color:#92400e; text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">
-                        Largest transaction
+                        {{ __('Largest transaction') }}
                     </p>
-                    <p style="margin:0 0 4px; font-size:16px; font-weight:600; color:#1f2937;">{{ $insights['top_expense']['description'] ?: 'Untitled' }}</p>
+                    <p style="margin:0 0 4px; font-size:16px; font-weight:600; color:#1f2937;">{{ $insights['top_expense']['description'] ?: __('Untitled') }}</p>
                     <p style="margin:0 0 4px; font-size:20px; font-weight:700; color:#b45309;">{{ number_format($insights['top_expense']['amount'], 2) }}</p>
                     @if (! empty($insights['top_expense']['category']))
                         <p style="margin:0; font-size:13px; color:#6b7280;">{{ $insights['top_expense']['category'] }}</p>
@@ -106,7 +109,7 @@
             <td>
                 @include('emails.partials.button', [
                     'href' => config('app.frontend_url', config('app.url')) . '/dashboard',
-                    'label' => 'View full report',
+                    'label' => __('View full report'),
                     'variant' => 'primary',
                 ])
             </td>
@@ -115,5 +118,5 @@
 @endsection
 
 @section('footerNote')
-    You're receiving this because {{ strtolower($periodLabel) }} insights are on.
+    {{ __("You're receiving this because $periodKey insights are on.") }}
 @endsection

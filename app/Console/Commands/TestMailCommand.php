@@ -52,7 +52,7 @@ class TestMailCommand extends Command
             'generic' => new GenericMail('Test Email from Trakli', "Hi {$user->first_name},\n\nThis is a test email."),
         };
 
-        Mail::to($user->email)->send($mailable);
+        Mail::to($user)->send($mailable);
         $this->info("Sent '{$type}' test email to {$user->email}.");
     }
 
