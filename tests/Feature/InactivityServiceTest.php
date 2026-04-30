@@ -72,7 +72,11 @@ class InactivityServiceTest extends TestCase
     public function test_does_not_send_reminder_to_user_who_opted_out()
     {
         $user = $this->createUserWithOldTransaction(10);
-        $user->setConfigValue(InactivityService::CONFIG_INACTIVITY_REMINDERS_ENABLED, 'false', ConfigValueType::String);
+        $this->actingAs($user)->postJson('/api/v1/configurations', [
+            'key' => InactivityService::CONFIG_INACTIVITY_REMINDERS_ENABLED,
+            'type' => 'bool',
+            'value' => false,
+        ])->assertStatus(201);
 
         $sent = $this->service->sendInactivityReminders();
 
@@ -83,11 +87,11 @@ class InactivityServiceTest extends TestCase
     public function test_does_not_send_reminder_if_sent_recently()
     {
         $user = $this->createUserWithOldTransaction(10);
-        $user->setConfigValue(
-            InactivityService::CONFIG_LAST_REMINDER_SENT,
-            now()->subDays(3)->toIso8601String(),
-            ConfigValueType::String
-        );
+        $this->actingAs($user)->postJson('/api/v1/configurations', [
+            'key' => InactivityService::CONFIG_LAST_REMINDER_SENT,
+            'type' => 'date',
+            'value' => now()->subDays(3)->toIso8601String(),
+        ])->assertStatus(201);
 
         $sent = $this->service->sendInactivityReminders();
 
@@ -98,11 +102,11 @@ class InactivityServiceTest extends TestCase
     public function test_sends_reminder_if_last_reminder_was_7_plus_days_ago()
     {
         $user = $this->createUserWithOldTransaction(14);
-        $user->setConfigValue(
-            InactivityService::CONFIG_LAST_REMINDER_SENT,
-            now()->subDays(8)->toIso8601String(),
-            ConfigValueType::String
-        );
+        $this->actingAs($user)->postJson('/api/v1/configurations', [
+            'key' => InactivityService::CONFIG_LAST_REMINDER_SENT,
+            'type' => 'date',
+            'value' => now()->subDays(8)->toIso8601String(),
+        ])->assertStatus(201);
         $user->setConfigValue(InactivityService::CONFIG_INACTIVITY_REMINDER_COUNT, 1, ConfigValueType::Integer);
 
         $sent = $this->service->sendInactivityReminders();
@@ -141,6 +145,18 @@ class InactivityServiceTest extends TestCase
         $this->assertEquals(1, (int) $user->fresh()->getConfigValue(
             InactivityService::CONFIG_INACTIVITY_REMINDER_COUNT
         ));
+    }
+
+    public function test_sends_reminder_by_default_when_no_preference_set()
+    {
+        $user = $this->createUserWithOldTransaction(10);
+
+        $sent = $this->service->sendInactivityReminders();
+
+        $this->assertEquals(1, $sent);
+        Mail::assertQueued(InactivityReminderMail::class, function ($mail) use ($user) {
+            return $mail->hasTo($user->email);
+        });
     }
 
     public function test_does_not_send_to_user_with_no_transactions()

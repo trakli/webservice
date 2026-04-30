@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\Groupable;
 use App\Traits\HasClientCreatedAt;
+use App\Traits\Refundable;
 use App\Traits\Syncable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -81,6 +82,7 @@ class Transaction extends Model
     use Groupable;
     use HasClientCreatedAt;
     use HasFactory;
+    use Refundable;
     use SoftDeletes;
     use Syncable;
 
@@ -123,6 +125,8 @@ class Transaction extends Model
         'amount' => 'decimal:2',
     ];
 
+    protected $hidden = ['transfer'];
+
     protected $appends = [
         'wallet',
         'party',
@@ -132,8 +136,11 @@ class Transaction extends Model
         'client_generated_id',
         'wallet_client_generated_id',
         'party_client_generated_id',
+        'transfer_client_generated_id',
         'files',
         'recurring_rules',
+        'is_refund',
+        'refund_of_transaction_id',
     ];
 
     public function getWalletClientGeneratedIdAttribute()
@@ -144,6 +151,15 @@ class Transaction extends Model
     public function getPartyClientGeneratedIdAttribute()
     {
         return $this->party ? $this->party->client_generated_id : null;
+    }
+
+    public function getTransferClientGeneratedIdAttribute()
+    {
+        if (! $this->transfer_id) {
+            return null;
+        }
+
+        return $this->transfer?->client_generated_id;
     }
 
     public function getCategoriesAttribute()
@@ -159,6 +175,11 @@ class Transaction extends Model
     public function getWalletAttribute()
     {
         return $this->wallet()->first();
+    }
+
+    public function transfer()
+    {
+        return $this->belongsTo(Transfer::class);
     }
 
     public function wallet()
@@ -202,6 +223,24 @@ class Transaction extends Model
     public function recurringTransactionRule(): HasOne
     {
         return $this->hasOne(RecurringTransactionRule::class);
+    }
+
+    public function getIsRefundAttribute(): bool
+    {
+        return $this->refund()->exists();
+    }
+
+    public function getRefundOfTransactionIdAttribute(): ?int
+    {
+        return $this->refund?->original_transaction_id;
+    }
+
+    /**
+     * Scope to exclude transfer transactions.
+     */
+    public function scopeNonTransfer($query)
+    {
+        return $query->whereNull($this->getTable() . '.transfer_id');
     }
 
     public static function findByClientId(string $clientId, User $user): ?self

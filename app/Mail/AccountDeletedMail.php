@@ -23,7 +23,7 @@ class AccountDeletedMail extends Mailable
     {
         return new Envelope(
             from: new Address(config('mail.from.address'), config('app.name')),
-            subject: 'Your Trakli Account Has Been Deleted'
+            subject: __('Your Trakli account has been deleted')
         );
     }
 
@@ -31,6 +31,7 @@ class AccountDeletedMail extends Mailable
     {
         return new Content(
             view: 'emails.account-deleted',
+            text: 'emails.account-deleted-text',
             with: ['userName' => $this->userName]
         );
     }

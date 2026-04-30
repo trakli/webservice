@@ -25,6 +25,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('engagement:send-inactivity-reminders')
             ->dailyAt('10:00')
             ->withoutOverlapping();
+
+        $schedule->command('budgets:close-periods')
+            ->dailyAt('00:10')
+            ->withoutOverlapping();
+
+        $schedule->command('budgets:send-digests')
+            ->weeklyOn(1, '08:00')
+            ->withoutOverlapping();
     }
 
     /**

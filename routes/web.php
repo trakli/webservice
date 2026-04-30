@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MailPreviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,3 +19,10 @@ Route::get('/', function () {
 
     return response()->json(['welcome' => 'Welcome to the Trakli WebService! See API documentation here: '."$host/docs/swagger or $host/docs/api.json"]);
 });
+
+if (config('app.debug') && app()->environment(['local', 'staging', 'testing'])) {
+    Route::prefix('dev')->group(function () {
+        Route::get('/mail-preview', [MailPreviewController::class, 'index'])->name('mail-preview.index');
+        Route::get('/mail-preview/{type}', [MailPreviewController::class, 'show'])->name('mail-preview.show');
+    });
+}

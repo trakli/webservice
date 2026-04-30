@@ -3,6 +3,8 @@
 use App\Http\Controllers\API\v1\AccountController;
 use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
+use App\Http\Controllers\API\v1\BudgetController;
+use App\Http\Controllers\API\v1\BudgetPeriodStateController;
 use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
@@ -12,6 +14,7 @@ use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\ReminderController;
 use App\Http\Controllers\API\v1\StatsController;
 use App\Http\Controllers\API\v1\TransactionController;
+use App\Http\Controllers\API\v1\TransactionRefundController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
@@ -47,18 +50,31 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
+    Route::get('/refunds', [TransactionRefundController::class, 'index']);
+    Route::post('/transactions/{id}/refund', [TransactionRefundController::class, 'mark']);
+    Route::delete('/transactions/{id}/refund', [TransactionRefundController::class, 'unmark']);
     Route::get('/files/{id}', [FileController::class, 'show']);
     Route::post('categories/seed-defaults', [CategoryController::class, 'seedDefaults']);
     Route::apiResource('categories', CategoryController::class);
 
-    // Import routes
+    // Advanced import routes (analyze → review → confirm)
+    Route::post('import/analyze', [ImportController::class, 'analyze']);
+    Route::post('import/confirm', [ImportController::class, 'confirm']);
+    Route::get('import/sessions', [ImportController::class, 'getSessions']);
+    Route::get('import/sessions/{id}', [ImportController::class, 'getSession']);
+
+    // Import routes (legacy CSV auto-import)
     Route::post('import', [ImportController::class, 'import']);
     Route::get('imports', [ImportController::class, 'getImports']);
     Route::get('imports/{id}/failed', [ImportController::class, 'getFailedImports']);
     Route::put('imports/{id}/fix', [ImportController::class, 'fixFailedImports']);
 
     // AI routes
-    Route::post('ai/chat', [AiController::class, 'chat']);
+    Route::get('ai/chats', [AiController::class, 'index']);
+    Route::post('ai/chats', [AiController::class, 'store']);
+    Route::get('ai/chats/{chat}', [AiController::class, 'show']);
+    Route::delete('ai/chats/{chat}', [AiController::class, 'destroy']);
+    Route::post('ai/chats/{chat}/messages', [AiController::class, 'storeMessage']);
     Route::get('ai/health', [AiController::class, 'health']);
 
     // Reminder routes
@@ -66,6 +82,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('reminders/{id}/snooze', [ReminderController::class, 'snooze']);
     Route::post('reminders/{id}/pause', [ReminderController::class, 'pause']);
     Route::post('reminders/{id}/resume', [ReminderController::class, 'resume']);
+
+    // Budget routes
+    Route::get('budgets/{id}/progress', [BudgetController::class, 'progress']);
+    Route::get('budgets/{id}/transactions', [BudgetController::class, 'transactions']);
+    Route::post('budgets/{id}/close-period', [BudgetController::class, 'closePeriod']);
+    Route::get('budget-period-states', [BudgetPeriodStateController::class, 'index']);
+    Route::apiResource('budgets', BudgetController::class);
 
     // Notification routes
     Route::get('notifications', [NotificationController::class, 'index']);

@@ -68,7 +68,14 @@ class FileImportService
                 $transactionType = strtolower(trim($data[2]));
                 if (in_array($transactionType, [TransactionType::EXPENSE->value, TransactionType::INCOME->value])) {
                     try {
-                        $this->importTransaction($data, $transactionType, $user);
+                        $this->importTransaction(
+                            $data,
+                            $transactionType,
+                            $user,
+                            autoCreateWallets: true,
+                            autoCreateParties: true,
+                            autoCreateCategories: true,
+                        );
                     } catch (FileImportException $e) {
                         $this->saveFailedImport($fileImport, $data, $user, $e->getMessage());
                         Log::error($e);
@@ -162,13 +169,23 @@ class FileImportService
     }
 
     /**
+     * Used by the raw CSV import path (/api/v1/import), which has no ability to
+     * pass resource IDs. Name-based resolution with optional auto-create is the
+     * only way to ingest a freshly uploaded spreadsheet.
+     *
      * @throws Exception
      *
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function importTransaction(array $data, string $transactionType, User $user): void
-    {
-        DB::transaction(function () use ($user, $transactionType, $data) {
+    public function importTransaction(
+        array $data,
+        string $transactionType,
+        User $user,
+        bool $autoCreateWallets = false,
+        bool $autoCreateParties = false,
+        bool $autoCreateCategories = false,
+    ): void {
+        DB::transaction(function () use ($user, $transactionType, $data, $autoCreateWallets, $autoCreateParties, $autoCreateCategories) {
             // get the data we need
 
             $amount = floatval($data[0]);
@@ -182,14 +199,13 @@ class FileImportService
             $existingParty = null;
 
             if (! empty($wallet)) {
-                // check if the wallet exists, if not create a new wallet
                 if (empty($currency)) {
                     $existingWallet = $user->wallets()->where('name', $wallet)->first();
                 } else {
                     $existingWallet = $user->wallets()->where('name', $wallet)->where('currency', $currency)->first();
                 }
 
-                if (is_null($existingWallet) && ! empty($currency)) {
+                if (is_null($existingWallet) && ! empty($currency) && $autoCreateWallets) {
                     $existingWallet = $user->wallets()->create([
                         'name' => $wallet,
                         'currency' => $currency,
@@ -198,9 +214,8 @@ class FileImportService
             }
 
             if (! empty($party)) {
-                // check if the party exists, if not create a new party
                 $existingParty = $user->parties()->where('name', $party)->first();
-                if (is_null($existingParty)) {
+                if (is_null($existingParty) && $autoCreateParties) {
                     $existingParty = $user->parties()->create([
                         'name' => $party,
                     ]);
@@ -223,18 +238,182 @@ class FileImportService
             $transaction = $user->transactions()->create($transactionData);
 
             if (! empty($category)) {
-                // check if the category exists, if not create a new category
                 $existingCategory = $user->categories()->where('name', $category)->first();
-                if (is_null($existingCategory)) {
+                if (is_null($existingCategory) && $autoCreateCategories) {
                     $existingCategory = $user->categories()->create([
                         'type' => $transactionType,
                         'name' => $category,
                     ]);
                 }
 
-                $transaction->categories()->sync([$existingCategory->id]);
+                if (! is_null($existingCategory)) {
+                    $transaction->categories()->sync([$existingCategory->id]);
+                }
             }
         });
+    }
+
+    /**
+     * Used by the analyze/confirm flow (/api/v1/import/confirm).
+     *
+     * Each resource is resolved in order: caller-supplied ID first (strict
+     * ownership check), then the analyzer's suggested name when the matching
+     * auto_create flag is on. Otherwise the slot stays empty -- which is fatal
+     * for wallet (transactions require one), permitted for party/category.
+     *
+     * @param array $merged  Suggestion row merged with the user's accepted item.
+     *                       Structure: [
+     *                         'amount' => float, 'description' => ?string, 'date' => ?string,
+     *                         'wallet_id' => ?int, 'wallet' => ?string, 'currency' => ?string,
+     *                         'party_id' => ?int, 'party' => ?string,
+     *                         'category_id' => ?int, 'category' => ?string,
+     *                       ]
+     *
+     * @throws FileImportException
+     */
+    public function importTransactionFromConfirm(
+        array $merged,
+        string $transactionType,
+        User $user,
+        bool $autoCreateWallets = false,
+        bool $autoCreateParties = false,
+        bool $autoCreateCategories = false,
+    ): void {
+        DB::transaction(function () use ($merged, $transactionType, $user, $autoCreateWallets, $autoCreateParties, $autoCreateCategories) {
+            $wallet = $this->resolveWalletForConfirm(
+                $user,
+                $merged['wallet_id'] ?? null,
+                $merged['wallet'] ?? null,
+                $merged['currency'] ?? null,
+                $autoCreateWallets,
+            );
+            $party = $this->resolvePartyForConfirm(
+                $user,
+                $merged['party_id'] ?? null,
+                $merged['party'] ?? null,
+                $autoCreateParties,
+            );
+            $category = $this->resolveCategoryForConfirm(
+                $user,
+                $merged['category_id'] ?? null,
+                $merged['category'] ?? null,
+                $transactionType,
+                $autoCreateCategories,
+            );
+
+            $transaction = $user->transactions()->create([
+                'amount' => (float) ($merged['amount'] ?? 0),
+                'description' => $merged['description'] ?? null,
+                'datetime' => $merged['date'] ?? null,
+                'type' => $transactionType,
+                'wallet_id' => $wallet->id,
+                'party_id' => $party?->id,
+            ]);
+
+            if (! is_null($category)) {
+                $transaction->categories()->sync([$category->id]);
+            }
+        });
+    }
+
+    /**
+     * @throws FileImportException
+     */
+    private function resolveWalletForConfirm(
+        User $user,
+        ?int $walletId,
+        ?string $walletName,
+        ?string $currency,
+        bool $autoCreate,
+    ): \App\Models\Wallet {
+        if (! is_null($walletId)) {
+            $found = $user->wallets()->find($walletId);
+            if (is_null($found)) {
+                throw new FileImportException(__('Wallet with id :id not found', ['id' => $walletId]));
+            }
+
+            return $found;
+        }
+
+        if ($autoCreate && ! empty($walletName) && ! empty($currency)) {
+            // Double-check by name+currency first so two successive accepts of the
+            // same analyzer output don't spawn duplicate wallets.
+            $existing = $user->wallets()->where('name', $walletName)->where('currency', $currency)->first();
+            if (! is_null($existing)) {
+                return $existing;
+            }
+
+            return $user->wallets()->create([
+                'name' => $walletName,
+                'currency' => $currency,
+            ]);
+        }
+
+        throw new FileImportException(__('A wallet must be selected or auto-created.'));
+    }
+
+    /**
+     * @throws FileImportException
+     */
+    private function resolvePartyForConfirm(
+        User $user,
+        ?int $partyId,
+        ?string $partyName,
+        bool $autoCreate,
+    ): ?\App\Models\Party {
+        if (! is_null($partyId)) {
+            $found = $user->parties()->find($partyId);
+            if (is_null($found)) {
+                throw new FileImportException(__('Party with id :id not found', ['id' => $partyId]));
+            }
+
+            return $found;
+        }
+
+        if ($autoCreate && ! empty($partyName)) {
+            $existing = $user->parties()->where('name', $partyName)->first();
+            if (! is_null($existing)) {
+                return $existing;
+            }
+
+            return $user->parties()->create(['name' => $partyName]);
+        }
+
+        return null;
+    }
+
+    /**
+     * @throws FileImportException
+     */
+    private function resolveCategoryForConfirm(
+        User $user,
+        ?int $categoryId,
+        ?string $categoryName,
+        string $transactionType,
+        bool $autoCreate,
+    ): ?\App\Models\Category {
+        if (! is_null($categoryId)) {
+            $found = $user->categories()->find($categoryId);
+            if (is_null($found)) {
+                throw new FileImportException(__('Category with id :id not found', ['id' => $categoryId]));
+            }
+
+            return $found;
+        }
+
+        if ($autoCreate && ! empty($categoryName)) {
+            $existing = $user->categories()->where('name', $categoryName)->first();
+            if (! is_null($existing)) {
+                return $existing;
+            }
+
+            return $user->categories()->create([
+                'type' => $transactionType,
+                'name' => $categoryName,
+            ]);
+        }
+
+        return null;
     }
 
     /**

@@ -8,7 +8,9 @@ use App\Mail\GenericMail;
 use App\Mail\InactivityReminderMail;
 use App\Mail\InsightsMail;
 use App\Models\User;
+use App\Services\InactivityService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 
 class TestMailCommand extends Command
@@ -50,33 +52,46 @@ class TestMailCommand extends Command
             'generic' => new GenericMail('Test Email from Trakli', "Hi {$user->first_name},\n\nThis is a test email."),
         };
 
-        Mail::to($user->email)->send($mailable);
+        Mail::to($user)->send($mailable);
         $this->info("Sent '{$type}' test email to {$user->email}.");
     }
 
     private function buildInactivityMail(User $user): InactivityReminderMail
     {
-        $tier = [
-            'subject' => 'We miss you!',
-            'message' => 'It has been a while since your last transaction.',
-            'encouragement' => 'Just a few minutes of tracking can make a big difference!',
-            'cta' => 'Log a quick transaction to get back on track.',
-        ];
+        $variants = InactivityService::INACTIVITY_TIERS[7];
+        $variant = $variants[array_rand($variants)];
 
-        return new InactivityReminderMail($user, $tier, 7);
+        return new InactivityReminderMail($user, $variant, 7);
     }
 
     private function buildInsightsMail(User $user): InsightsMail
     {
+        $start = Carbon::now()->subWeek()->startOfWeek();
+        $end = Carbon::now()->subWeek()->endOfWeek();
+
         $insights = [
-            'total_income' => 150000,
-            'total_expenses' => 95000,
-            'net_savings' => 55000,
-            'top_categories' => [
-                ['name' => 'Food', 'amount' => 35000],
-                ['name' => 'Transport', 'amount' => 25000],
-                ['name' => 'Utilities', 'amount' => 20000],
+            'period' => [
+                'start' => $start,
+                'end' => $end,
+                'label' => $start->format('M j') . ' - ' . $end->format('M j, Y'),
             ],
+            'frequency' => 'weekly',
+            'income' => 150000,
+            'expenses' => 95000,
+            'net' => 55000,
+            'savings_rate' => 36.7,
+            'transaction_count' => 24,
+            'expenses_by_category' => [
+                'Food' => 35000,
+                'Transport' => 25000,
+                'Utilities' => 20000,
+            ],
+            'top_expense' => [
+                'description' => 'Monthly rent',
+                'amount' => 18000,
+                'category' => 'Housing',
+            ],
+            'expense_change_percent' => -4.2,
         ];
 
         return new InsightsMail($user, $insights, 'Weekly');

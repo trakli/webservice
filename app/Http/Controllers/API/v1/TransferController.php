@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\TransferService;
+use App\Support\ConfigurationKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,13 @@ use Whilesmart\UserDevices\Models\Device;
 class TransferController extends ApiController
 {
     use ApiQueryable;
+
+    private const EAGER_LOAD = [
+        'transactions.syncState',
+        'sourceWallet',
+        'destinationWallet',
+        'syncState',
+    ];
 
     private TransferService $transferService;
 
@@ -57,15 +65,55 @@ class TransferController extends ApiController
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = $user->transfers()->orderBy('datetime', 'desc')->orderBy('created_at', 'desc');
+        $query = $user->transfers()
+            ->with(self::EAGER_LOAD)
+            ->orderBy('datetime', 'desc')
+            ->orderBy('created_at', 'desc');
 
         try {
-            $data = $this->applyApiQuery($request, $query, with_deleted: false);
+            $data = $this->applyApiQuery($request, $query, with_deleted: true);
 
             return $this->success($data);
         } catch (\InvalidArgumentException $e) {
             return $this->failure($e->getMessage(), 422);
         }
+    }
+
+    #[OA\Get(
+        path: '/transfers/{id}',
+        summary: 'Get a specific transfer',
+        tags: ['Transfers'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transfer',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Successful operation',
+                content: new OA\JsonContent(ref: '#/components/schemas/Transfer')
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Transfer not found'
+            ),
+        ]
+    )]
+    public function show(Request $request, int $transferId): JsonResponse
+    {
+        $user = $request->user();
+        $transfer = $user->transfers()->with(self::EAGER_LOAD)->find($transferId);
+
+        if (! $transfer) {
+            return $this->failure(__('Transfer not found'), 404);
+        }
+
+        return $this->success($transfer);
     }
 
     #[OA\Post(
@@ -124,7 +172,7 @@ class TransferController extends ApiController
         $validationResult = $this->validateRequest($request, [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
-            'exchange_rate' => 'sometimes|numeric|min:0.01',
+            'exchange_rate' => 'sometimes|numeric|gt:0',
             'from_wallet_id' => 'required|integer|exists:wallets,id',
             'to_wallet_id' => 'required|integer|exists:wallets,id',
             'datetime' => ['nullable', new Iso8601DateTime()],
@@ -156,8 +204,15 @@ class TransferController extends ApiController
             return $this->failure(__('Destination wallet does not exist'));
         }
 
-        if ($fromWallet->balance < $data['amount']) {
-            return $this->failure(__('Source wallet has insufficient balance'));
+        if (
+            $fromWallet->balance < $data['amount']
+            && ! $user->getConfigValue(ConfigurationKeys::WALLETS_ALLOW_NEGATIVE_BALANCE, false)
+        ) {
+            return $this->failure(
+                __('Source wallet has insufficient balance. Enable allowing negative wallet balances in your settings to record this transfer anyway.'),
+                422,
+                ['setting_key' => ConfigurationKeys::WALLETS_ALLOW_NEGATIVE_BALANCE]
+            );
         }
 
         $exchangeRate = 1;
@@ -216,6 +271,8 @@ class TransferController extends ApiController
 
             return $transfer;
         });
+
+        $transfer->load(self::EAGER_LOAD);
 
         return $this->success($transfer, statusCode: 201);
     }
@@ -286,8 +343,47 @@ class TransferController extends ApiController
 
         $this->updateClientId($transfer, $request);
         $transfer->markAsSynced();
+        $transfer->load(self::EAGER_LOAD);
 
         return $this->success($transfer);
+    }
+
+    #[OA\Delete(
+        path: '/transfers/{id}',
+        summary: 'Delete a specific transfer',
+        tags: ['Transfers'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'ID of the transfer',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'integer')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Transfer deleted successfully'
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Transfer not found'
+            ),
+        ]
+    )]
+    public function destroy(Request $request, int $transferId): JsonResponse
+    {
+        $user = $request->user();
+        $transfer = $user->transfers()->find($transferId);
+
+        if (! $transfer) {
+            return $this->failure(__('Transfer not found'), 404);
+        }
+
+        $transfer->delete();
+
+        return $this->success(null, __('Transfer deleted successfully'));
     }
 
     private function findTransferByClientId(string $clientId, User $user): ?Transfer

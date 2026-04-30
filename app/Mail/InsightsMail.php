@@ -24,9 +24,11 @@ class InsightsMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $periodKey = strtolower($this->periodLabel);
+
         return new Envelope(
             from: new Address(config('mail.from.address'), config('app.name')),
-            subject: "Your {$this->periodLabel} Financial Insights"
+            subject: __("Your $periodKey financial insights")
         );
     }
 
@@ -34,6 +36,7 @@ class InsightsMail extends Mailable
     {
         return new Content(
             view: 'emails.insights',
+            text: 'emails.insights-text',
             with: [
                 'user' => $this->user,
                 'insights' => $this->insights,

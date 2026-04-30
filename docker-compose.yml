@@ -2,12 +2,7 @@ name: trakli
 
 services:
     app:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            args:
-                HOST_UID: '${HOST_UID:-1000}'
-                HOST_GID: '${HOST_GID:-1000}'
+        image: ghcr.io/whilesmartphp/laravel-dev:8.2
         ports:
             - '${APP_PORT:-8000}:80'
         tty: true
@@ -86,9 +81,9 @@ services:
             DB_DATABASE: '${DB_DATABASE}'
             DB_USERNAME: '${DB_USERNAME}'
             DB_PASSWORD: '${DB_PASSWORD}'
-            LLM_PROVIDER: '${LLM_PROVIDER:-groq}'
-            LLM_MODEL: '${LLM_MODEL:-}'
-            LLM_API_KEY: '${LLM_API_KEY:-}'
+            LLM_PROVIDER: '${LLM_PROVIDER:-gemini}'
+            LLM_MODEL: '${LLM_MODEL:-gemini-2.0-flash}'
+            LLM_API_KEY: '${LLM_API_KEY:?LLM_API_KEY must be set for SmartQL}'
             LLM_TEMPERATURE: '${LLM_TEMPERATURE:-0.1}'
             LLM_RETRIES: '${LLM_RETRIES:-3}'
         volumes:
