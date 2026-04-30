@@ -268,7 +268,9 @@ class TransactionController extends ApiController
         ) {
             $transfer = $this->handleMyselfTransfer($data, $user, $request);
             //return response here to prevent controller from creating a third transaction below
-            return $this->success($transfer, statusCode: 201);
+            // Extract the "Transaction" object from the transfer.
+            $transaction = $transfer->incomeTransaction;
+            return $this->success($transaction, statusCode: 201);
         }
 
 
