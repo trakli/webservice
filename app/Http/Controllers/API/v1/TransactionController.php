@@ -829,6 +829,7 @@ class TransactionController extends ApiController
     private function validateRequestData(Request $request): array
     {
         return $this->validateRequest($request, [
+            'convert_myself_to_transfer' => 'sometimes|boolean',
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
