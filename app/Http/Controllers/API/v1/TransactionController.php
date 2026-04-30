@@ -829,7 +829,7 @@ class TransactionController extends ApiController
     private function validateRequestData(Request $request): array
     {
         return $this->validateRequest($request, [
-            'convert_myself_to_transfer' => 'sometimes|boolean',
+            'convert_myself_to_transfer' => 'sometimes|boolean', //'sometimes' to allow for the possibility of null entries when user is not transfering to themselves
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
@@ -859,7 +859,7 @@ class TransactionController extends ApiController
 
         //identify the party and check its 'is_myself' property;
         $partyId = $data['party_id'] ?? null;
-        $party = $user->parties()->find($partyId);
+        $party = $partyId ? $user->parties()->find($partyId) : null;
 
         $isMyselfParty = $party && $party->getConfigValue('is-myself');
 
