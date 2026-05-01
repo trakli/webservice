@@ -4,10 +4,15 @@ namespace App\Services;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Validator;
 
 class FileService
 {
+    public const ALLOWED_EXTENSIONS = 'jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt,csv';
+
+    public const MAX_KILOBYTES = 5120;
+
     public static function uploadFiles(Model $model, Request $request, string $key, string $folder)
     {
         if ($request->hasFile($key)) {
@@ -15,10 +20,25 @@ class FileService
                 $path = $file->store($folder);
                 $model->files()->create([
                     'path' => $path,
-                    'type' => 'file',
+                    'type' => self::detectType($file),
                 ]);
             }
         }
+    }
+
+    private static function detectType(UploadedFile $file): string
+    {
+        $mime = $file->getMimeType() ?? '';
+
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+
+        if ($mime === 'application/pdf') {
+            return 'pdf';
+        }
+
+        return 'document';
     }
 
     public static function updateIcon(Model $model, array $data, Request $request, string $folder = 'icons')

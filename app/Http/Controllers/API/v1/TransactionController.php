@@ -186,7 +186,7 @@ class TransactionController extends ApiController
     {
         $request->validate([
             'files' => 'nullable|array',
-            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1024',
+            'files.*' => 'file|mimes:' . FileService::ALLOWED_EXTENSIONS . '|max:' . FileService::MAX_KILOBYTES,
         ]);
         $transaction = $request->user()->transactions()->find($transactionId);
 
@@ -310,7 +310,7 @@ class TransactionController extends ApiController
             'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
             'categories.*' => 'integer|exists:categories,id',
             'files' => 'nullable|array',
-            'files.*' => 'file|mimes:jpg,jpeg,png,pdf|max:1240',
+            'files.*' => 'file|mimes:' . FileService::ALLOWED_EXTENSIONS . '|max:' . FileService::MAX_KILOBYTES,
         ]);
 
         if (! $validationResult['isValidated']) {
@@ -390,15 +390,7 @@ class TransactionController extends ApiController
                     $transaction->groups()->sync($data['group_id']);
                 }
 
-                if ($request->hasFile('files')) {
-                    foreach ($request->file('files') as $file) {
-                        $path = $file->store('transactions');
-                        $transaction->files()->create([
-                            'path' => $path,
-                            'type' => 'file',
-                        ]);
-                    }
-                }
+                FileService::uploadFiles($transaction, $request, 'files', 'transactions');
 
                 // check if this transaction is recurring
                 if (! empty($recurringTransactionData)) {
