@@ -92,6 +92,128 @@ class NotificationTest extends TestCase
         $this->assertNotNull($notification->fresh()->read_at);
     }
 
+    public function test_mark_as_read_uses_supplied_read_at_timestamp()
+    {
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => null,
+        ]);
+
+        $readAt = now()->subHours(3);
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            ['read_at' => $readAt->toIso8601String()],
+        );
+
+        $response->assertStatus(200);
+        $this->assertEquals(
+            $readAt->startOfSecond()->timestamp,
+            $notification->fresh()->read_at->timestamp,
+        );
+    }
+
+    public function test_mark_as_read_with_client_id_only_does_not_mark_read()
+    {
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => null,
+        ]);
+
+        $deviceId = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $randomId = '245cb3df-df3a-428b-a908-e5f74b8d58a5';
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            ['client_id' => "$deviceId:$randomId"],
+        );
+
+        $response->assertStatus(200);
+        $this->assertNull($notification->fresh()->read_at);
+        $this->assertEquals($randomId, $notification->fresh()->syncState->client_generated_id);
+    }
+
+    public function test_mark_as_read_with_client_id_and_read_at_sets_both()
+    {
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => null,
+        ]);
+
+        $deviceId = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $randomId = '245cb3df-df3a-428b-a908-e5f74b8d58a6';
+        $readAt = now()->subMinutes(10);
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            [
+                'client_id' => "$deviceId:$randomId",
+                'read_at' => $readAt->toIso8601String(),
+            ],
+        );
+
+        $response->assertStatus(200);
+        $fresh = $notification->fresh();
+        $this->assertNotNull($fresh->read_at);
+        $this->assertEquals($randomId, $fresh->syncState->client_generated_id);
+    }
+
+    public function test_mark_as_read_does_not_overwrite_existing_read_at()
+    {
+        $originalReadAt = now()->subDays(2)->startOfSecond();
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => $originalReadAt,
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            ['read_at' => now()->toIso8601String()],
+        );
+
+        $response->assertStatus(200);
+        $this->assertEquals(
+            $originalReadAt->timestamp,
+            $notification->fresh()->read_at->timestamp,
+        );
+    }
+
+    public function test_mark_as_read_rejects_invalid_client_id()
+    {
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => null,
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            ['client_id' => 'not-a-valid-client-id'],
+        );
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString(
+            'must be in the format',
+            $response->json('errors.client_id.0'),
+        );
+        $this->assertNull($notification->fresh()->read_at);
+    }
+
+    public function test_mark_as_read_rejects_invalid_read_at()
+    {
+        $notification = Notification::factory()->create([
+            'user_id' => $this->user->id,
+            'read_at' => null,
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson(
+            "/api/v1/notifications/{$notification->id}/read",
+            ['read_at' => 'not-a-date'],
+        );
+
+        $response->assertStatus(422);
+        $this->assertNull($notification->fresh()->read_at);
+    }
+
     public function test_user_can_mark_all_notifications_as_read()
     {
         Notification::factory()->count(5)->create([
