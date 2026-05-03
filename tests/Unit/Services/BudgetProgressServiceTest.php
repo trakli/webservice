@@ -26,9 +26,19 @@ class BudgetProgressServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Pinned mid-month so the linear-projection floor and the
+        // threshold/forecast triggers all evaluate at a stable point in
+        // the period, regardless of when the suite happens to run.
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 1, 20, 12, 0, 0));
         $this->service = app(BudgetProgressService::class);
         $this->user = User::factory()->create();
         $this->wallet = Wallet::factory()->create(['user_id' => $this->user->id]);
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+        parent::tearDown();
     }
 
     public function test_category_only_budget_sums_net_of_refunds(): void
