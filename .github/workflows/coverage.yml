@@ -1,27 +1,23 @@
 name: Tests
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - dev
+      - dev # The branch the PR was merged into
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  coverage:
-    name: Update Code Coverage
+  update-baseline:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      - name: Update Coverage Baseline
+        uses: whilesmart/workflows/php/coverage/update@coverage
         with:
-          php-version: '8.2'
-          tools: composer
-
-      - name: Check Coverage
-        uses: whilesmart/workflows/php/coverage/update@main
+          token: ${{ secrets.PAT_TOKEN }}
