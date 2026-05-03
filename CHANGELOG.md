@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-05-03
+
+### Added
+
+- Negative-balance transactions when the user opts in via configuration; transfer responses surface "insufficient balance" as the explicit blocker when the guard fires
+- Outgoing emails redesigned and localised to the recipient's language, with a dev preview endpoint
+- Imports confirm step resolves targets by id and can auto-create missing entities
+- Configurations API exposes the full list of allowed keys in OpenAPI; inactivity reminder keys can now be set through it
+
+### Changed
+
+- Transaction attachments now record their real type (`image`, `pdf`, or `document`) derived from the upload's MIME, and the file validators on both transaction endpoints accept the formats users actually attach (images, PDFs, common office formats, plain text and CSV) up to 5 MB
+- Notification mark-as-read accepts `client_id` and `read_at` so mobile-driven sync stays consistent across devices
+
+### Fixed
+
+- Restored the service-level negative-balance guard on transfers
+- Pinned the budget progress test clock so date-sensitive assertions stop flaking depending on when the suite runs
+
 ## [1.1.0] - 2026-04-19
 
 ### Added

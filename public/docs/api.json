@@ -1805,12 +1805,17 @@
                     "Import"
                 ],
                 "summary": "Confirm and create transactions from reviewed suggestions",
+                "description": "Each accepted item should reference existing wallet/party/category rows by ID. When an ID is omitted and the matching auto_create_* flag is true, the analyzer's suggested name is used to create the resource (wallets additionally need a currency).",
                 "operationId": "1fdb80050f2d675d2bc4bd942a6958c3",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "session_id",
+                                    "accepted"
+                                ],
                                 "properties": {
                                     "session_id": {
                                         "type": "integer"
@@ -1818,21 +1823,68 @@
                                     "accepted": {
                                         "type": "array",
                                         "items": {
+                                            "required": [
+                                                "index"
+                                            ],
+                                            "properties": {
+                                                "index": {
+                                                    "description": "Zero-based position of the suggestion in the session.",
+                                                    "type": "integer"
+                                                },
+                                                "wallet_id": {
+                                                    "description": "Existing wallet owned by the caller. Required unless auto_create_wallets is true and the suggestion has a wallet name and currency.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "party_id": {
+                                                    "description": "Existing party owned by the caller.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "category_id": {
+                                                    "description": "Existing category owned by the caller.",
+                                                    "type": "integer",
+                                                    "nullable": true
+                                                },
+                                                "amount": {
+                                                    "description": "Override the suggested amount.",
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "nullable": true
+                                                },
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "income",
+                                                        "expense"
+                                                    ],
+                                                    "nullable": true
+                                                },
+                                                "description": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "nullable": true
+                                                }
+                                            },
                                             "type": "object"
                                         }
                                     },
                                     "auto_create_wallets": {
-                                        "description": "Create wallets that do not exist",
+                                        "description": "Create a wallet from the suggestion when wallet_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     },
                                     "auto_create_parties": {
-                                        "description": "Create parties that do not exist",
+                                        "description": "Create a party from the suggestion when party_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     },
                                     "auto_create_categories": {
-                                        "description": "Create categories that do not exist",
+                                        "description": "Create a category from the suggestion when category_id is omitted.",
                                         "type": "boolean",
                                         "default": false
                                     }
@@ -1845,6 +1897,9 @@
                 "responses": {
                     "200": {
                         "description": "Transactions created"
+                    },
+                    "206": {
+                        "description": "Some suggestions failed (see errors)"
                     },
                     "404": {
                         "description": "Session not found"
@@ -2015,7 +2070,8 @@
                 "tags": [
                     "Notifications"
                 ],
-                "summary": "Mark a notification as read",
+                "summary": "Mark a notification as read or sync its client_id",
+                "description": "Marks the notification as read using the supplied read_at (or now() if omitted). If only client_id is sent, the server records the client_id without changing read state, so the mobile sync can establish the link before the user opens the notification.",
                 "operationId": "057bc4edab5f0e13b8b89356e8155f58",
                 "parameters": [
                     {
@@ -2027,12 +2083,37 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "description": "Client-generated identifier for offline sync. Optional.",
+                                        "type": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
+                                    },
+                                    "read_at": {
+                                        "description": "Timestamp the notification was read on the client. Optional. When omitted and client_id is also omitted, the server uses the current time. When omitted and client_id is present, read state is left unchanged.",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Notification marked as read"
+                        "description": "Notification marked as read or synced"
                     },
                     "404": {
                         "description": "Notification not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -4221,7 +4302,28 @@
                                 "properties": {
                                     "key": {
                                         "type": "string",
-                                        "example": "theme_preference"
+                                        "enum": [
+                                            "default-wallet",
+                                            "default-currency",
+                                            "default-group",
+                                            "default-lang",
+                                            "onboarding-complete",
+                                            "theme",
+                                            "timezone",
+                                            "manual-exchange-rates",
+                                            "notifications-email",
+                                            "notifications-push",
+                                            "notifications-inapp",
+                                            "notifications-reminders",
+                                            "notifications-insights",
+                                            "notifications-inactivity",
+                                            "insights-frequency",
+                                            "inactivity-reminders-enabled",
+                                            "inactivity-reminder-count",
+                                            "last-inactivity-reminder-sent",
+                                            "wallets-allow-negative-balance"
+                                        ],
+                                        "example": "theme"
                                     },
                                     "value": {
                                         "type": "object",
@@ -4281,7 +4383,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],
@@ -4315,7 +4438,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],
@@ -4387,7 +4531,28 @@
                         "description": "Configuration key",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "default-wallet",
+                                "default-currency",
+                                "default-group",
+                                "default-lang",
+                                "onboarding-complete",
+                                "theme",
+                                "timezone",
+                                "manual-exchange-rates",
+                                "notifications-email",
+                                "notifications-push",
+                                "notifications-inapp",
+                                "notifications-reminders",
+                                "notifications-insights",
+                                "notifications-inactivity",
+                                "insights-frequency",
+                                "inactivity-reminders-enabled",
+                                "inactivity-reminder-count",
+                                "last-inactivity-reminder-sent",
+                                "wallets-allow-negative-balance"
+                            ]
                         }
                     }
                 ],

@@ -68,139 +68,43 @@ class AdvancedImportTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_confirm_creates_transactions_from_accepted_suggestions(): void
+    public function test_analyze_with_document_type_parameter(): void
     {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Lunch',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-                [
-                    'amount' => 200.00,
-                    'currency' => 'EUR',
-                    'type' => 'income',
-                    'party' => 'Employer',
-                    'wallet' => 'Savings',
-                    'category' => 'Salary',
-                    'description' => 'Monthly pay',
-                    'date' => '2025-01-02',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
+        Storage::fake('local');
+        Queue::fake();
 
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-                ['index' => 1],
-            ],
-            'auto_create_wallets' => true,
-            'auto_create_parties' => true,
-            'auto_create_categories' => true,
+        $csv = "amount,currency,type,party,wallet,category,description,date\n"
+            . "100,USD,expense,Store,Wallet,Food,Lunch,2025-01-01\n";
+
+        $file = UploadedFile::fake()->createWithContent('statement.csv', $csv);
+
+        $response = $this->actingAs($this->user)->post('/api/v1/import/analyze', [
+            'file' => $file,
+            'document_type' => 'bank_statement',
         ]);
 
         $response->assertStatus(200);
 
         $data = $response->json('data');
-        $this->assertEquals(2, $data['created_count']);
-        $this->assertEmpty($data['errors']);
-
-        // Verify the session status was updated
-        $session->refresh();
-        $this->assertEquals('confirmed', $session->status);
-
-        // Verify transactions were created
-        $this->assertEquals(2, $this->user->transactions()->count());
+        $this->assertEquals('bank_statement', $data['document_type']);
+        $this->assertEquals('analyzing', $data['status']);
     }
 
-    public function test_confirm_rejects_already_confirmed_sessions(): void
+    public function test_analyze_rejects_invalid_document_type(): void
     {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'confirmed',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Lunch',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
+        Storage::fake('local');
 
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-            ],
+        $csv = "amount,currency,type,party,wallet,category,description,date\n"
+            . "100,USD,expense,Store,Wallet,Food,Lunch,2025-01-01\n";
+
+        $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/analyze', [
+            'file' => $file,
+            'document_type' => 'invalid_type',
         ]);
 
         $response->assertStatus(422);
-    }
-
-    public function test_confirm_returns_404_for_other_users_session(): void
-    {
-        $otherUser = User::factory()->create();
-
-        $session = $otherUser->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Lunch',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-            ],
-        ]);
-
-        $response->assertStatus(404);
     }
 
     public function test_get_sessions_returns_user_sessions(): void
@@ -298,186 +202,10 @@ class AdvancedImportTest extends TestCase
         $response->assertStatus(404);
     }
 
-    public function test_confirm_with_user_edits_overrides_suggestion_fields(): void
-    {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Lunch',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                [
-                    'index' => 0,
-                    'amount' => 150.00,
-                    'description' => 'Edited description',
-                ],
-            ],
-            'auto_create_wallets' => true,
-            'auto_create_parties' => true,
-            'auto_create_categories' => true,
-        ]);
-
-        $response->assertStatus(200);
-
-        $data = $response->json('data');
-        $this->assertEquals(1, $data['created_count']);
-
-        // Verify the transaction was created with the edited amount
-        $transaction = $this->user->transactions()->first();
-        $this->assertEquals(150.00, $transaction->amount);
-        $this->assertEquals('Edited description', $transaction->description);
-    }
-
-    public function test_confirm_with_invalid_suggestion_index_returns_error(): void
-    {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Lunch',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 99],
-            ],
-        ]);
-
-        // Should still return 206 because errors occurred but session is confirmed
-        $response->assertStatus(206);
-
-        $data = $response->json('data');
-        $this->assertEquals(0, $data['created_count']);
-        $this->assertNotEmpty($data['errors']);
-    }
-
-    public function test_confirm_with_date_override(): void
-    {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 75.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Groceries',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                [
-                    'index' => 0,
-                    'date' => '2025-06-15',
-                    'amount' => 80.00,
-                ],
-            ],
-            'auto_create_wallets' => true,
-            'auto_create_parties' => true,
-            'auto_create_categories' => true,
-        ]);
-
-        $response->assertStatus(200);
-
-        $transaction = $this->user->transactions()->first();
-        $this->assertNotNull($transaction);
-        $this->assertEquals(80.00, $transaction->amount);
-    }
-
-    public function test_analyze_with_document_type_parameter(): void
-    {
-        Storage::fake('local');
-        Queue::fake();
-
-        $csv = "amount,currency,type,party,wallet,category,description,date\n"
-            . "100,USD,expense,Store,Wallet,Food,Lunch,2025-01-01\n";
-
-        $file = UploadedFile::fake()->createWithContent('statement.csv', $csv);
-
-        $response = $this->actingAs($this->user)->post('/api/v1/import/analyze', [
-            'file' => $file,
-            'document_type' => 'bank_statement',
-        ]);
-
-        $response->assertStatus(200);
-
-        $data = $response->json('data');
-        $this->assertEquals('bank_statement', $data['document_type']);
-        $this->assertEquals('analyzing', $data['status']);
-    }
-
-    public function test_analyze_rejects_invalid_document_type(): void
-    {
-        Storage::fake('local');
-
-        $csv = "amount,currency,type,party,wallet,category,description,date\n"
-            . "100,USD,expense,Store,Wallet,Food,Lunch,2025-01-01\n";
-
-        $file = UploadedFile::fake()->createWithContent('test.csv', $csv);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/analyze', [
-            'file' => $file,
-            'document_type' => 'invalid_type',
-        ]);
-
-        $response->assertStatus(422);
-    }
-
     public function test_sessions_are_scoped_to_authenticated_user(): void
     {
         $otherUser = User::factory()->create();
 
-        // Create sessions for both users
         $this->user->importSessions()->create([
             'file_name' => 'my-file.csv',
             'file_type' => 'csv',
@@ -496,7 +224,6 @@ class AdvancedImportTest extends TestCase
             'suggestions' => [],
         ]);
 
-        // User should only see their own session
         $response = $this->actingAs($this->user)->getJson('/api/v1/import/sessions');
         $response->assertStatus(200);
 
@@ -505,16 +232,482 @@ class AdvancedImportTest extends TestCase
         $this->assertEquals('my-file.csv', $data[0]['file_name']);
     }
 
-    public function test_confirm_requires_accepted_array(): void
+    // ---------------------------------------------------------------------
+    // /import/confirm — strict ID-based contract
+    // ---------------------------------------------------------------------
+
+    public function test_confirm_creates_transactions_from_accepted_suggestions(): void
     {
+        $walletA = $this->user->wallets()->create(['name' => 'Checking', 'currency' => 'USD']);
+        $walletB = $this->user->wallets()->create(['name' => 'Savings', 'currency' => 'EUR']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['amount' => 100.00, 'type' => 'expense']),
+            $this->sampleSuggestion(['amount' => 200.00, 'type' => 'income', 'currency' => 'EUR']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $walletA->id],
+                ['index' => 1, 'wallet_id' => $walletB->id],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals(2, $data['created_count']);
+        $this->assertEmpty($data['errors']);
+
+        $session->refresh();
+        $this->assertEquals('confirmed', $session->status);
+
+        $this->assertEquals(2, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_accepts_party_id_and_category_id(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+        $party = $this->user->parties()->create(['name' => 'Employer Inc.']);
+        $category = $this->user->categories()->create(['name' => 'Payroll', 'type' => 'income']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['amount' => 2500.00, 'type' => 'income', 'party' => 'Ignored', 'category' => 'Ignored']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                [
+                    'index' => 0,
+                    'wallet_id' => $wallet->id,
+                    'party_id' => $party->id,
+                    'category_id' => $category->id,
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+        $this->assertEquals($wallet->id, $transaction->wallet_id);
+        $this->assertEquals($party->id, $transaction->party_id);
+        $this->assertEquals(1, $transaction->categories()->count());
+        $this->assertEquals($category->id, $transaction->categories()->first()->id);
+
+        // No new entities were created despite the suggestion's names pointing elsewhere.
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $this->assertEquals(1, $this->user->parties()->count());
+        $this->assertEquals(1, $this->user->categories()->count());
+    }
+
+    public function test_confirm_ignores_wallet_name_in_suggestion_metadata(): void
+    {
+        $realWallet = $this->user->wallets()->create(['name' => 'Travel Card', 'currency' => 'USD']);
+        // Decoy wallet matching the suggestion's name must be ignored because IDs are the only input.
+        $this->user->wallets()->create(['name' => 'Suggested Wallet', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['wallet' => 'Suggested Wallet']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $realWallet->id],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+        $this->assertEquals($realWallet->id, $transaction->wallet_id);
+    }
+
+    public function test_confirm_rejects_wallet_id_owned_by_another_user(): void
+    {
+        $otherUser = User::factory()->create();
+        $foreignWallet = $otherUser->wallets()->create(['name' => 'Foreign', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $foreignWallet->id],
+            ],
+        ]);
+
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertNotEmpty($data['errors']);
+        $this->assertStringContainsString((string) $foreignWallet->id, $data['errors'][0]);
+
+        $this->assertEquals(0, $this->user->transactions()->count());
+        $this->assertEquals(0, $this->user->wallets()->count());
+        $this->assertEquals(1, $otherUser->wallets()->count());
+    }
+
+    public function test_confirm_rejects_nonexistent_wallet_id(): void
+    {
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => 999999],
+            ],
+        ]);
+
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertStringContainsString('999999', $data['errors'][0]);
+    }
+
+    public function test_confirm_rejects_party_id_owned_by_another_user(): void
+    {
+        $otherUser = User::factory()->create();
+        $foreignParty = $otherUser->parties()->create(['name' => 'Foreign Party']);
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id, 'party_id' => $foreignParty->id],
+            ],
+        ]);
+
+        $response->assertStatus(206);
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_rejects_category_id_owned_by_another_user(): void
+    {
+        $otherUser = User::factory()->create();
+        $foreignCategory = $otherUser->categories()->create(['name' => 'Foreign', 'type' => 'expense']);
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id, 'category_id' => $foreignCategory->id],
+            ],
+        ]);
+
+        $response->assertStatus(206);
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_errors_when_neither_wallet_id_nor_auto_create_is_provided(): void
+    {
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+            // auto_create_wallets omitted -> defaults to false
+        ]);
+
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertNotEmpty($data['errors']);
+
+        $this->assertEquals(0, $this->user->transactions()->count());
+        $this->assertEquals(0, $this->user->wallets()->count());
+    }
+
+    public function test_confirm_auto_creates_wallet_from_suggestion_when_flag_on(): void
+    {
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['wallet' => 'Fresh Wallet', 'currency' => 'USD']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+            'auto_create_wallets' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $created = $this->user->wallets()->first();
+        $this->assertEquals('Fresh Wallet', $created->name);
+        $this->assertEquals('USD', $created->currency);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+        $this->assertEquals($created->id, $transaction->wallet_id);
+    }
+
+    public function test_confirm_auto_create_reuses_existing_wallet_matching_name_and_currency(): void
+    {
+        $existing = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['wallet' => 'Main', 'currency' => 'USD']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+            'auto_create_wallets' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        // No duplicate wallet — existing one was reused.
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $this->assertEquals($existing->id, $this->user->transactions()->first()->wallet_id);
+    }
+
+    public function test_confirm_auto_create_wallet_requires_currency_in_suggestion(): void
+    {
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['wallet' => 'Nameless Wallet', 'currency' => null]),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0],
+            ],
+            'auto_create_wallets' => true,
+        ]);
+
+        $response->assertStatus(206);
+        $this->assertEquals(0, $this->user->wallets()->count());
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_auto_creates_party_and_category_from_suggestion(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['party' => 'New Vendor', 'category' => 'New Cat']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id],
+            ],
+            'auto_create_parties' => true,
+            'auto_create_categories' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertEquals(1, $this->user->parties()->count());
+        $this->assertEquals('New Vendor', $this->user->parties()->first()->name);
+        $this->assertEquals(1, $this->user->categories()->count());
+        $this->assertEquals('New Cat', $this->user->categories()->first()->name);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertEquals(1, $transaction->categories()->count());
+    }
+
+    public function test_confirm_wallet_id_wins_over_auto_create_flag(): void
+    {
+        $chosenWallet = $this->user->wallets()->create(['name' => 'Chosen', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['wallet' => 'Would Be Created', 'currency' => 'USD']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $chosenWallet->id],
+            ],
+            'auto_create_wallets' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        // Auto-create was on, but the explicit ID wins — no new wallet.
+        $this->assertEquals(1, $this->user->wallets()->count());
+        $this->assertEquals($chosenWallet->id, $this->user->transactions()->first()->wallet_id);
+    }
+
+    public function test_confirm_rejects_non_integer_wallet_id(): void
+    {
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => 'not-an-int'],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('accepted.0.wallet_id');
+    }
+
+    public function test_confirm_with_user_edits_overrides_suggestion_fields(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion(['amount' => 100.00, 'description' => 'Lunch'])]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                [
+                    'index' => 0,
+                    'wallet_id' => $wallet->id,
+                    'amount' => 150.00,
+                    'description' => 'Edited description',
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals(1, $data['created_count']);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertEquals(150.00, $transaction->amount);
+        $this->assertEquals('Edited description', $transaction->description);
+    }
+
+    public function test_confirm_with_type_override(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion(['type' => 'expense'])]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id, 'type' => 'income'],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertEquals('income', $transaction->type);
+    }
+
+    public function test_confirm_with_date_override(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion(['amount' => 75.00, 'date' => '2025-01-01'])]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                [
+                    'index' => 0,
+                    'wallet_id' => $wallet->id,
+                    'date' => '2025-06-15',
+                    'amount' => 80.00,
+                ],
+            ],
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = $this->user->transactions()->first();
+        $this->assertNotNull($transaction);
+        $this->assertEquals(80.00, $transaction->amount);
+        $this->assertEquals('2025-06-15', $transaction->datetime->format('Y-m-d'));
+    }
+
+    public function test_confirm_with_invalid_suggestion_index_returns_error(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([$this->sampleSuggestion()]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 99, 'wallet_id' => $wallet->id],
+            ],
+        ]);
+
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertNotEmpty($data['errors']);
+    }
+
+    public function test_confirm_rejects_already_confirmed_sessions(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
         $session = $this->user->importSessions()->create([
             'file_name' => 'test.csv',
             'file_type' => 'csv',
             'document_type' => null,
             'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [],
+            'status' => 'confirmed',
+            'suggestions' => [$this->sampleSuggestion()],
         ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id],
+            ],
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_confirm_returns_404_for_other_users_session(): void
+    {
+        $otherUser = User::factory()->create();
+        $wallet = $this->user->wallets()->create(['name' => 'Main', 'currency' => 'USD']);
+
+        $session = $otherUser->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [$this->sampleSuggestion()],
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [
+                ['index' => 0, 'wallet_id' => $wallet->id],
+            ],
+        ]);
+
+        $response->assertStatus(404);
+    }
+
+    public function test_confirm_requires_accepted_array(): void
+    {
+        $session = $this->makeReadySession([]);
 
         $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
             'session_id' => $session->id,
@@ -532,205 +725,36 @@ class AdvancedImportTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_confirm_with_type_override(): void
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+
+    private function makeReadySession(array $suggestions): \App\Models\ImportSession
     {
-        $session = $this->user->importSessions()->create([
+        return $this->user->importSessions()->create([
             'file_name' => 'test.csv',
             'file_type' => 'csv',
             'document_type' => null,
             'processor' => 'CsvProcessor',
             'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 100.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'Store',
-                    'wallet' => 'Checking',
-                    'category' => 'Food',
-                    'description' => 'Refund',
-                    'date' => '2025-01-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
+            'suggestions' => $suggestions,
         ]);
-
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                [
-                    'index' => 0,
-                    'type' => 'income',
-                ],
-            ],
-            'auto_create_wallets' => true,
-            'auto_create_parties' => true,
-            'auto_create_categories' => true,
-        ]);
-
-        $response->assertStatus(200);
-
-        $transaction = $this->user->transactions()->first();
-        $this->assertNotNull($transaction);
-        $this->assertEquals('income', $transaction->type);
     }
 
-    public function test_confirm_does_not_auto_create_entities_by_default(): void
+    private function sampleSuggestion(array $overrides = []): array
     {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 50.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'New Store',
-                    'wallet' => 'New Wallet',
-                    'category' => 'New Category',
-                    'description' => 'Test purchase',
-                    'date' => '2025-03-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        // No auto_create flags — defaults to false
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-            ],
-        ]);
-
-        // Import should fail because wallet doesn't exist and wasn't auto-created
-        $response->assertStatus(206);
-
-        $data = $response->json('data');
-        $this->assertEquals(0, $data['created_count']);
-        $this->assertNotEmpty($data['errors']);
-
-        // No entities should have been created
-        $this->assertEquals(0, $this->user->wallets()->count());
-        $this->assertEquals(0, $this->user->parties()->count());
-        $this->assertEquals(0, $this->user->categories()->count());
-        $this->assertEquals(0, $this->user->transactions()->count());
-    }
-
-    public function test_confirm_respects_granular_auto_create_flags(): void
-    {
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 75.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'New Party',
-                    'wallet' => 'New Wallet',
-                    'category' => 'New Category',
-                    'description' => 'Granular test',
-                    'date' => '2025-03-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        // Enable auto-create for wallets and parties only
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-            ],
-            'auto_create_wallets' => true,
-            'auto_create_parties' => true,
-            'auto_create_categories' => false,
-        ]);
-
-        $response->assertStatus(200);
-
-        $transaction = $this->user->transactions()->first();
-        $this->assertNotNull($transaction);
-
-        // Wallet should be created and linked
-        $this->assertEquals(1, $this->user->wallets()->count());
-        $this->assertNotNull($transaction->wallet_id);
-
-        // Party should be created and linked
-        $this->assertEquals(1, $this->user->parties()->count());
-        $this->assertNotNull($transaction->party_id);
-        $this->assertEquals('New Party', $this->user->parties()->first()->name);
-
-        // Category should NOT be created
-        $this->assertEquals(0, $this->user->categories()->count());
-        $this->assertEquals(0, $transaction->categories()->count());
-    }
-
-    public function test_confirm_matches_existing_entities_without_auto_create(): void
-    {
-        // Pre-create entities
-        $wallet = $this->user->wallets()->create(['name' => 'My Wallet', 'currency' => 'USD']);
-        $party = $this->user->parties()->create(['name' => 'My Store']);
-        $category = $this->user->categories()->create(['name' => 'Groceries', 'type' => 'expense']);
-
-        $session = $this->user->importSessions()->create([
-            'file_name' => 'test.csv',
-            'file_type' => 'csv',
-            'document_type' => null,
-            'processor' => 'CsvProcessor',
-            'status' => 'ready',
-            'suggestions' => [
-                [
-                    'amount' => 30.00,
-                    'currency' => 'USD',
-                    'type' => 'expense',
-                    'party' => 'My Store',
-                    'wallet' => 'My Wallet',
-                    'category' => 'Groceries',
-                    'description' => 'Weekly shop',
-                    'date' => '2025-03-01',
-                    'confidence' => 1.0,
-                    'document_type' => 'csv',
-                    'duplicate' => null,
-                ],
-            ],
-        ]);
-
-        // No auto-create flags — should still match existing entities
-        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
-            'session_id' => $session->id,
-            'accepted' => [
-                ['index' => 0],
-            ],
-        ]);
-
-        $response->assertStatus(200);
-
-        $transaction = $this->user->transactions()->first();
-        $this->assertNotNull($transaction);
-
-        // Should link to existing entities without creating new ones
-        $this->assertEquals($wallet->id, $transaction->wallet_id);
-        $this->assertEquals($party->id, $transaction->party_id);
-        $this->assertEquals(1, $transaction->categories()->count());
-        $this->assertEquals($category->id, $transaction->categories()->first()->id);
-
-        // No additional entities created
-        $this->assertEquals(1, $this->user->wallets()->count());
-        $this->assertEquals(1, $this->user->parties()->count());
-        $this->assertEquals(1, $this->user->categories()->count());
+        return array_merge([
+            'amount' => 100.00,
+            'currency' => 'USD',
+            'type' => 'expense',
+            'party' => 'Store',
+            'wallet' => 'Checking',
+            'category' => 'Food',
+            'description' => 'Lunch',
+            'date' => '2025-01-01',
+            'confidence' => 1.0,
+            'document_type' => 'csv',
+            'duplicate' => null,
+        ], $overrides);
     }
 }

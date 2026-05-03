@@ -26,7 +26,7 @@ class InactivityReminderMail extends Mailable
     {
         return new Envelope(
             from: new Address(config('mail.from.address'), config('app.name')),
-            subject: $this->tier['subject']
+            subject: __($this->tier['subject'])
         );
     }
 
@@ -34,6 +34,7 @@ class InactivityReminderMail extends Mailable
     {
         return new Content(
             view: 'emails.inactivity-reminder',
+            text: 'emails.inactivity-reminder-text',
             with: [
                 'user' => $this->user,
                 'tier' => $this->tier,

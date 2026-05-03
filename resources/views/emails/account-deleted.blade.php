@@ -1,41 +1,30 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Deleted</title>
-    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8faf9; }
-        .container { background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e6f2ec; }
-        .content { font-size: 16px; color: #374151; }
-        .content p { margin-bottom: 16px; }
-        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e6f2ec; color: #6b7280; font-size: 12px; }
-        .footer a { color: #047844; text-decoration: none; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2 style="color: #374151; margin: 0;">Account Deleted</h2>
-        </div>
+@extends('emails.layouts.base', [
+    'title' => __('Your Trakli account has been deleted'),
+    'preheader' => __('Confirmation that your account and all associated data have been removed.'),
+])
 
-        <div class="content">
-            <p>Hi {{ $userName }},</p>
+@section('content')
+    <h1 class="h1 text-heading" style="margin:0 0 18px; font-size:22px; line-height:1.3; color:#0f3a23; font-weight:700;">
+        {{ __('Account deleted') }}
+    </h1>
 
-            <p>Your Trakli account and all associated data have been permanently deleted as requested.</p>
+    <p style="margin:0 0 16px; font-size:15px; line-height:1.65;">
+        {{ __('Hi :name,', ['name' => $userName]) }}
+    </p>
 
-            <p>This includes all your wallets, transactions, categories, groups, and other data.</p>
+    <p style="margin:0 0 16px; font-size:15px; line-height:1.65;">
+        {{ __('Your Trakli account and all associated data have been permanently deleted. This includes your wallets, transactions, categories, groups, files, and configuration.') }}
+    </p>
 
-            <p>If you did not request this deletion, please contact us immediately at <a href="mailto:support@trakli.app">support@trakli.app</a>.</p>
+    <p style="margin:0 0 16px; font-size:15px; line-height:1.65;">
+        {!! __("If you didn't request this, please contact us right away at :emailLink. After this point the data is no longer recoverable.", ['emailLink' => '<a href="mailto:support@trakli.app" style="color:#047844; text-decoration:none;">support@trakli.app</a>']) !!}
+    </p>
 
-            <p>We're sorry to see you go. If you ever want to come back, you're always welcome to create a new account.</p>
-        </div>
+    <p style="margin:0; font-size:15px; line-height:1.65;">
+        {{ __("If you ever want to come back, you're always welcome to start fresh.") }}
+    </p>
+@endsection
 
-        <div class="footer">
-            <p>&copy; {{ date('Y') }} Trakli. All rights reserved.</p>
-        </div>
-    </div>
-</body>
-</html>
+@section('footerNote')
+    {{ __('This is a one-time confirmation message.') }}
+@endsection

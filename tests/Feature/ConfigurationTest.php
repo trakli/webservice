@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\InactivityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -92,6 +93,65 @@ class ConfigurationTest extends TestCase
         ]);
         $response->assertStatus(200);
         $response->assertJsonFragment(['value' => true]);
+    }
+
+    public function test_api_user_can_create_and_update_last_inactivity_reminder_sent()
+    {
+        $key = InactivityService::CONFIG_LAST_REMINDER_SENT;
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => $key,
+            'type' => 'date',
+            'value' => now()->subDays(3)->toIso8601String(),
+        ])->assertStatus(201);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/configurations/{$key}", [
+            'type' => 'date',
+            'value' => now()->toIso8601String(),
+        ]);
+        $response->assertStatus(200);
+    }
+
+    public function test_api_user_can_create_and_update_inactivity_reminder_count()
+    {
+        $key = InactivityService::CONFIG_INACTIVITY_REMINDER_COUNT;
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => $key,
+            'type' => 'int',
+            'value' => 0,
+        ])->assertStatus(201);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/configurations/{$key}", [
+            'type' => 'int',
+            'value' => 2,
+        ]);
+        $response->assertStatus(200);
+        $response->assertJsonFragment(['value' => 2]);
+    }
+
+    public function test_api_user_can_create_and_update_inactivity_reminders_enabled()
+    {
+        $key = InactivityService::CONFIG_INACTIVITY_REMINDERS_ENABLED;
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => $key,
+            'type' => 'bool',
+            'value' => true,
+        ])->assertStatus(201);
+
+        $response = $this->actingAs($this->user)->putJson("/api/v1/configurations/{$key}", [
+            'type' => 'bool',
+            'value' => false,
+        ]);
+        $response->assertStatus(200);
+        $response->assertJsonFragment(['value' => false]);
+    }
+
+    public function test_inactivity_service_config_keys_are_in_allowlist()
+    {
+        $allowed = array_keys(config('model-configuration.allowed_keys'));
+
+        $this->assertContains(InactivityService::CONFIG_LAST_REMINDER_SENT, $allowed);
+        $this->assertContains(InactivityService::CONFIG_INACTIVITY_REMINDER_COUNT, $allowed);
+        $this->assertContains(InactivityService::CONFIG_INACTIVITY_REMINDERS_ENABLED, $allowed);
     }
 
     protected function setUp(): void

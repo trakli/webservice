@@ -7,6 +7,7 @@ use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Support\ConfigurationKeys;
 use InvalidArgumentException;
 use Ramsey\Uuid\Uuid;
 
@@ -26,7 +27,10 @@ class TransferService
         ?string $datetime = null,
         array $transactionClientIds = []
     ) {
-        if ($fromWallet->balance < $amountToSend) {
+        if (
+            $fromWallet->balance < $amountToSend
+            && ! $user->getConfigValue(ConfigurationKeys::WALLETS_ALLOW_NEGATIVE_BALANCE, false)
+        ) {
             throw new InvalidArgumentException(__('Insufficient balance in source wallet'));
         }
 

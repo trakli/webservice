@@ -61,13 +61,13 @@ class MailTemplateTest extends TestCase
 
         $mail = new InsightsMail($user, $insights, 'Weekly');
 
-        $mail->assertSeeInHtml('Weekly Insights');
+        $mail->assertSeeInHtml('weekly insights');
         $mail->assertSeeInHtml('5,000.00');
         $mail->assertSeeInHtml('3,200.00');
         $mail->assertSeeInHtml('1,800.00');
-        $mail->assertSeeInHtml('Food & Dining');
+        $mail->assertSeeInHtml('Food &amp; Dining', false);
         $mail->assertSeeInHtml('Monthly Rent Payment');
-        $mail->assertSeeInHtml('View Full Report');
+        $mail->assertSeeInHtml('View full report');
     }
 
     public function test_insights_mail_has_correct_subject(): void
@@ -88,7 +88,7 @@ class MailTemplateTest extends TestCase
 
         $mail = new InsightsMail($user, $insights, 'Monthly');
 
-        $this->assertEquals('Your Monthly Financial Insights', $mail->envelope()->subject);
+        $this->assertEquals('Your monthly financial insights', $mail->envelope()->subject);
     }
 
     public function test_inactivity_reminder_mail_renders_correctly(): void
@@ -105,7 +105,7 @@ class MailTemplateTest extends TestCase
         $mail = new InactivityReminderMail($user, $tier, 14);
 
         $mail->assertSeeInHtml('We miss you!');
-        $mail->assertSeeInHtml('14 days since last transaction');
+        $mail->assertSeeInHtml('14 days since your last transaction');
         $mail->assertSeeInHtml('Tracking your expenses regularly');
         $mail->assertSeeInHtml('Even logging just one transaction');
         $mail->assertSeeInHtml('Trakli');
@@ -125,5 +125,48 @@ class MailTemplateTest extends TestCase
         $mail = new InactivityReminderMail($user, $tier, 7);
 
         $this->assertEquals('Custom Subject Line', $mail->envelope()->subject);
+    }
+
+    public function test_user_preferred_locale_reflects_default_lang_config(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->postJson('/api/v1/configurations', [
+            'key' => 'default-lang',
+            'type' => 'string',
+            'value' => 'fr',
+        ])->assertStatus(201);
+
+        $this->assertEquals('fr', $user->fresh()->preferredLocale());
+    }
+
+    public function test_inactivity_subject_translates_with_app_locale(): void
+    {
+        $user = User::factory()->create(['first_name' => 'Alex']);
+        $tier = \App\Services\InactivityService::INACTIVITY_TIERS[7][0];
+        $mail = new InactivityReminderMail($user, $tier, 7);
+
+        app()->setLocale('fr');
+        $subjectFr = $mail->envelope()->subject;
+        app()->setLocale('en');
+        $subjectEn = $mail->envelope()->subject;
+
+        $this->assertSame('Your tracking went quiet', $subjectEn);
+        $this->assertSame('Votre suivi s\'est calmé', $subjectFr);
+    }
+
+    public function test_insights_html_translates_static_labels_in_french(): void
+    {
+        $user = User::factory()->create();
+        $insights = [
+            'income' => 100, 'expenses' => 50, 'net' => 50,
+            'savings_rate' => 50, 'transaction_count' => 1, 'expense_change_percent' => 0,
+            'period' => ['label' => 'Test'], 'expenses_by_category' => [], 'top_expense' => null,
+        ];
+        $mail = new InsightsMail($user, $insights, 'Weekly');
+
+        app()->setLocale('fr');
+        $mail->assertSeeInHtml('Revenus');
+        $mail->assertSeeInHtml('Dépenses', false);
+        $mail->assertSeeInHtml('Voir le rapport complet');
     }
 }

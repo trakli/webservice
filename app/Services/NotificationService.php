@@ -170,7 +170,7 @@ class NotificationService
     ): bool {
         try {
             $mail = $mailable ?? new GenericMail($subject, $body);
-            $mailBuilder = Mail::to($user->email);
+            $mailBuilder = Mail::to($user);
 
             if ($queue) {
                 $mailBuilder->queue($mail);
