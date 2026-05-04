@@ -92,7 +92,7 @@ class IntegerTypeConsistencyTest extends TestCase
 
         $updateResponse = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transactionId}", [
             'amount' => 200,
-            'updated_at' => '2026-05-01T15:17:54.120Z',
+            'updated_at' => now()->addSecond()->toIso8601String(),
         ]);
 
         $updateResponse->assertStatus(200);
@@ -126,7 +126,7 @@ class IntegerTypeConsistencyTest extends TestCase
 
         $updateResponse = $this->actingAs($this->user)->putJson("/api/v1/transactions/{$transactionId}", [
             'wallet_id' => $newWallet->id,
-            'updated_at' => '2026-05-01T15:17:54.120Z',
+            'updated_at' => now()->addSecond()->toIso8601String(),
         ]);
 
         $updateResponse->assertStatus(200);

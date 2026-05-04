@@ -4,6 +4,8 @@ namespace App\Http\Controllers\API\v1;
 
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
+use App\Rules\Iso8601DateTime;
+use App\Rules\ValidateClientId;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,18 +99,49 @@ class NotificationController extends ApiController
 
     #[OA\Post(
         path: '/notifications/{id}/read',
-        summary: 'Mark a notification as read',
+        summary: 'Mark a notification as read or sync its client_id',
+        description: 'Marks the notification as read using the supplied read_at (or now() if omitted). '
+            . 'If only client_id is sent, the server records the client_id without changing read state, '
+            . 'so the mobile sync can establish the link before the user opens the notification.',
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'client_id',
+                        description: 'Client-generated identifier for offline sync. Optional.',
+                        type: 'string',
+                        example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
+                    ),
+                    new OA\Property(
+                        property: 'read_at',
+                        description: 'Timestamp the notification was read on the client. Optional. '
+                            . 'When omitted and client_id is also omitted, the server uses the current time. '
+                            . 'When omitted and client_id is present, read state is left unchanged.',
+                        type: 'string',
+                        format: 'date-time'
+                    ),
+                ],
+                type: 'object'
+            )
+        ),
         tags: ['Notifications'],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Notification marked as read'),
+            new OA\Response(response: 200, description: 'Notification marked as read or synced'),
             new OA\Response(response: 404, description: 'Notification not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
     public function markAsRead(Request $request, int $notificationId): JsonResponse
     {
+        $validatedData = $request->validate([
+            'client_id' => ['nullable', 'string', new ValidateClientId()],
+            'read_at' => ['nullable', new Iso8601DateTime()],
+        ]);
+
         $user = $request->user();
         $notification = $user->notifications()->find($notificationId);
 
@@ -116,9 +149,32 @@ class NotificationController extends ApiController
             return $this->failure(__('Notification not found'), 404);
         }
 
-        $notification->markAsRead();
+        $hasClientId = isset($validatedData['client_id']);
+        $hasReadAt = isset($validatedData['read_at']);
+        // Mobile sync may push the client_id before the user has actually read
+        // the notification. Only mark as read when the caller explicitly sends
+        // read_at, or when neither field is sent (legacy "just mark me read").
+        $shouldMarkRead = $hasReadAt || ! $hasClientId;
 
-        return $this->success($notification, __('Notification marked as read'));
+        if ($shouldMarkRead && ! $notification->isRead()) {
+            $notification->read_at = $hasReadAt
+                ? format_iso8601_to_sql($validatedData['read_at'])
+                : now();
+            $notification->save();
+        }
+
+        if ($hasClientId && ! $notification->client_generated_id) {
+            $notification->setClientGeneratedId($validatedData['client_id'], $user);
+        }
+
+        $notification->markAsSynced();
+        $notification->refresh();
+
+        $message = $shouldMarkRead
+            ? __('Notification marked as read')
+            : __('Notification synced');
+
+        return $this->success($notification, $message);
     }
 
     #[OA\Post(

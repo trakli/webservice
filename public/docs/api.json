@@ -2070,7 +2070,8 @@
                 "tags": [
                     "Notifications"
                 ],
-                "summary": "Mark a notification as read",
+                "summary": "Mark a notification as read or sync its client_id",
+                "description": "Marks the notification as read using the supplied read_at (or now() if omitted). If only client_id is sent, the server records the client_id without changing read state, so the mobile sync can establish the link before the user opens the notification.",
                 "operationId": "057bc4edab5f0e13b8b89356e8155f58",
                 "parameters": [
                     {
@@ -2082,12 +2083,37 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "client_id": {
+                                        "description": "Client-generated identifier for offline sync. Optional.",
+                                        "type": "string",
+                                        "example": "245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4"
+                                    },
+                                    "read_at": {
+                                        "description": "Timestamp the notification was read on the client. Optional. When omitted and client_id is also omitted, the server uses the current time. When omitted and client_id is present, read state is left unchanged.",
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Notification marked as read"
+                        "description": "Notification marked as read or synced"
                     },
                     "404": {
                         "description": "Notification not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
