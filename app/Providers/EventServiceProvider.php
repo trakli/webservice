@@ -56,7 +56,7 @@ class EventServiceProvider extends ServiceProvider
             [CreateBudgetAlertReminder::class, 'handleForecast'],
         ],
         SocialiteWasCalled::class => [
-            AppleExtendSocialite::class.'@handle',
+            AppleExtendSocialite::class . '@handle',
         ],
     ];
 
