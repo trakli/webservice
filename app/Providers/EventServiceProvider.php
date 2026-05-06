@@ -17,6 +17,8 @@ use App\Observers\TransactionObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use SocialiteProviders\Apple\AppleExtendSocialite;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 use Whilesmart\UserAuthentication\Events\PasswordResetCodeGeneratedEvent;
 use Whilesmart\UserAuthentication\Events\PasswordResetCompleteEvent;
 use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
@@ -52,6 +54,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         BudgetForecastBreached::class => [
             [CreateBudgetAlertReminder::class, 'handleForecast'],
+        ],
+        SocialiteWasCalled::class => [
+            AppleExtendSocialite::class.'@handle',
         ],
     ];
 

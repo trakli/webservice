@@ -31,6 +31,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'client_secret' => '', // Empty. Created from private key.
+        'key_id' => env('APPLE_KEY_ID'),
+        'team_id' => env('APPLE_TEAM_ID'),
+        'private_key' => storage_path(env('APPLE_PRIVATE_KEY')), // Must be absolute path, e.g. /var/www/cert/AuthKey_XYZ.p8
+        'redirect' => env('APPLE_REDIRECT_URI')
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

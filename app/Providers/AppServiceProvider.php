@@ -65,5 +65,9 @@ class AppServiceProvider extends ServiceProvider
                 logger()->warning('Schema auto-conform skipped: ' . $e->getMessage());
             }
         });
+
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('apple', \SocialiteProviders\Apple\Provider::class);
+        });
     }
 }

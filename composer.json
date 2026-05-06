@@ -22,7 +22,7 @@
         "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/eloquent-roles": "dev-dev",
         "whilesmart/laravel-plugin-engine": "^1.0.0",
-        "whilesmart/laravel-user-authentication": "^1.0",
+        "whilesmart/laravel-user-authentication": "dev-feat/apple-oauth",
         "whilesmart/laravel-user-devices": "^1.0.0",
         "zircote/swagger-php": "^5.0"
     },
