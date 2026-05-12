@@ -16,6 +16,8 @@ use OpenApi\Attributes as OA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 use App\Services\TransferService;
+use App\Http\Requests\StoreTransactionRequest;
+use App\Http\Requests\UpdateTransactionRequest;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
 /**
