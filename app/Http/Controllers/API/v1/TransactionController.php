@@ -7,8 +7,6 @@ use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
-use App\Rules\Iso8601DateTime;
-use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use App\Services\RecurringTransactionService;
 use Illuminate\Http\JsonResponse;
@@ -291,33 +289,10 @@ class TransactionController extends ApiController
     /**
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreTransactionRequest $request): JsonResponse
     {
-        $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'required|numeric|min:0.01',
-            'type' => 'required|string|in:income,expense',
-            'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'created_at' => ['nullable', new Iso8601DateTime()],
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'required|integer|exists:wallets,id',
-            'categories' => 'nullable|array',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
-            'categories.*' => 'integer|exists:categories,id',
-            'files' => 'nullable|array',
-            'files.*' => 'file|mimes:' . FileService::ALLOWED_EXTENSIONS . '|max:' . FileService::MAX_KILOBYTES,
-        ]);
 
-        if (! $validationResult['isValidated']) {
-            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
-        }
-
-        $data = $validationResult['data'];
+        $data = $request->validated();
         $user = $request->user();
 
         if (! empty($data['client_id'])) {
@@ -611,31 +586,9 @@ class TransactionController extends ApiController
     /**
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function update(Request $request, $transactionId): JsonResponse
+    public function update(UpdateTransactionRequest $request, $transactionId): JsonResponse
     {
-        $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'nullable|numeric|min:0.01',
-            'type' => 'nullable|string|in:income,expense',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'description' => 'nullable|string',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'sometimes|integer|exists:wallets,id',
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'categories' => 'nullable|array',
-            'categories.*' => 'integer|exists:categories,id',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
-            'updated_at' => ['nullable', new Iso8601DateTime()],
-        ]);
-
-        if (! $validationResult['isValidated']) {
-            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
-        }
-
-        $validatedData = $validationResult['data'];
+        $validatedData = $request->validated();
         $recurringTransactionData = [];
 
         if (isset($validatedData['is_recurring']) && $validatedData['is_recurring']) {
