@@ -11,6 +11,10 @@ on:
       - main
       - dev
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   docker-build-prod:
     name: Verify Prod Docker Build
@@ -42,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -75,19 +79,10 @@ jobs:
         run: php artisan migrate --seed
       - name: Run tests
         run: php artisan test --coverage-clover=reports/coverage/coverage.xml --coverage-text
-      - name: Check code coverage
-        run: |
-          COVERAGE=$(php -r "
-            \$xml = simplexml_load_file('reports/coverage/coverage.xml');
-            \$metrics = \$xml->project->metrics;
-            \$coverage = ((int)\$metrics['coveredelements'] / (int)\$metrics['elements']) * 100;
-            echo round(\$coverage, 2);
-          ")
-          echo "Code coverage: $COVERAGE%"
-          MIN_COVERAGE=68.13
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
-            echo "❌ Code coverage ($COVERAGE%) is below the minimum threshold of $MIN_COVERAGE%"
-            exit 1
-          else
-            echo "✅ Code coverage ($COVERAGE%) meets the minimum threshold of $MIN_COVERAGE%"
-          fi
+
+      - name: Check Coverage
+        uses: whilesmart/workflows/php/coverage/check@coverage
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          strict_mode: false
+          threshold: 95
