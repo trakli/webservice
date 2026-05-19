@@ -133,4 +133,15 @@ class User extends Authenticatable implements HasLocalePreference
 
         return is_string($locale) && $locale !== '' ? $locale : null;
     }
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // Automatically enable this setting for every new user
+            $user->setConfigValue(
+                'create-transfers-for-myself-transactions',
+                true,
+                \Whilesmart\ModelConfiguration\Enums\ConfigValueType::Boolean
+            );
+        });
+    }
 }
