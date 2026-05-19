@@ -7,8 +7,6 @@ use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
-use App\Rules\Iso8601DateTime;
-use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use App\Services\RecurringTransactionService;
 use Illuminate\Http\JsonResponse;
@@ -17,14 +15,21 @@ use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
+use App\Services\TransferService;
+use App\Http\Requests\StoreTransactionRequest;
+use App\Http\Requests\UpdateTransactionRequest;
 
 #[OA\Tag(name: 'Transactions', description: 'Endpoints for managing transactions')]
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class TransactionController extends ApiController
 {
     use ApiQueryable;
 
     public function __construct(
-        private RecurringTransactionService $recurringTransactionService
+        private RecurringTransactionService $recurringTransactionService,
+        private TransferService $transferService
     ) {
     }
 
@@ -291,34 +296,27 @@ class TransactionController extends ApiController
     /**
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreTransactionRequest $request): JsonResponse
     {
-        $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'required|numeric|min:0.01',
-            'type' => 'required|string|in:income,expense',
-            'description' => 'nullable|string',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'created_at' => ['nullable', new Iso8601DateTime()],
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'required|integer|exists:wallets,id',
-            'categories' => 'nullable|array',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
-            'categories.*' => 'integer|exists:categories,id',
-            'files' => 'nullable|array',
-            'files.*' => 'file|mimes:' . FileService::ALLOWED_EXTENSIONS . '|max:' . FileService::MAX_KILOBYTES,
-        ]);
 
-        if (! $validationResult['isValidated']) {
-            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
+        $data = $request->validated();
+        $user = $request->user();
+
+        //check if party_id is the user's "myself" party
+        //and if convert_myself_to_transfer is enabled in configuration. If so, create a transfer instead of a regular transaction
+        if (
+            $this->isMyselfTransfer($data, $user, $request)
+        ) {
+            $transfer = $this->handleMyselfTransfer($data, $user, $request);
+            //return response here to prevent controller from creating a third transaction below
+            // Extract the "Transaction" object from the transfer.
+            $transaction = $transfer->incomeTransaction;
+            return $this->success($transaction, statusCode: 201);
         }
 
-        $data = $validationResult['data'];
-        $user = $request->user();
+
+
+
 
         if (! empty($data['client_id'])) {
             $existingTransaction = Transaction::findByClientId($data['client_id'], $user);
@@ -611,31 +609,9 @@ class TransactionController extends ApiController
     /**
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function update(Request $request, $transactionId): JsonResponse
+    public function update(UpdateTransactionRequest $request, $transactionId): JsonResponse
     {
-        $validationResult = $this->validateRequest($request, [
-            'client_id' => ['nullable', 'string', new ValidateClientId()],
-            'amount' => 'nullable|numeric|min:0.01',
-            'type' => 'nullable|string|in:income,expense',
-            'datetime' => ['nullable', new Iso8601DateTime()],
-            'description' => 'nullable|string',
-            'party_id' => 'nullable|integer|exists:parties,id',
-            'wallet_id' => 'sometimes|integer|exists:wallets,id',
-            'group_id' => 'nullable|integer|exists:groups,id',
-            'categories' => 'nullable|array',
-            'categories.*' => 'integer|exists:categories,id',
-            'is_recurring' => 'nullable|boolean',
-            'recurrence_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
-            'recurrence_interval' => 'nullable|integer|min:1',
-            'recurrence_ends_at' => ['nullable', 'date', 'after:today', new Iso8601DateTime()],
-            'updated_at' => ['nullable', new Iso8601DateTime()],
-        ]);
-
-        if (! $validationResult['isValidated']) {
-            return $this->failure($validationResult['message'], $validationResult['code'], $validationResult['errors']);
-        }
-
-        $validatedData = $validationResult['data'];
+        $validatedData = $request->validated();
         $recurringTransactionData = [];
 
         if (isset($validatedData['is_recurring']) && $validatedData['is_recurring']) {
@@ -915,5 +891,38 @@ class TransactionController extends ApiController
                 );
             }
         }
+    }
+
+    private function isMyselfTransfer($data, $user, $request): bool
+    {
+        //get user preferences (boolean)
+        $featureEnabled = $user->getConfigValue('create-transfers-for-myself-transactions');
+
+        //identify the party and check its 'is_myself' property;
+        $partyId = $data['party_id'] ?? null;
+        $party = $partyId ? $user->parties()->find($partyId) : null;
+
+        $isMyselfParty = $party && $party->getConfigValue('is-myself');
+
+        return $featureEnabled && $isMyselfParty && $request->has('from_wallet_id');
+    }
+
+    private function handleMyselfTransfer($data, $user, $request)
+    {
+        $fromWallet = $user->wallets()->findOrFail($request['from_wallet_id']);
+        $toWallet = $user->wallets()->findOrFail($data['wallet_id']);
+
+        return $this->transferService->transfer(
+            amountToSend: (float) $data['amount'],
+            fromWallet: $fromWallet,
+            amountToReceive: (float) $data['amount'],
+            toWallet: $toWallet,
+            user: $user,
+            exchangeRate: 1.0,
+            datetime: $data['datetime'] ?? null,
+            transactionClientIds: [
+                'income_transaction_client_id' => $data['client_id'] ?? null
+            ]
+        );
     }
 }
