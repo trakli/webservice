@@ -20,7 +20,8 @@ class AiService
         bool $execute = true,
         ?string $formatHint = null,
         bool $generateResponse = true,
-        ?string $language = null
+        ?string $language = null,
+        ?string $role = null
     ): array {
         try {
             $payload = [
@@ -32,6 +33,10 @@ class AiService
                     'language' => $language ?? app()->getLocale(),
                 ],
             ];
+
+            if ($role !== null) {
+                $payload['context']['role'] = $role;
+            }
 
             if ($formatHint !== null) {
                 $payload['format_hint'] = $formatHint;

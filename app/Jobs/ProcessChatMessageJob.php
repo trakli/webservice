@@ -61,6 +61,7 @@ class ProcessChatMessageJob implements ShouldQueue
             formatHint: $userMessage->format_hint,
             generateResponse: true,
             language: $userMessage->language ?? app()->getLocale(),
+            role: $userMessage->user?->hasRole('admin') ? 'admin' : null,
         );
 
         if ($this->isSoftFailure($response)) {
