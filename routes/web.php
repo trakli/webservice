@@ -17,8 +17,20 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     $host = request()->getHttpHost();
 
-    return response()->json(['welcome' => 'Welcome to the Trakli WebService! See API documentation here: '."$host/docs/swagger or $host/docs/api.json"]);
+    $payload = ['welcome' => 'Welcome to the Trakli WebService!'];
+
+    if (! app()->environment('production')) {
+        $payload['welcome'] = 'Welcome to the Trakli WebService! See API documentation here: '."$host/docs/swagger or $host/docs/api.json";
+    }
+
+    return response()->json($payload);
 });
+
+if (! app()->environment('production')) {
+    Route::get('/docs/swagger', function () {
+        return view('swagger');
+    });
+}
 
 if (config('app.debug') && app()->environment(['local', 'staging', 'testing'])) {
     Route::prefix('dev')->group(function () {
