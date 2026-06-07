@@ -51,3 +51,20 @@ jobs:
           tags: |
             ghcr.io/trakli/webservice:latest
             ghcr.io/trakli/webservice:${{ github.event.release.tag_name }}
+
+  deploy-staging:
+    needs: build
+    if: ${{ github.event_name != 'release' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup FlatRun
+        uses: flatrun/actions/setup-flatrun@v1
+        with:
+          version: 0.1.0
+
+      - name: Deploy
+        run: flatrun deployment deploy trakli-staging
+        env:
+          FLATRUN_URL: ${{ vars.FLATRUN_URL }}
+          FLATRUN_TOKEN: ${{ secrets.FLATRUN_TOKEN }}
