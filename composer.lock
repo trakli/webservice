@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c1aed71dcf4e2a26dc5867d996857982",
+    "content-hash": "73e24f6e9104921b0d867eb21de6b0f0",
     "packages": [
         {
             "name": "beste/clock",
@@ -8581,16 +8581,16 @@
         },
         {
             "name": "whilesmart/laravel-plugin-engine",
-            "version": "v1.0.0",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/laravel-plugin-engine.git",
-                "reference": "a60320904b121b05bf0f9208e75d7c98c2cdedd7"
+                "reference": "dc421fbd35b0b3bab83cb72cd840a0bb305ae97a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/laravel-plugin-engine/zipball/a60320904b121b05bf0f9208e75d7c98c2cdedd7",
-                "reference": "a60320904b121b05bf0f9208e75d7c98c2cdedd7",
+                "url": "https://api.github.com/repos/whilesmartphp/laravel-plugin-engine/zipball/dc421fbd35b0b3bab83cb72cd840a0bb305ae97a",
+                "reference": "dc421fbd35b0b3bab83cb72cd840a0bb305ae97a",
                 "shasum": ""
             },
             "require": {
@@ -8630,12 +8630,12 @@
                     "email": "engineering@whilesmart.com"
                 }
             ],
-            "description": "Laravel plugin engine for WhileSmart applications",
+            "description": "A flexible plugin engine for Laravel applications",
             "support": {
                 "issues": "https://github.com/whilesmartphp/laravel-plugin-engine/issues",
-                "source": "https://github.com/whilesmartphp/laravel-plugin-engine/tree/v1.0.0"
+                "source": "https://github.com/whilesmartphp/laravel-plugin-engine/tree/v1.1.0"
             },
-            "time": "2025-10-02T18:07:14+00:00"
+            "time": "2026-06-07T16:31:09+00:00"
         },
         {
             "name": "whilesmart/laravel-user-authentication",
