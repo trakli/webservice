@@ -177,6 +177,13 @@ security:
   mode: read_only
   max_rows: 100
   max_join_depth: 4
+  permission_key: role
+  allowed_tables: [transactions, wallets, categories, parties, categorizables]
+  required_filters:
+    transactions: { column: user_id, bypass_roles: [admin] }
+    wallets: { column: user_id, bypass_roles: [admin] }
+    categories: { column: user_id, bypass_roles: [admin] }
+    parties: { column: user_id, bypass_roles: [admin] }
   blocked_columns:
     - users.password
     - users.remember_token
