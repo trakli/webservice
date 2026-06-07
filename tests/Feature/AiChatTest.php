@@ -10,8 +10,10 @@ use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Tests\TestCase;
+use Whilesmart\Roles\Models\Role;
 
 class AiChatTest extends TestCase
 {
@@ -207,6 +209,60 @@ class AiChatTest extends TestCase
 
         $assistant->refresh();
         $this->assertEquals('prism_fallback', $assistant->result['source']);
+    }
+
+    public function test_smartql_context_is_scoped_to_the_authenticated_user(): void
+    {
+        Http::fake([
+            '*/ask' => Http::response([
+                'human_response' => 'ok',
+                'format_type' => 'scalar',
+                'rows' => [['total' => 1]],
+            ]),
+        ]);
+
+        [$assistant] = $this->makeTurn('show all transactions');
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('generateTitle')->andReturn('All transactions');
+
+        (new ProcessChatMessageJob($assistant))->handle(app(AiService::class), $router);
+
+        Http::assertSent(function ($request) {
+            return $request['context']['user_id'] === $this->user->id
+                && ! array_key_exists('role', $request['context']);
+        });
+    }
+
+    public function test_admin_users_send_their_role_in_smartql_context(): void
+    {
+        Role::firstOrCreate(
+            ['slug' => 'admin'],
+            ['name' => 'Admin', 'description' => 'System administrator']
+        );
+        $this->user->assignRole('admin');
+
+        Http::fake([
+            '*/ask' => Http::response([
+                'human_response' => 'ok',
+                'format_type' => 'scalar',
+                'rows' => [['total' => 1]],
+            ]),
+        ]);
+
+        [$assistant] = $this->makeTurn('show all transactions');
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('generateTitle')->andReturn('All transactions');
+
+        (new ProcessChatMessageJob($assistant))->handle(app(AiService::class), $router);
+
+        Http::assertSent(function ($request) {
+            return $request['context']['user_id'] === $this->user->id
+                && ($request['context']['role'] ?? null) === 'admin';
+        });
     }
 
     private function makeSession(): ChatSession
