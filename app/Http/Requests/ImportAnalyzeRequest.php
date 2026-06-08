@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+// use Illuminate\Foundation\Http\FormRequest;
 
-class ImportAnalyzeRequest extends FormRequest
+class ImportAnalyzeRequest extends ApiFormRequest
 {
     public function rules(): array
     {
