@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+// use Illuminate\Foundation\Http\FormRequest;
 
-class FixFailedImportsRequest extends FormRequest
+class FixFailedImportsRequest extends ApiFormRequest
 {
     /**
      * Get the validation rules that apply to the request.

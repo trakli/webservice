@@ -5,9 +5,10 @@ namespace App\Http\Requests;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\FileService;
-use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTransactionRequest extends FormRequest
+// use Illuminate\Foundation\Http\FormRequest;
+
+class StoreTransactionRequest extends ApiFormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
