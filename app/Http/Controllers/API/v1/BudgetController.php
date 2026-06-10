@@ -14,6 +14,7 @@ use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\BudgetProgressService;
+use App\Services\ExchangeRateService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,13 @@ class BudgetController extends ApiController
         'group' => Group::class,
         'wallet' => Wallet::class,
     ];
+
+    private ExchangeRateService $exchangeRateService;
+
+    public function __construct(ExchangeRateService $exchangeRateService)
+    {
+        $this->exchangeRateService = $exchangeRateService;
+    }
 
     #[OA\Get(
         path: '/budgets',
@@ -463,10 +471,21 @@ class BudgetController extends ApiController
             });
         }
 
+
         $transactions = $query
             ->orderByDesc('datetime')
             ->limit($limit)
-            ->get();
+            ->get()->map(function (Transaction $transaction) use ($budget) {
+                $transaction->amount_in_budget_currency = $transaction->amount;
+
+                if ($transaction->wallet->currency != $budget->currency) {
+                    $exchangeRate = $this->exchangeRateService->getRate($budget->currency, $transaction->wallet->currency);
+                    $transaction->amount_in_budget_currency = $transaction->amount * $exchangeRate;
+                }
+
+                return $transaction;
+            });
+
 
         return $this->success([
             'period_start' => $periodStart->toDateString(),
