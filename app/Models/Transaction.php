@@ -51,6 +51,11 @@ use Whilesmart\UserDevices\Models\Device;
             description: 'ID of the user who created the transaction',
             type: 'integer'
         ),
+        new OA\Property(
+            property: 'amount_in_budget_currency',
+            description: 'Transaction amount converted to the currency of the budget',
+            type: 'string'
+        ),
         new OA\Property(property: 'transfer_id', description: 'ID of the associated transfer, if any', type: 'integer'),
         new OA\Property(
             property: 'wallet_client_generated_id',
