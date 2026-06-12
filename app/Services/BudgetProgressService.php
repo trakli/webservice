@@ -22,6 +22,7 @@ class BudgetProgressService
 
     public function __construct(
         protected OwnerResolver $ownerResolver,
+        protected ExchangeRateService $exchangeRateService
     ) {
     }
 
@@ -68,7 +69,7 @@ class BudgetProgressService
         // NOTE: empty target lists are intentional — they mean the budget
         // covers every transaction in the owner's period, not zero.
 
-        $grossSpent = $this->sumByType($userIds, $categoryIds, $groupIds, $walletIds, $periodStart, $periodEnd, 'expense');
+        $grossSpent = $this->sumByType($userIds, $categoryIds, $groupIds, $walletIds, $periodStart, $periodEnd, 'expense', $budget->currency);
 
         // Only transactions the user has explicitly marked as refunds
         // (via the `refunds` table) count against the budget — no more
@@ -81,6 +82,7 @@ class BudgetProgressService
             $periodStart,
             $periodEnd,
             'income',
+            budgetCurrency: $budget->currency,
             onlyRefunds: true,
         );
 
@@ -208,6 +210,7 @@ class BudgetProgressService
         CarbonImmutable $periodStart,
         CarbonImmutable $periodEnd,
         string $type,
+        string $budgetCurrency,
         bool $onlyRefunds = false,
     ): float {
         $query = Transaction::query()
@@ -221,7 +224,7 @@ class BudgetProgressService
         }
 
         if (empty($categoryIds) && empty($groupIds) && empty($walletIds)) {
-            return (float) $query->sum('amount');
+            return $this->getReducedSum($query, $budgetCurrency);
         }
 
         $query->where(function (Builder $outer) use ($categoryIds, $groupIds, $walletIds) {
@@ -240,7 +243,24 @@ class BudgetProgressService
             }
         });
 
-        return (float) $query->sum('amount');
+        return $this->getReducedSum($query, $budgetCurrency);
+    }
+
+    /**
+     * Calculates the total transaction amount, taking into account different currencies
+    */
+    private function getReducedSum($query, $baseCurrency): float
+    {
+        return (float) $query->with('wallet')->cursor()->reduce(function ($carry, Transaction $transaction) use ($baseCurrency) {
+            $amount = $transaction->amount;
+
+            if ($transaction->wallet->currency != $baseCurrency) {
+                $exchangeRate = $this->exchangeRateService->getRate($baseCurrency, $transaction->wallet->currency);
+                $amount = $transaction->amount * $exchangeRate;
+            }
+
+            return $amount + $carry;
+        }, 0);
     }
 
     /**

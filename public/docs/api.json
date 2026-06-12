@@ -5762,6 +5762,10 @@
                         "description": "ID of the user who created the transaction",
                         "type": "integer"
                     },
+                    "amount_in_budget_currency": {
+                        "description": "Transaction amount converted to the currency of the budget",
+                        "type": "string"
+                    },
                     "transfer_id": {
                         "description": "ID of the associated transfer, if any",
                         "type": "integer"
