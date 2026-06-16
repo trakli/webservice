@@ -105,12 +105,22 @@ class StatsController extends ApiController
         $defaultCurrency = $user->getConfigValue('default-currency') ?? 'USD';
         $period = $request->input('period', 'month');
 
+        $section = $request->input('section');
+        if ($section !== null && ! in_array($section, StatsService::SECTIONS, true)) {
+            return response()->json([
+                'message' => __('Invalid stats section.'),
+                'invalid_section' => $section,
+                'valid_sections' => StatsService::SECTIONS,
+            ], 422);
+        }
+
         $cacheKey = StatsService::generateCacheKey(
             $user->id,
             $startDate,
             $endDate,
             $walletIds,
-            $period
+            $period,
+            $section
         );
 
         $data = Cache::remember(
@@ -122,7 +132,8 @@ class StatsController extends ApiController
                 $endDate,
                 $walletIds,
                 $period,
-                $defaultCurrency
+                $defaultCurrency,
+                $section
             )
         );
 
