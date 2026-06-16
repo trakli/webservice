@@ -1,18 +1,14 @@
 name: Build and Publish Docker Image
 
 on:
-  workflow_run:
-    workflows: ["Checks"]
-    types:
-      - completed
+  push:
     branches:
-      - main
+      - dev
   release:
     types: [published]
 
 jobs:
   build:
-    if: ${{ github.event_name == 'release' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,8 +28,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        if: ${{ github.event_name != 'release' }}
+      - name: Build and push commit image
+        if: ${{ github.event_name == 'push' }}
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -54,17 +50,23 @@ jobs:
 
   deploy-staging:
     needs: build
-    if: ${{ github.event_name != 'release' }}
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    env:
+      FLATRUN_URL: ${{ vars.FLATRUN_URL }}
+      FLATRUN_TOKEN: ${{ secrets.FLATRUN_TOKEN }}
 
     steps:
       - name: Setup FlatRun
         uses: flatrun/actions/setup-flatrun@v1
         with:
-          version: 0.1.0
+          version: 0.2.0
 
       - name: Deploy
-        run: flatrun deployment deploy trakli-staging
-        env:
-          FLATRUN_URL: ${{ vars.FLATRUN_URL }}
-          FLATRUN_TOKEN: ${{ secrets.FLATRUN_TOKEN }}
+        run: flatrun deployment image set trakli-staging app ghcr.io/trakli/webservice:${{ github.sha }} --deploy
+
+      - name: Run database migrations
+        run: flatrun deployment exec trakli-staging app -- php artisan migrate
+
+      - name: Optimize application caches
+        run: flatrun deployment exec trakli-staging app -- php artisan optimize
