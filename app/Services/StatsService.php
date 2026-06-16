@@ -51,57 +51,13 @@ class StatsService
         $this->walletIds = $walletIds;
         $this->targetCurrency = $targetCurrency;
 
-        $want = fn (string $name): bool => $section === null || $section === $name;
-
         $result = ['currency' => $targetCurrency];
         $charts = [];
 
-        if ($want('overview')) {
-            $periodTotals = $this->getPeriodTotals();
-            $totalBalance = $this->getTotalBalance();
-            $overview = [
-                'total_balance' => $totalBalance,
-                'net_worth' => $totalBalance,
-                'total_income' => $periodTotals['income'],
-                'total_expenses' => $periodTotals['expense'],
-                'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
-                'avg_monthly_income' => $this->getAverageMonthlyAmount('income'),
-                'avg_monthly_expenses' => $this->getAverageMonthlyAmount('expense'),
-                'savings_rate' => 0,
-            ];
-            if ($overview['total_income'] > 0) {
-                $overview['savings_rate'] =
-                    (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
-            }
-            $result['overview'] = $overview;
-            $result['period_summary'] = $this->getPeriodSummary();
-        }
-
-        if ($want('activity')) {
-            $result['activity'] = $this->getActivityMetrics();
-        }
-
-        if ($want('comparisons')) {
-            $result['comparisons'] = $this->getComparisons();
-        }
-
-        if ($want('categories')) {
-            $result['top_categories'] = $this->getTopCategories();
-            $result['category_distribution'] = $this->getCategoryDistribution();
-            $charts['category_spending'] = $this->getCategorySpendingData('expense');
-            $charts['income_sources'] = $this->getCategorySpendingData('income');
-        }
-
-        if ($want('parties')) {
-            $charts['party_spending'] = $this->getPartyData('expense');
-            $charts['party_income'] = $this->getPartyData('income');
-        }
-
-        if ($want('cashflow')) {
-            $result['largest_transactions'] = $this->getLargestTransactions();
-            $result['spending_trends'] = $this->getSpendingTrends($period);
-            $charts['monthly_cash_flow'] = $this->getMonthlyCashFlowData();
-            $charts['expense_by_wallet'] = $this->getExpenseByWalletData();
+        foreach ($section === null ? self::SECTIONS : [$section] as $name) {
+            [$fields, $sectionCharts] = $this->sectionData($name, $period);
+            $result += $fields;
+            $charts += $sectionCharts;
         }
 
         if ($charts !== [] || $section === null) {
@@ -109,6 +65,74 @@ class StatsService
         }
 
         return $result;
+    }
+
+    /**
+     * Build one section's response fields and chart contributions. Returns
+     * [topLevelFields, chartContributions].
+     */
+    private function sectionData(string $section, string $period): array
+    {
+        return match ($section) {
+            'overview' => [$this->overviewFields(), []],
+            'activity' => [['activity' => $this->getActivityMetrics()], []],
+            'comparisons' => [['comparisons' => $this->getComparisons()], []],
+            'categories' => [
+                [
+                    'top_categories' => $this->getTopCategories(),
+                    'category_distribution' => $this->getCategoryDistribution(),
+                ],
+                [
+                    'category_spending' => $this->getCategorySpendingData('expense'),
+                    'income_sources' => $this->getCategorySpendingData('income'),
+                ],
+            ],
+            'parties' => [
+                [],
+                [
+                    'party_spending' => $this->getPartyData('expense'),
+                    'party_income' => $this->getPartyData('income'),
+                ],
+            ],
+            'cashflow' => [
+                [
+                    'largest_transactions' => $this->getLargestTransactions(),
+                    'spending_trends' => $this->getSpendingTrends($period),
+                ],
+                [
+                    'monthly_cash_flow' => $this->getMonthlyCashFlowData(),
+                    'expense_by_wallet' => $this->getExpenseByWalletData(),
+                ],
+            ],
+            default => [[], []],
+        };
+    }
+
+    /**
+     * Headline totals and the period summary that drive the KPI widgets.
+     */
+    private function overviewFields(): array
+    {
+        $periodTotals = $this->getPeriodTotals();
+        $totalBalance = $this->getTotalBalance();
+
+        $overview = [
+            'total_balance' => $totalBalance,
+            'net_worth' => $totalBalance,
+            'total_income' => $periodTotals['income'],
+            'total_expenses' => $periodTotals['expense'],
+            'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
+            'avg_monthly_income' => $this->getAverageMonthlyAmount('income'),
+            'avg_monthly_expenses' => $this->getAverageMonthlyAmount('expense'),
+            'savings_rate' => 0,
+        ];
+
+        if ($overview['total_income'] > 0) {
+            $overview['savings_rate'] =
+                (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
+        }
+
+        return ['overview' => $overview, 'period_summary' => $this->getPeriodSummary()];
     }
 
     /**
