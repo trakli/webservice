@@ -81,7 +81,7 @@ jobs:
         run: php artisan test --coverage-clover=reports/coverage/coverage.xml --coverage-text
 
       - name: Check Coverage
-        uses: whilesmart/workflows/php/coverage/check@coverage
+        uses: whilesmart/workflows/php/coverage/check@main
         with:
           token: ${{ secrets.PAT_TOKEN }}
           strict_mode: false
