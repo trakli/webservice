@@ -26,7 +26,15 @@ class StatsService
     }
 
     /**
-     * Compute all stats for the given parameters.
+     * Independently computable stats sections, in rough cost order. A request
+     * for a single section computes only that section so the client can load
+     * the dashboard progressively instead of waiting for the whole payload.
+     */
+    public const SECTIONS = ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow'];
+
+    /**
+     * Compute stats for the given parameters. When $section is null the full
+     * payload is returned; otherwise only that section is computed.
      */
     public function compute(
         $user,
@@ -34,7 +42,8 @@ class StatsService
         Carbon $endDate,
         array $walletIds,
         string $period,
-        string $targetCurrency
+        string $targetCurrency,
+        ?string $section = null
     ): array {
         $this->user = $user;
         $this->startDate = $startDate;
@@ -42,43 +51,64 @@ class StatsService
         $this->walletIds = $walletIds;
         $this->targetCurrency = $targetCurrency;
 
-        $periodTotals = $this->getPeriodTotals();
+        $want = fn (string $name): bool => $section === null || $section === $name;
 
-        $overview = [
-            'total_balance' => $this->getTotalBalance(),
-            'net_worth' => $this->getTotalBalance(),
-            'total_income' => $periodTotals['income'],
-            'total_expenses' => $periodTotals['expense'],
-            'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
-            'avg_monthly_income' => $this->getAverageMonthlyAmount('income'),
-            'avg_monthly_expenses' => $this->getAverageMonthlyAmount('expense'),
-            'savings_rate' => 0,
-        ];
+        $result = ['currency' => $targetCurrency];
+        $charts = [];
 
-        if ($overview['total_income'] > 0) {
-            $overview['savings_rate'] =
-                (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
+        if ($want('overview')) {
+            $periodTotals = $this->getPeriodTotals();
+            $totalBalance = $this->getTotalBalance();
+            $overview = [
+                'total_balance' => $totalBalance,
+                'net_worth' => $totalBalance,
+                'total_income' => $periodTotals['income'],
+                'total_expenses' => $periodTotals['expense'],
+                'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
+                'avg_monthly_income' => $this->getAverageMonthlyAmount('income'),
+                'avg_monthly_expenses' => $this->getAverageMonthlyAmount('expense'),
+                'savings_rate' => 0,
+            ];
+            if ($overview['total_income'] > 0) {
+                $overview['savings_rate'] =
+                    (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
+            }
+            $result['overview'] = $overview;
+            $result['period_summary'] = $this->getPeriodSummary();
         }
 
-        return [
-            'currency' => $targetCurrency,
-            'overview' => $overview,
-            'activity' => $this->getActivityMetrics(),
-            'comparisons' => $this->getComparisons(),
-            'top_categories' => $this->getTopCategories(),
-            'largest_transactions' => $this->getLargestTransactions(),
-            'spending_trends' => $this->getSpendingTrends($period),
-            'category_distribution' => $this->getCategoryDistribution(),
-            'period_summary' => $this->getPeriodSummary(),
-            'charts' => [
-                'party_spending' => $this->getPartyData('expense'),
-                'party_income' => $this->getPartyData('income'),
-                'category_spending' => $this->getCategorySpendingData('expense'),
-                'income_sources' => $this->getCategorySpendingData('income'),
-                'monthly_cash_flow' => $this->getMonthlyCashFlowData(),
-                'expense_by_wallet' => $this->getExpenseByWalletData(),
-            ],
-        ];
+        if ($want('activity')) {
+            $result['activity'] = $this->getActivityMetrics();
+        }
+
+        if ($want('comparisons')) {
+            $result['comparisons'] = $this->getComparisons();
+        }
+
+        if ($want('categories')) {
+            $result['top_categories'] = $this->getTopCategories();
+            $result['category_distribution'] = $this->getCategoryDistribution();
+            $charts['category_spending'] = $this->getCategorySpendingData('expense');
+            $charts['income_sources'] = $this->getCategorySpendingData('income');
+        }
+
+        if ($want('parties')) {
+            $charts['party_spending'] = $this->getPartyData('expense');
+            $charts['party_income'] = $this->getPartyData('income');
+        }
+
+        if ($want('cashflow')) {
+            $result['largest_transactions'] = $this->getLargestTransactions();
+            $result['spending_trends'] = $this->getSpendingTrends($period);
+            $charts['monthly_cash_flow'] = $this->getMonthlyCashFlowData();
+            $charts['expense_by_wallet'] = $this->getExpenseByWalletData();
+        }
+
+        if ($charts !== [] || $section === null) {
+            $result['charts'] = $charts;
+        }
+
+        return $result;
     }
 
     /**
@@ -108,7 +138,8 @@ class StatsService
         Carbon $startDate,
         Carbon $endDate,
         array $walletIds,
-        string $period
+        string $period,
+        ?string $section = null
     ): string {
         $version = Cache::get('stats:user:' . $userId . ':version', 1);
 
@@ -117,6 +148,7 @@ class StatsService
             'end' => $endDate->toDateString(),
             'wallets' => implode(',', $walletIds),
             'period' => $period,
+            'section' => $section ?? 'all',
             'v' => $version,
         ];
 

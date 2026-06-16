@@ -698,4 +698,104 @@ class StatsControllerTest extends TestCase
         $second = $this->statsRequest('?preset=all_time');
         $this->assertEquals(6000, $second->json('data.overview.total_income'));
     }
+
+    /** @test */
+    public function it_returns_only_the_overview_section_when_requested(): void
+    {
+        $this->createTestData();
+
+        $response = $this->statsRequest('?preset=all_time&section=overview');
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals(5000, $data['overview']['total_income']);
+        $this->assertEquals(1800, $data['overview']['total_expenses']);
+        $this->assertArrayHasKey('period_summary', $data);
+
+        // Heavier sections are not computed for this request.
+        $this->assertArrayNotHasKey('activity', $data);
+        $this->assertArrayNotHasKey('comparisons', $data);
+        $this->assertArrayNotHasKey('top_categories', $data);
+        $this->assertArrayNotHasKey('charts', $data);
+    }
+
+    /** @test */
+    public function it_returns_only_the_categories_section_when_requested(): void
+    {
+        $this->createTestData();
+
+        $response = $this->statsRequest('?preset=all_time&section=categories');
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals('Food', $data['top_categories']['expenses'][0]['name']);
+        $this->assertArrayHasKey('category_spending', $data['charts']);
+        $this->assertArrayHasKey('income_sources', $data['charts']);
+
+        $this->assertArrayNotHasKey('overview', $data);
+        $this->assertArrayNotHasKey('party_spending', $data['charts']);
+        $this->assertArrayNotHasKey('monthly_cash_flow', $data['charts']);
+    }
+
+    /** @test */
+    public function it_returns_only_the_parties_section_when_requested(): void
+    {
+        $this->createTestData();
+
+        $response = $this->statsRequest('?preset=all_time&section=parties');
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals('Restaurant', $data['charts']['party_spending'][0]['name']);
+        $this->assertEquals('Employer', $data['charts']['party_income'][0]['name']);
+        $this->assertArrayNotHasKey('category_spending', $data['charts']);
+        $this->assertArrayNotHasKey('overview', $data);
+    }
+
+    /** @test */
+    public function it_returns_only_the_cashflow_section_when_requested(): void
+    {
+        $this->createTestData();
+
+        $response = $this->statsRequest('?preset=all_time&section=cashflow');
+        $response->assertStatus(200);
+
+        $data = $response->json('data');
+        $this->assertEquals(1000, $data['largest_transactions']['expense']['amount']);
+        $this->assertArrayHasKey('monthly_cash_flow', $data['charts']);
+        $this->assertArrayHasKey('expense_by_wallet', $data['charts']);
+        $this->assertArrayNotHasKey('overview', $data);
+    }
+
+    /** @test */
+    public function it_section_overview_matches_full_payload(): void
+    {
+        $this->createTestData();
+
+        $full = $this->statsRequest('?preset=all_time')->json('data.overview');
+        $section = $this->statsRequest('?preset=all_time&section=overview')->json('data.overview');
+
+        $this->assertEquals($full, $section);
+    }
+
+    /** @test */
+    public function it_rejects_an_invalid_section(): void
+    {
+        $this->createTestData();
+
+        $response = $this->statsRequest('?section=bogus');
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message', 'invalid_section', 'valid_sections']);
+    }
+
+    /** @test */
+    public function it_still_returns_the_full_payload_without_a_section(): void
+    {
+        $this->createTestData();
+
+        $data = $this->statsRequest('?preset=all_time')->json('data');
+        foreach (['overview', 'activity', 'comparisons', 'top_categories', 'largest_transactions', 'charts'] as $key) {
+            $this->assertArrayHasKey($key, $data);
+        }
+    }
 }
