@@ -2971,6 +2971,23 @@
                                 "last_3_months"
                             ]
                         }
+                    },
+                    {
+                        "name": "section",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "description": "Compute only one section of the response for progressive loading. Omit for the full payload.",
+                            "type": "string",
+                            "enum": [
+                                "overview",
+                                "activity",
+                                "comparisons",
+                                "categories",
+                                "parties",
+                                "cashflow"
+                            ]
+                        }
                     }
                 ],
                 "responses": {

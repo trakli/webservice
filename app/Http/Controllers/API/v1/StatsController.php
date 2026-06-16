@@ -62,6 +62,16 @@ class StatsController extends ApiController
                     description: 'Preset date range (overrides start_date/end_date)'
                 )
             ),
+            new OA\Parameter(
+                name: 'section',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(
+                    type: 'string',
+                    enum: ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow'],
+                    description: 'Compute only one section of the response for progressive loading. Omit for the full payload.'
+                )
+            ),
         ],
         responses: [
             new OA\Response(
