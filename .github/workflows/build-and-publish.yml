@@ -28,6 +28,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Resolve short commit SHA
+        id: meta
+        if: ${{ github.event_name == 'push' }}
+        run: echo "sha=${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push commit image
         if: ${{ github.event_name == 'push' }}
         uses: docker/build-push-action@v4
@@ -35,7 +40,7 @@ jobs:
           context: .
           file: docker/prod/Dockerfile
           push: true
-          tags: ghcr.io/trakli/webservice:${{ github.sha }}
+          tags: ghcr.io/trakli/webservice:${{ steps.meta.outputs.sha }}
 
       - name: Build and push latest
         if: ${{ github.event_name == 'release' }}
