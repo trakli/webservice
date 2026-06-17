@@ -11,6 +11,7 @@ use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use App\Services\RecurringTransactionService;
+use App\Services\TransactionWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,8 @@ class TransactionController extends ApiController
     use ApiQueryable;
 
     public function __construct(
-        private RecurringTransactionService $recurringTransactionService
+        private RecurringTransactionService $recurringTransactionService,
+        private TransactionWriter $transactionWriter
     ) {
     }
 
@@ -370,25 +372,10 @@ class TransactionController extends ApiController
 
         try {
             // Validate ownership of all resources before creating the transaction
-            $this->validateResourceOwnership($data, $categories);
+            $this->transactionWriter->validateOwnership($user, $data, $categories);
 
             $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData, $user) {
-                /** @var Transaction $transaction */
-                $transaction = $user->transactions()->create($data);
-
-                if (isset($data['client_id'])) {
-                    $transaction->setClientGeneratedId($data['client_id'], $user);
-                }
-
-                $transaction->markAsSynced();
-
-                if (! empty($categories)) {
-                    $transaction->categories()->sync($categories);
-                }
-
-                if (isset($data['group_id'])) {
-                    $transaction->groups()->sync($data['group_id']);
-                }
+                $transaction = $this->transactionWriter->createCore($user, $data, $categories);
 
                 FileService::uploadFiles($transaction, $request, 'files', 'transactions');
 
@@ -689,7 +676,7 @@ class TransactionController extends ApiController
 
         try {
             // Validate ownership of all resources before updating the transaction
-            $this->validateResourceOwnership($validatedData, $categories);
+            $this->transactionWriter->validateOwnership($request->user(), $validatedData, $categories);
             $this->checkUpdatedAt($transaction, $validatedData);
 
             $transaction = DB::transaction(function () use (
@@ -874,46 +861,5 @@ class TransactionController extends ApiController
                 $q->orWhere('amount', $numeric);
             }
         });
-    }
-
-    /**
-     * Validate that the authenticated user owns the specified resources.
-     *
-     * @param  array  $data  The validated data containing resource IDs
-     * @param  array  $categories  The category IDs array
-     *
-     * @throws HttpException If any resource does not belong to the user
-     */
-    private function validateResourceOwnership(array $data, array $categories = []): void
-    {
-        $user = auth()->user();
-
-        // Check wallet ownership
-        if (! empty($data['wallet_id']) && ! $user->wallets()->where('id', $data['wallet_id'])->exists()) {
-            throw new HttpException(403, 'The selected wallet does not belong to user');
-        }
-
-        // Check group ownership
-        if (! empty($data['group_id']) && ! $user->groups()->where('id', $data['group_id'])->exists()) {
-            throw new HttpException(403, 'The selected group does not belong to user');
-        }
-
-        // Check party ownership
-        if (! empty($data['party_id']) && ! $user->parties()->where('id', $data['party_id'])->exists()) {
-            throw new HttpException(403, 'The selected party does not belong to user');
-        }
-
-        // Check categories ownership
-        if (! empty($categories)) {
-            $user_category_ids = $user->categories()->pluck('id')->toArray();
-            $invalid_categories = array_diff($categories, $user_category_ids);
-            if (! empty($invalid_categories)) {
-                throw new HttpException(
-                    403,
-                    'Some of the selected categories do not belong to user. Invalid category IDs: ' .
-                    implode(',', $invalid_categories)
-                );
-            }
-        }
     }
 }
