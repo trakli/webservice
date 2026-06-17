@@ -19,6 +19,8 @@
         "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
+        "whilesmart/eloquent-activities": "^1.0",
+        "whilesmart/eloquent-agents": "dev-main",
         "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/eloquent-roles": "dev-dev",
         "whilesmart/laravel-plugin-engine": "^1.0.0",
@@ -102,5 +104,10 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "eloquent-agents",
+        "type": "vcs",
+        "url": "https://github.com/whilesmartphp/eloquent-agents"
+    }]
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ChatMessage;
+use App\Services\AgentRunner;
 use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Bus\Queueable;
@@ -29,7 +30,8 @@ class ProcessChatMessageJob implements ShouldQueue
     {
     }
 
-    public function handle(AiService $aiService, AiRouter $router): void
+    /** @SuppressWarnings(PHPMD.NPathComplexity) */
+    public function handle(AiService $aiService, AiRouter $router, AgentRunner $agentRunner): void
     {
         $this->assistantMessage->update(['status' => ChatMessage::STATUS_PROCESSING]);
 
@@ -45,10 +47,21 @@ class ProcessChatMessageJob implements ShouldQueue
             return;
         }
 
-        $route = $router->classify($userMessage->content);
+        // An attached file always means "act on this document": route straight to
+        // the agent so the import/extract tools run, regardless of the caption.
+        $route = $userMessage->files()->exists()
+            ? AiRouter::ROUTE_AGENT
+            : $router->classify($userMessage->content);
 
         if ($route === AiRouter::ROUTE_GENERAL) {
             $this->answerGeneral($router, $userMessage->content);
+            $this->maybeGenerateTitle($router, $userMessage->content);
+
+            return;
+        }
+
+        if ($route === AiRouter::ROUTE_AGENT) {
+            $this->answerAgent($agentRunner, $router, $userMessage);
             $this->maybeGenerateTitle($router, $userMessage->content);
 
             return;
@@ -64,12 +77,19 @@ class ProcessChatMessageJob implements ShouldQueue
             role: $userMessage->user?->hasRole('admin') ? 'admin' : null,
         );
 
-        if ($this->isSoftFailure($response)) {
-            $this->answerGeneral(
-                $router,
-                $userMessage->content,
-                $response['error'] ?? __('The data query returned no results.')
-            );
+        // Infra/auth failure (SmartQL down, expired key, timeout): not the user's
+        // fault, so don't tell them to rephrase; say the service is unavailable.
+        if (! ($response['success'] ?? false)) {
+            $this->answerUnavailable();
+            $this->maybeGenerateTitle($router, $userMessage->content);
+
+            return;
+        }
+
+        // Genuine empty result: a rephrase suggestion is the right nudge.
+        $rows = $response['data']['rows'] ?? null;
+        if (is_array($rows) && $rows === []) {
+            $this->answerGeneral($router, $userMessage->content, __('The data query returned no results.'));
             $this->maybeGenerateTitle($router, $userMessage->content);
 
             return;
@@ -102,15 +122,38 @@ class ProcessChatMessageJob implements ShouldQueue
         );
     }
 
-    private function isSoftFailure(array $response): bool
+    private function answerUnavailable(): void
     {
-        if (! ($response['success'] ?? false)) {
-            return true;
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => __('The data service is temporarily unavailable. Please try again shortly.'),
+            'result' => ['source' => 'unavailable', 'format_type' => 'raw', 'rows' => []],
+            'completed_at' => now(),
+        ]);
+    }
+
+    private function answerAgent(AgentRunner $agentRunner, AiRouter $router, ChatMessage $userMessage): void
+    {
+        $result = $agentRunner->run($userMessage, $this->assistantMessage);
+
+        if (! ($result['ok'] ?? false)) {
+            // Fall back to a conversational answer so the turn still resolves.
+            $this->answerGeneral($router, $userMessage->content, $result['error'] ?? null);
+
+            return;
         }
 
-        $rows = $response['data']['rows'] ?? null;
-
-        return is_array($rows) && $rows === [];
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => $result['text'] ?? '',
+            'result' => [
+                'source' => 'agent',
+                'blocks' => $result['blocks'] ?? [],
+                'tool_calls' => $result['tool_calls'] ?? [],
+                'usage' => $result['usage'] ?? [],
+            ],
+            'completed_at' => now(),
+        ]);
     }
 
     private function answerGeneral(AiRouter $router, string $question, ?string $hint = null): void

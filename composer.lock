@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "73e24f6e9104921b0d867eb21de6b0f0",
+    "content-hash": "2843f02ae7b0c06b628e0dcef9347441",
     "packages": [
         {
             "name": "beste/clock",
@@ -8463,6 +8463,144 @@
             "time": "2026-04-26T05:33:54+00:00"
         },
         {
+            "name": "whilesmart/eloquent-activities",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-activities.git",
+                "reference": "ec7f1a4bd8255c4f8918cdd9cb6ee7160a3cacd3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-activities/zipball/ec7f1a4bd8255c4f8918cdd9cb6ee7160a3cacd3",
+                "reference": "ec7f1a4bd8255c4f8918cdd9cb6ee7160a3cacd3",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.25",
+                "orchestra/testbench": "^9.0|^10.0",
+                "phpunit/phpunit": "^10.0|^11.0"
+            },
+            "suggest": {
+                "whilesmart/eloquent-roles": "For permission-based activity management"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Activities\\ActivitiesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Activities\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Flexible activity tracking package for Laravel applications with actor-action-subject pattern",
+            "keywords": [
+                "Audit",
+                "activities",
+                "activity-log",
+                "laravel",
+                "package",
+                "php",
+                "tracking"
+            ],
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-activities/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-activities/tree/v1.0.0"
+            },
+            "time": "2026-03-08T19:36:46+00:00"
+        },
+        {
+            "name": "whilesmart/eloquent-agents",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-agents.git",
+                "reference": "f972a6900cadfaf43e3e74dc471e0e5d536e404b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agents/zipball/f972a6900cadfaf43e3e74dc471e0e5d536e404b",
+                "reference": "f972a6900cadfaf43e3e74dc471e0e5d536e404b",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2",
+                "prism-php/prism": "^0.100"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Agents\\AgentsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Agents\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Tests\\": "tests/",
+                    "Workbench\\App\\": "workbench/app/",
+                    "Workbench\\Database\\Factories\\": "workbench/database/factories/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/testbench package:test"
+                ],
+                "pint": [
+                    "./vendor/bin/pint"
+                ],
+                "pint:test": [
+                    "./vendor/bin/pint --test"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "WhileSmart",
+                    "email": "engineering@whilesmart.com"
+                }
+            ],
+            "description": "AI tool-calling foundation for Laravel: ready-made tools, an agent harness, and an extension API on top of Prism",
+            "support": {
+                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/main",
+                "issues": "https://github.com/whilesmartphp/eloquent-agents/issues"
+            },
+            "time": "2026-06-14T16:23:46+00:00"
+        },
+        {
             "name": "whilesmart/eloquent-model-configuration",
             "version": "1.0.11",
             "source": {
@@ -12129,6 +12267,7 @@
     "stability-flags": {
         "phpmd/phpmd": 0,
         "smartpings/php-sdk": 20,
+        "whilesmart/eloquent-agents": 20,
         "whilesmart/eloquent-roles": 20
     },
     "prefer-stable": true,
