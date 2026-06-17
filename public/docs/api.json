@@ -420,6 +420,164 @@
                 }
             }
         },
+        "/ai/chats/{chat}/actions/{action}/confirm": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Confirm and execute an agent-proposed action",
+                "operationId": "430ade075fc0429a3498cdc64a88fa4e",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Action executed"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Action no longer confirmable"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/{action}/reject": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Reject an agent-proposed action",
+                "operationId": "cb9779ac3c35041c3391960e949740c6",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Action dismissed"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Action already executed"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/messages/{message}/files": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Attach files to a chat message (for receipts, statements, etc.)",
+                "operationId": "480403526f7f229bd7d4f5cbf9dfa019",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Files attached"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/messages/{message}/export": {
+            "get": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Export a message canvas document in a given format",
+                "operationId": "11d029d3a0175da1e4ddfec1a57b7b9b",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "md"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The exported document as a file download"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Unsupported format"
+                    }
+                }
+            }
+        },
         "/budgets": {
             "get": {
                 "tags": [
@@ -1944,6 +2102,31 @@
                 "responses": {
                     "200": {
                         "description": "Session details"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Delete an import session",
+                "operationId": "67321428e9c3903dbda68d858ab2448b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session deleted"
                     },
                     "404": {
                         "description": "Not found"

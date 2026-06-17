@@ -13,6 +13,8 @@ class AiRouter
 
     public const ROUTE_GENERAL = 'general';
 
+    public const ROUTE_AGENT = 'agent';
+
     public function classify(string $question): string
     {
         try {
@@ -27,7 +29,11 @@ class AiRouter
                 ->asText();
 
             $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
-            $route = $label === self::ROUTE_GENERAL ? self::ROUTE_GENERAL : self::ROUTE_DATA;
+            $route = match ($label) {
+                self::ROUTE_GENERAL => self::ROUTE_GENERAL,
+                self::ROUTE_AGENT => self::ROUTE_AGENT,
+                default => self::ROUTE_DATA,
+            };
 
             Log::debug('AiRouter classified question', [
                 'question' => $question,
@@ -105,12 +111,35 @@ class AiRouter
         return <<<'PROMPT'
 Route the user's question for a personal finance assistant. Trakli has
 live access to the user's financial records (transactions, wallets,
-categories, parties, transfers, balances) through a data layer.
+categories, parties, transfers, balances) through a data layer, and can
+ALSO take actions on the user's behalf (create or change records).
 
-Reply with EXACTLY one word: data OR general. No quotes, no punctuation,
-no explanation. Lowercase.
+Reply with EXACTLY one word: data OR general OR agent. No quotes, no
+punctuation, no explanation. Lowercase.
 
-Reply "data" for ANY question that would look up the user's own records:
+Reply "agent" when the user wants to DO or CHANGE something, not just learn:
+  - Recording: "log 20 for coffee", "add an expense of 50", "record income"
+  - Creating: "create a wallet called Cash", "add a category Groceries",
+    "make a new party"
+  - Changing: "categorize that as food", "rename my wallet", "delete that
+    transaction", "update the amount to 30"
+  - Moving money: "transfer 100 from Cash to Bank"
+  - Importing: "import this statement", "add the transactions from this receipt"
+  - Any imperative verb acting on their data: log, add, record, create, make,
+    set, change, update, rename, delete, remove, categorize, transfer, import.
+
+Also reply "agent" when the user wants RICH or VISUAL output rather than a
+single number or sentence — anything that needs presentation, not just a lookup:
+  - Reports: "write a report about my spending", "a proper report with graphs"
+  - Charts / graphs: "show me a chart of my spending", "graph my cash flow"
+  - Dashboards / visual breakdowns: "build a dashboard", "visualize my expenses"
+  - Tables to act on, or analysis that combines querying with presentation:
+    "a table of my top spend and a personality trait", "compare months visually"
+  - Any request mentioning report, chart, graph, plot, dashboard, visualize,
+    visualization, breakdown, or "with graphs/visuals".
+
+Reply "data" for a PLAIN question that just needs a number, list or short answer
+from the user's own records (no report/chart/visual framing):
   - Spending: "what did I spend on food", "how much did I spend last month"
   - Income: "my income this year", "how much did I earn in June"
   - Wallets / balances: "what wallet has the most money", "my balance"
