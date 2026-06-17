@@ -36,7 +36,8 @@ class AgentProposedAction extends Model
     protected $fillable = [
         'chat_session_id',
         'chat_message_id',
-        'user_id',
+        'owner_type',
+        'owner_id',
         'tool_name',
         'action_type',
         'payload',
@@ -71,9 +72,9 @@ class AgentProposedAction extends Model
         return $this->belongsTo(ChatMessage::class, 'chat_message_id');
     }
 
-    public function user(): BelongsTo
+    public function owner(): MorphTo
     {
-        return $this->belongsTo(User::class);
+        return $this->morphTo();
     }
 
     public function executedResource(): MorphTo

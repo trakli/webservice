@@ -403,7 +403,7 @@ class AiController extends ApiController
     {
         $this->authorizeOwnership($user, $chat);
 
-        if ((int) $action->chat_session_id !== (int) $chat->id || (int) $action->user_id !== (int) $user->getKey()) {
+        if ((int) $action->chat_session_id !== (int) $chat->id || ! $action->owner?->is($user)) {
             abort(Response::HTTP_NOT_FOUND, 'Action not found.');
         }
     }

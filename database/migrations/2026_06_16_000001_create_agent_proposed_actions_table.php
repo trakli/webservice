@@ -11,7 +11,7 @@ return new class () extends Migration {
             $table->id();
             $table->foreignId('chat_session_id')->constrained()->cascadeOnDelete();
             $table->foreignId('chat_message_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->morphs('owner');
             $table->string('tool_name');
             $table->string('action_type');
             $table->json('payload');
