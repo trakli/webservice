@@ -202,6 +202,44 @@ class AdvancedImportTest extends TestCase
         $response->assertStatus(404);
     }
 
+    public function test_delete_session_removes_the_owners_session(): void
+    {
+        $session = $this->user->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'failed',
+            'suggestions' => [],
+        ]);
+
+        $this->actingAs($this->user)
+            ->deleteJson("/api/v1/import/sessions/{$session->id}")
+            ->assertStatus(200);
+
+        $this->assertDatabaseMissing('import_sessions', ['id' => $session->id]);
+    }
+
+    public function test_delete_session_returns_404_for_other_users_session(): void
+    {
+        $otherUser = User::factory()->create();
+
+        $session = $otherUser->importSessions()->create([
+            'file_name' => 'secret.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [],
+        ]);
+
+        $this->actingAs($this->user)
+            ->deleteJson("/api/v1/import/sessions/{$session->id}")
+            ->assertStatus(404);
+
+        $this->assertDatabaseHas('import_sessions', ['id' => $session->id]);
+    }
+
     public function test_sessions_are_scoped_to_authenticated_user(): void
     {
         $otherUser = User::factory()->create();

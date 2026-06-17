@@ -13,15 +13,16 @@ class FileService
 
     public const MAX_KILOBYTES = 5120;
 
-    public static function uploadFiles(Model $model, Request $request, string $key, string $folder)
+    public static function uploadFiles(Model $model, Request $request, string $key, string $folder, ?string $documentType = null)
     {
         if ($request->hasFile($key)) {
             foreach ($request->file($key) as $file) {
                 $path = $file->store($folder);
-                $model->files()->create([
+                $model->files()->create(array_filter([
                     'path' => $path,
                     'type' => self::detectType($file),
-                ]);
+                    'metadata' => $documentType ? ['document_type' => $documentType] : null,
+                ], fn ($value) => $value !== null));
             }
         }
     }

@@ -629,4 +629,29 @@ class ImportController extends ApiController
 
         return $this->success($session);
     }
+
+    #[OA\Delete(
+        path: '/import/sessions/{id}',
+        summary: 'Delete an import session',
+        tags: ['Import'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Session deleted'),
+            new OA\Response(response: 404, description: 'Not found'),
+        ]
+    )]
+    public function destroySession(Request $request, string $sessionId): JsonResponse
+    {
+        $session = $request->user()->importSessions()->find($sessionId);
+
+        if (is_null($session)) {
+            return $this->failure(__('Import session not found.'), 404);
+        }
+
+        $session->delete();
+
+        return $this->success(null, __('Import session deleted.'));
+    }
 }
