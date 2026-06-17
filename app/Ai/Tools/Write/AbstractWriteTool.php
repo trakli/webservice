@@ -72,7 +72,8 @@ abstract class AbstractWriteTool extends AbstractTool
         $proposal = AgentProposedAction::create([
             'chat_session_id' => $sessionId,
             'chat_message_id' => $context->get('chat_message_id'),
-            'user_id' => $user->getAuthIdentifier(),
+            'owner_type' => $user->getMorphClass(),
+            'owner_id' => $user->getAuthIdentifier(),
             'tool_name' => $this->name(),
             'action_type' => $this->actionType(),
             'payload' => $payload,

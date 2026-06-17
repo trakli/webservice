@@ -26,16 +26,16 @@ class ProposedActionExecutor
             'transaction.create' => $this->createTransaction($action),
             'transaction.categorize' => $this->categorizeTransaction($action),
             'transaction.attach_file' => $this->attachFile($action),
-            'wallet.create' => $this->createOwned($action, $action->user->wallets()),
-            'category.create' => $this->createOwned($action, $action->user->categories()),
-            'party.create' => $this->createOwned($action, $action->user->parties()),
+            'wallet.create' => $this->createOwned($action, $action->owner->wallets()),
+            'category.create' => $this->createOwned($action, $action->owner->categories()),
+            'party.create' => $this->createOwned($action, $action->owner->parties()),
             default => throw new RuntimeException("Unsupported action type: {$action->action_type}"),
         });
     }
 
     private function createTransaction(AgentProposedAction $action): Model
     {
-        $user = $action->user;
+        $user = $action->owner;
         $payload = $action->payload;
         $categories = $payload['categories'] ?? [];
         unset($payload['categories']);
@@ -55,7 +55,7 @@ class ProposedActionExecutor
 
     private function categorizeTransaction(AgentProposedAction $action): Model
     {
-        $user = $action->user;
+        $user = $action->owner;
         $payload = $action->payload;
 
         /** @var Model $transaction */
@@ -71,7 +71,7 @@ class ProposedActionExecutor
 
     private function attachFile(AgentProposedAction $action): Model
     {
-        $user = $action->user;
+        $user = $action->owner;
         $payload = $action->payload;
 
         /** @var Model $transaction */
@@ -95,7 +95,7 @@ class ProposedActionExecutor
     {
         /** @var Model $model */
         $model = $relation->create($action->payload);
-        $model->setClientGeneratedId($action->idempotency_key, $action->user);
+        $model->setClientGeneratedId($action->idempotency_key, $action->owner);
         $model->markAsSynced();
 
         return $model;
