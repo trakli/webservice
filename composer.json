@@ -77,10 +77,11 @@
             "vendor/bin/pint --preset psr12 --test"
         ],
         "openapi": [
-            "./vendor/bin/openapi app --debug --output public/docs/api.json"
+            "./vendor/bin/openapi app --debug --output public/docs/api.json",
+            "php scripts/stamp-openapi-version.php public/docs/api.json"
         ],
         "openapi:test": [
-            "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
+            "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && php scripts/stamp-openapi-version.php public/docs/check-api.json && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
         ],
         "phpmd": [
             "vendor/bin/phpmd app text phpmd.xml"
