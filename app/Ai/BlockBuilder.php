@@ -127,6 +127,83 @@ class BlockBuilder
     }
 
     /**
+     * A question with selectable answers. Each option's label is the text sent
+     * back as the user's next message when they pick it.
+     *
+     * @param  array<int, array{label: string, message?: string}|string>  $options
+     * @return array<string, mixed>
+     */
+    public function question(string $prompt, array $options): array
+    {
+        $normalized = [];
+        foreach ($options as $option) {
+            if (is_string($option)) {
+                $label = trim($option);
+                if ($label === '') {
+                    continue;
+                }
+                $normalized[] = ['label' => $label, 'message' => $label];
+
+                continue;
+            }
+            $label = trim((string) ($option['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $normalized[] = ['label' => $label, 'message' => (string) ($option['message'] ?? $label)];
+        }
+
+        return ['type' => 'question', 'prompt' => $prompt, 'options' => $normalized];
+    }
+
+    /**
+     * A highlighted insight/alert. Variant drives the accent colour.
+     *
+     * @return array<string, mixed>
+     */
+    public function callout(string $text, string $variant = 'info', ?string $title = null): array
+    {
+        $allowed = ['info', 'success', 'warning', 'danger'];
+
+        return array_filter([
+            'type' => 'callout',
+            'variant' => in_array($variant, $allowed, true) ? $variant : 'info',
+            'title' => $title,
+            'text' => $text,
+        ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * A chronological feed. Each item: {date, title, description?, amount?, currency?}.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<string, mixed>
+     */
+    public function timeline(array $items, ?string $title = null): array
+    {
+        return array_filter([
+            'type' => 'timeline',
+            'title' => $title,
+            'items' => array_values($items),
+        ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * Progress toward one or more targets. Each item: {label, current, target, currency?}.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<string, mixed>
+     */
+    public function progress(array $items, ?string $title = null): array
+    {
+        return array_filter([
+            'type' => 'progress',
+            'title' => $title,
+            'items' => array_values($items),
+        ], fn ($value) => $value !== null);
+    }
+
+    /**
      * The in-chat import widget for a document being analyzed.
      *
      * @return array<string, mixed>

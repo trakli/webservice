@@ -49,9 +49,12 @@ class ProcessChatMessageJob implements ShouldQueue
 
         // An attached file always means "act on this document": route straight to
         // the agent so the import/extract tools run, regardless of the caption.
+        // Otherwise classify with the recent conversation so a follow-up that
+        // continues an in-progress action (e.g. answering "which wallet?") isn't
+        // judged in isolation and misrouted.
         $route = $userMessage->files()->exists()
             ? AiRouter::ROUTE_AGENT
-            : $router->classify($userMessage->content);
+            : $router->classify($userMessage->content, $this->recentConversation($userMessage));
 
         if ($route === AiRouter::ROUTE_GENERAL) {
             $this->answerGeneral($router, $userMessage->content);
@@ -108,6 +111,24 @@ class ProcessChatMessageJob implements ShouldQueue
         ]);
 
         $this->maybeGenerateTitle($router, $userMessage->content);
+    }
+
+    /**
+     * The recent turns of this session before the current message, as a compact
+     * role-labelled transcript, so the router can judge a message in context.
+     */
+    private function recentConversation(ChatMessage $userMessage): string
+    {
+        return $userMessage->session->messages()
+            ->where('id', '<', $userMessage->id)
+            ->whereIn('role', [ChatMessage::ROLE_USER, ChatMessage::ROLE_ASSISTANT])
+            ->orderBy('id')
+            ->get(['role', 'content'])
+            ->filter(fn (ChatMessage $m) => trim((string) $m->content) !== '')
+            ->take(-10)
+            ->map(fn (ChatMessage $m) => ($m->role === ChatMessage::ROLE_USER ? 'User' : 'Assistant')
+                . ': ' . trim((string) $m->content))
+            ->implode("\n");
     }
 
     public function failed(?Throwable $exception): void

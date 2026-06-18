@@ -15,16 +15,20 @@ class AiRouter
 
     public const ROUTE_AGENT = 'agent';
 
-    public function classify(string $question): string
+    public function classify(string $question, string $conversation = ''): string
     {
         try {
+            $prompt = trim($conversation) !== ''
+                ? "Conversation so far:\n{$conversation}\n\nLatest message: {$question}"
+                : $question;
+
             $response = Prism::text()
                 ->using(
                     config('services.llm.provider'),
                     config('services.llm.model'),
                 )
                 ->withSystemPrompt($this->classifierSystemPrompt())
-                ->withPrompt($question)
+                ->withPrompt($prompt)
                 ->usingTemperature(0)
                 ->asText();
 
@@ -116,6 +120,15 @@ ALSO take actions on the user's behalf (create or change records).
 
 Reply with EXACTLY one word: data OR general OR agent. No quotes, no
 punctuation, no explanation. Lowercase.
+
+You may be given the recent conversation before the latest message. Judge the
+LATEST message in that context, not in isolation. If it continues something
+already underway (answering a question the assistant just asked, or supplying a
+detail needed to finish an action it started), classify it for the route that
+CONTINUES that flow. An action the assistant is still gathering details for
+stays "agent", even when the latest message is just a short value (a name, a
+number, a "yes"). Only judge the message on its own when there is no relevant
+prior context.
 
 Reply "agent" when the user wants to DO or CHANGE something, not just learn:
   - Recording: "log 20 for coffee", "add an expense of 50", "record income"

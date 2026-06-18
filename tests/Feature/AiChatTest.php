@@ -264,6 +264,67 @@ class AiChatTest extends TestCase
         $this->assertNotEmpty($assistant->result['tool_calls']);
     }
 
+    public function test_followup_is_classified_with_conversation_context(): void
+    {
+        // A bare "Main Checking" answering the agent's "which wallet?" must be
+        // classified with the prior conversation, not in isolation.
+        [$assistant] = $this->makeFollowUpTurn('Main Checking');
+
+        $ai = Mockery::mock(AiService::class);
+        $ai->shouldNotReceive('ask');
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()
+            ->with('Main Checking', Mockery::on(
+                fn ($conversation) => is_string($conversation) && str_contains($conversation, 'Which wallet')
+            ))
+            ->andReturn(AiRouter::ROUTE_AGENT);
+        $router->shouldReceive('generateTitle')->andReturn(null);
+
+        $agent = Mockery::mock(AgentRunner::class);
+        $agent->shouldReceive('run')->once()->andReturn([
+            'ok' => true,
+            'text' => 'Proposed the transaction.',
+            'blocks' => [['type' => 'proposed_action']],
+            'tool_calls' => [['name' => 'record_transaction', 'arguments' => []]],
+            'usage' => [],
+        ]);
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router, $agent);
+
+        $assistant->refresh();
+        $this->assertEquals('agent', $assistant->result['source']);
+    }
+
+    public function test_routing_still_respects_classifier_after_an_agent_turn(): void
+    {
+        // Context-driven, not a blanket "force agent": if the classifier still
+        // says data, the data route runs even though the prior turn was the agent.
+        [$assistant] = $this->makeFollowUpTurn('how much did I spend last month?');
+
+        $ai = Mockery::mock(AiService::class);
+        $ai->shouldReceive('ask')->once()->andReturn([
+            'success' => true,
+            'data' => [
+                'human_response' => 'You spent $500.',
+                'format_type' => 'scalar',
+                'rows' => [['total' => 500]],
+            ],
+        ]);
+
+        $router = Mockery::mock(AiRouter::class);
+        $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_DATA);
+        $router->shouldReceive('generateTitle')->andReturn(null);
+
+        $agent = Mockery::mock(AgentRunner::class);
+        $agent->shouldNotReceive('run');
+
+        (new ProcessChatMessageJob($assistant))->handle($ai, $router, $agent);
+
+        $assistant->refresh();
+        $this->assertEquals('smartql', $assistant->result['source']);
+    }
+
     public function test_job_falls_back_to_prism_when_agent_fails(): void
     {
         [$assistant] = $this->makeTurn('do something the agent cannot');
@@ -450,6 +511,37 @@ class AiChatTest extends TestCase
             'user_id' => $this->user->id,
             'role' => ChatMessage::ROLE_USER,
             'content' => $question,
+        ]);
+        $assistant = $session->messages()->create([
+            'role' => ChatMessage::ROLE_ASSISTANT,
+            'status' => ChatMessage::STATUS_PENDING,
+        ]);
+
+        return [$assistant, $user];
+    }
+
+    /**
+     * A session already mid-flow: a prior agent turn asked a clarifying question,
+     * and now the user replies. Returns [pendingAssistant, followUpUser].
+     */
+    private function makeFollowUpTurn(string $reply): array
+    {
+        $session = $this->makeSession();
+        $session->messages()->create([
+            'user_id' => $this->user->id,
+            'role' => ChatMessage::ROLE_USER,
+            'content' => 'Record 500 shoes purchase from Zara Berlin',
+        ]);
+        $session->messages()->create([
+            'role' => ChatMessage::ROLE_ASSISTANT,
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => 'Which wallet did you use for this purchase?',
+            'result' => ['source' => 'agent', 'blocks' => [], 'tool_calls' => []],
+        ]);
+        $user = $session->messages()->create([
+            'user_id' => $this->user->id,
+            'role' => ChatMessage::ROLE_USER,
+            'content' => $reply,
         ]);
         $assistant = $session->messages()->create([
             'role' => ChatMessage::ROLE_ASSISTANT,

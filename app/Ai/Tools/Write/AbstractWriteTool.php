@@ -102,6 +102,22 @@ abstract class AbstractWriteTool extends AbstractTool
     }
 
     /**
+     * Recompute the human summary and review fields for a (possibly edited)
+     * payload, so a confirmed override is reflected truthfully instead of the
+     * text frozen at propose time.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array{summary: string, fields: array<int, array<string, mixed>>}
+     */
+    public function describe(array $payload, ToolContext $context): array
+    {
+        return [
+            'summary' => $this->summarize($payload, $context),
+            'fields' => $this->reviewFields($payload, $context),
+        ];
+    }
+
+    /**
      * Human-readable {label, value} pairs the client renders as a review form so
      * the user sees exactly what will be saved. Override for nicer labels or to
      * resolve ids (wallet/category) to names. Default humanizes the payload keys.

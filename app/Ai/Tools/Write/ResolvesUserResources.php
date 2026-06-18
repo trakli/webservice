@@ -37,6 +37,35 @@ trait ResolvesUserResources
     }
 
     /**
+     * Resolve an optional party reference. Returns null when none was given, and
+     * throws when a name is supplied that the user has no party for, so the agent
+     * can offer to create it instead of silently dropping it.
+     */
+    protected function resolvePartyId(Authenticatable $user, array $arguments): ?int
+    {
+        if (! empty($arguments['party_id'])) {
+            $partyId = (int) $arguments['party_id'];
+            if (! $user->parties()->whereKey($partyId)->exists()) {
+                throw new InvalidArgumentException('That party does not belong to you.');
+            }
+
+            return $partyId;
+        }
+
+        $name = trim((string) ($arguments['party_name'] ?? ''));
+        if ($name === '') {
+            return null;
+        }
+
+        $party = $user->parties()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
+        if ($party === null) {
+            throw new InvalidArgumentException("No party named \"{$name}\" was found. Confirm the party with the user or create it first.");
+        }
+
+        return (int) $party->id;
+    }
+
+    /**
      * @param  array<int, string>  $names
      * @return array<int, int>
      */

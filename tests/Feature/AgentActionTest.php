@@ -217,6 +217,34 @@ class AgentActionTest extends TestCase
         ]);
     }
 
+    public function test_confirm_override_regenerates_the_summary(): void
+    {
+        // Propose a USD wallet, then confirm with the currency edited to XAF.
+        $this->app->instance(BlockCollector::class, new BlockCollector());
+        $tool = $this->app->make(\App\Ai\Tools\Write\CreateWalletTool::class);
+        $context = ToolContext::forUser($this->user, 'en', ['chat_session_id' => $this->session->id]);
+        $tool->handle(['name' => 'Savings', 'type' => 'cash', 'currency' => 'USD'], $context);
+        $action = AgentProposedAction::latest('id')->firstOrFail();
+        $this->assertStringContainsString('USD', $action->summary);
+
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/ai/chats/{$this->session->id}/actions/{$action->id}/confirm", [
+                'overrides' => ['currency' => 'XAF'],
+            ])
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('wallets', [
+            'user_id' => $this->user->id,
+            'name' => 'Savings',
+            'currency' => 'XAF',
+        ]);
+
+        // The summary must reflect the edit, not the originally-proposed USD.
+        $action->refresh();
+        $this->assertStringContainsString('XAF', $action->summary);
+        $this->assertStringNotContainsString('USD', $action->summary);
+    }
+
     public function test_confirm_override_cannot_target_another_users_wallet(): void
     {
         $action = $this->propose(['amount' => 20, 'type' => 'expense', 'wallet_id' => $this->wallet->id]);
