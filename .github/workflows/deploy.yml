@@ -32,8 +32,11 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: echo "sha=${HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy
-        run: flatrun deployment image set trakli-staging app ghcr.io/trakli/webservice:${{ steps.meta.outputs.sha }} --deploy
+      - name: Set app image
+        run: flatrun deployment image set trakli-staging app ghcr.io/trakli/webservice:${{ steps.meta.outputs.sha }}
+
+      - name: Set worker image and deploy
+        run: flatrun deployment image set trakli-staging worker ghcr.io/trakli/webservice:${{ steps.meta.outputs.sha }} --deploy
 
       - name: Run database migrations
         run: flatrun deployment exec trakli-staging app -- php artisan migrate

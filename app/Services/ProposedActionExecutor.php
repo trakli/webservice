@@ -16,7 +16,7 @@ use RuntimeException;
  */
 class ProposedActionExecutor
 {
-    public function __construct(protected TransactionWriter $writer)
+    public function __construct(protected TransactionWriter $writer, protected TransferService $transfers)
     {
     }
 
@@ -26,11 +26,38 @@ class ProposedActionExecutor
             'transaction.create' => $this->createTransaction($action),
             'transaction.categorize' => $this->categorizeTransaction($action),
             'transaction.attach_file' => $this->attachFile($action),
+            'transfer.create' => $this->createTransfer($action),
             'wallet.create' => $this->createOwned($action, $action->owner->wallets()),
             'category.create' => $this->createOwned($action, $action->owner->categories()),
             'party.create' => $this->createOwned($action, $action->owner->parties()),
             default => throw new RuntimeException("Unsupported action type: {$action->action_type}"),
         });
+    }
+
+    private function createTransfer(AgentProposedAction $action): Model
+    {
+        $user = $action->owner;
+        $payload = $action->payload;
+
+        $fromWallet = $user->wallets()->findOrFail($payload['from_wallet_id']);
+        $toWallet = $user->wallets()->findOrFail($payload['to_wallet_id']);
+        $exchangeRate = (float) ($payload['exchange_rate'] ?? 1);
+        $amountToReceive = (float) bcmul((string) $payload['amount'], (string) $exchangeRate, 4);
+
+        $transfer = $this->transfers->transfer(
+            amountToSend: (float) $payload['amount'],
+            fromWallet: $fromWallet,
+            amountToReceive: $amountToReceive,
+            toWallet: $toWallet,
+            user: $user,
+            exchangeRate: $exchangeRate,
+            datetime: $payload['datetime'] ?? null,
+        );
+
+        $transfer->setClientGeneratedId($action->idempotency_key, $user);
+        $transfer->markAsSynced();
+
+        return $transfer;
     }
 
     private function createTransaction(AgentProposedAction $action): Model

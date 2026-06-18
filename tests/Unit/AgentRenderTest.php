@@ -77,6 +77,41 @@ class AgentRenderTest extends TestCase
         $this->assertCount(2, $canvas['blocks']);
     }
 
+    public function test_render_chart_tool_charts_arbitrary_rows(): void
+    {
+        $collector = new BlockCollector();
+        $this->app->instance(BlockCollector::class, $collector);
+
+        $tool = $this->app->make(\App\Ai\Tools\Render\RenderChartTool::class);
+
+        $msg = $tool->handle([
+            'rows_json' => json_encode([
+                ['item' => 'Rent', 'amount' => 1200],
+                ['item' => 'Car', 'amount' => 800],
+            ]),
+            'chart_hint' => 'pie',
+            'title' => 'Top purchases',
+        ], ToolContext::guest());
+
+        $this->assertStringContainsString('supplied data', $msg);
+        $blocks = $collector->all();
+        $this->assertCount(1, $blocks);
+        $this->assertSame('chart', $blocks[0]['type']);
+        $this->assertSame('pie', $blocks[0]['chart_hint']);
+        $this->assertSame('custom', $blocks[0]['dataset_ref']);
+        $this->assertCount(2, $blocks[0]['data']);
+    }
+
+    public function test_render_chart_tool_requires_dataset_or_rows(): void
+    {
+        $this->app->instance(BlockCollector::class, new BlockCollector());
+        $tool = $this->app->make(\App\Ai\Tools\Render\RenderChartTool::class);
+
+        $out = $tool->handle([], ToolContext::guest());
+
+        $this->assertArrayHasKey('error', $out);
+    }
+
     public function test_block_builder_kpi_and_chart_shapes(): void
     {
         $b = new BlockBuilder();

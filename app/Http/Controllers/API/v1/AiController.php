@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\v1;
 
 use App\Ai\Export\DocumentExporterManager;
+use App\Ai\Tools\Write\AbstractWriteTool;
 use App\Http\Controllers\API\ApiController;
 use App\Jobs\ProcessChatMessageJob;
 use App\Models\AgentProposedAction;
@@ -18,9 +19,12 @@ use Throwable;
 use Whilesmart\Activities\Models\Activity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Response;
+use Whilesmart\Agents\Registries\ToolRegistry;
+use Whilesmart\Agents\ValueObjects\ToolContext;
 
 #[OA\Tag(name: 'AI', description: 'AI-powered financial insights')]
 class AiController extends ApiController
@@ -228,6 +232,7 @@ class AiController extends ApiController
         if (is_array($overrides)) {
             $overrides = array_filter($overrides, fn ($value) => $value !== '' && $value !== null);
         }
+        $described = null;
         if (is_array($overrides) && $overrides !== []) {
             $allowed = array_flip($this->allowedOverrideKeys($action->action_type));
             $merged = array_merge($action->payload, array_intersect_key($overrides, $allowed));
@@ -240,6 +245,13 @@ class AiController extends ApiController
 
             $action->update(['payload' => $merged]);
             $action->refresh();
+
+            // Regenerate the human summary/fields so the confirmed card reflects
+            // the edits, instead of the text frozen when it was first proposed.
+            $described = $this->describeProposal($action, $user);
+            if ($described !== null) {
+                $action->update(['summary' => $described['summary']]);
+            }
         }
 
         try {
@@ -262,7 +274,7 @@ class AiController extends ApiController
         ]);
 
         $this->recordActivity($user, $chat, $action, $resource);
-        $this->markActionBlockStatus($action, AgentProposedAction::STATUS_EXECUTED);
+        $this->markActionBlockStatus($action, AgentProposedAction::STATUS_EXECUTED, $described);
 
         return $this->success(['action' => $action->fresh(), 'resource' => $resource], __('Action completed.'));
     }
@@ -425,8 +437,9 @@ class AiController extends ApiController
     private function allowedOverrideKeys(string $actionType): array
     {
         return match ($actionType) {
-            'transaction.create' => ['amount', 'type', 'wallet_id', 'description', 'datetime', 'categories'],
+            'transaction.create' => ['amount', 'type', 'wallet_id', 'party_id', 'description', 'datetime', 'categories'],
             'transaction.categorize' => ['categories'],
+            'transfer.create' => ['amount', 'from_wallet_id', 'to_wallet_id', 'exchange_rate', 'datetime'],
             'wallet.create' => ['name', 'type', 'currency', 'description'],
             'category.create' => ['name', 'type', 'description'],
             'party.create' => ['name', 'type', 'description'],
@@ -437,14 +450,41 @@ class AiController extends ApiController
     private function revalidateOverride(User $user, string $actionType, array $payload): void
     {
         if (in_array($actionType, ['transaction.create', 'transaction.categorize'], true)) {
-            app(TransactionWriter::class)->validateOwnership($user, $payload, $payload['categories'] ?? []);
+            $this->revalidateTransactionOverride($user, $payload);
+        }
 
-            if (isset($payload['amount']) && (float) $payload['amount'] <= 0) {
-                throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Amount must be greater than zero.');
+        if ($actionType === 'transfer.create') {
+            $this->revalidateTransferOverride($user, $payload);
+        }
+    }
+
+    private function revalidateTransactionOverride(User $user, array $payload): void
+    {
+        app(TransactionWriter::class)->validateOwnership($user, $payload, $payload['categories'] ?? []);
+
+        if (isset($payload['amount']) && (float) $payload['amount'] <= 0) {
+            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Amount must be greater than zero.');
+        }
+        if (isset($payload['type']) && ! in_array($payload['type'], ['income', 'expense'], true)) {
+            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Type must be income or expense.');
+        }
+    }
+
+    private function revalidateTransferOverride(User $user, array $payload): void
+    {
+        foreach (['from_wallet_id', 'to_wallet_id'] as $key) {
+            if (! empty($payload[$key]) && ! $user->wallets()->whereKey($payload[$key])->exists()) {
+                throw new HttpException(Response::HTTP_FORBIDDEN, 'The selected wallet does not belong to you.');
             }
-            if (isset($payload['type']) && ! in_array($payload['type'], ['income', 'expense'], true)) {
-                throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Type must be income or expense.');
-            }
+        }
+        if (! empty($payload['from_wallet_id']) && $payload['from_wallet_id'] === ($payload['to_wallet_id'] ?? null)) {
+            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'The source and destination wallets must be different.');
+        }
+        if (isset($payload['amount']) && (float) $payload['amount'] <= 0) {
+            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Amount must be greater than zero.');
+        }
+        if (isset($payload['exchange_rate']) && (float) $payload['exchange_rate'] <= 0) {
+            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Exchange rate must be greater than zero.');
         }
     }
 
@@ -506,7 +546,40 @@ class AiController extends ApiController
      * Reflect a confirmed/rejected action onto the stored chat message so a
      * reload renders the proposed-action card as done instead of an open form.
      */
-    private function markActionBlockStatus(AgentProposedAction $action, string $status): void
+    /**
+     * Resolve the proposal's tool and recompute its summary + review fields for
+     * the (possibly overridden) payload. Best-effort: returns null if the tool
+     * can't be resolved, since this only refreshes display text.
+     *
+     * @return array{summary: string, fields: array<int, array<string, mixed>>}|null
+     */
+    private function describeProposal(AgentProposedAction $action, User $user): ?array
+    {
+        try {
+            $registry = app(ToolRegistry::class);
+            if (! $registry->has($action->tool_name)) {
+                return null;
+            }
+            $tool = $registry->resolve($action->tool_name);
+            if (! $tool instanceof AbstractWriteTool) {
+                return null;
+            }
+
+            $context = ToolContext::forUser($user, null, ['chat_session_id' => $action->chat_session_id]);
+
+            return $tool->describe($action->payload, $context);
+        } catch (Throwable $e) {
+            Log::warning('Failed to regenerate proposal description', ['message' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
+     * @param  array{summary?: string, fields?: array}|null  $described  Regenerated
+     *   summary/fields to reflect confirmed edits on the rendered block.
+     */
+    private function markActionBlockStatus(AgentProposedAction $action, string $status, ?array $described = null): void
     {
         $message = $action->message;
 
@@ -529,6 +602,11 @@ class AiController extends ApiController
                 && (int) ($block['id'] ?? 0) === (int) $action->id
             ) {
                 $block['status'] = $status;
+                if ($described !== null) {
+                    $block['summary'] = $described['summary'];
+                    $block['fields'] = $described['fields'];
+                    $block['payload'] = $action->payload;
+                }
                 $changed = true;
             }
         }

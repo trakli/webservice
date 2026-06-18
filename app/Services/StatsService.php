@@ -6,7 +6,6 @@ use App\Models\Transaction;
 use App\Models\Wallet;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use RuntimeException;
 
 class StatsService
 {
@@ -19,6 +18,15 @@ class StatsService
     private array $walletIds;
 
     private string $targetCurrency;
+
+    /**
+     * Source currencies that could not be converted to the target this run,
+     * because no exchange rate was available. Their amounts are excluded from
+     * the totals and the response is flagged partial rather than failing.
+     *
+     * @var array<string, true>
+     */
+    private array $unconvertedCurrencies = [];
 
     public function __construct(
         protected ExchangeRateService $exchangeRateService
@@ -50,6 +58,7 @@ class StatsService
         $this->endDate = $endDate;
         $this->walletIds = $walletIds;
         $this->targetCurrency = $targetCurrency;
+        $this->unconvertedCurrencies = [];
 
         $result = ['currency' => $targetCurrency];
         $charts = [];
@@ -62,6 +71,11 @@ class StatsService
 
         if ($charts !== [] || $section === null) {
             $result['charts'] = $charts;
+        }
+
+        if ($this->unconvertedCurrencies !== []) {
+            $result['partial'] = true;
+            $result['unconverted_currencies'] = array_keys($this->unconvertedCurrencies);
         }
 
         return $result;
@@ -235,7 +249,8 @@ class StatsService
     // -- Currency conversion --
 
     /**
-     * @throws RuntimeException When currency conversion fails
+     * Convert an amount from its (wallet) currency to the target currency. When
+     * no rate is available the amount is excluded and the run is flagged partial.
      */
     private function convertCurrency(float $amount, string $fromCurrency): float
     {
@@ -251,9 +266,11 @@ class StatsService
         );
 
         if ($converted === null) {
-            throw new RuntimeException(
-                "Failed to convert {$fromCurrency} to {$this->targetCurrency}. Exchange rate unavailable."
-            );
+            // No rate available: exclude this amount and flag the response partial
+            // instead of failing the whole stats request with a 500.
+            $this->unconvertedCurrencies[$fromCurrency] = true;
+
+            return 0.0;
         }
 
         return $converted;

@@ -40,6 +40,8 @@ class RecordTransactionTool extends AbstractWriteTool
             ParameterSpec::string('wallet_name', 'The exact wallet name, if you do not have its id.', required: false),
             ParameterSpec::string('description', 'Free text describing the purchase, e.g. "coffee". This is NOT a category.', required: false),
             ParameterSpec::arrayOf('category_names', 'ONLY categories the user explicitly named and that exist. Omit otherwise.', required: false),
+            ParameterSpec::number('party_id', 'The id of the party this transaction is with (preferred; get it from list_parties).', required: false),
+            ParameterSpec::string('party_name', 'The exact party name, if you do not have its id and the user named one.', required: false),
             ParameterSpec::string('datetime', 'When it happened, ISO 8601. Defaults to now.', required: false),
         ];
     }
@@ -60,11 +62,13 @@ class RecordTransactionTool extends AbstractWriteTool
 
         $walletId = $this->resolveWalletId($user, $arguments);
         $categoryIds = $this->resolveCategoryIds($user, (array) ($arguments['category_names'] ?? []));
+        $partyId = $this->resolvePartyId($user, $arguments);
 
         return array_filter([
             'amount' => $amount,
             'type' => $type,
             'wallet_id' => $walletId,
+            'party_id' => $partyId,
             'description' => $arguments['description'] ?? null,
             'datetime' => $arguments['datetime'] ?? null,
             'categories' => $categoryIds,
@@ -93,10 +97,16 @@ class RecordTransactionTool extends AbstractWriteTool
             ? $user->categories()->whereIn('id', $categoryIds)->pluck('name')->all()
             : [];
 
+        $partyId = $payload['party_id'] ?? null;
+        $partyName = $partyId && $user !== null
+            ? optional($user->parties()->find($partyId))->name
+            : null;
+
         return [
             ['key' => 'type', 'label' => 'Type', 'type' => 'enum', 'value' => $type, 'display' => ucfirst($type), 'options' => ['income', 'expense']],
             ['key' => 'amount', 'label' => 'Amount', 'type' => 'number', 'value' => $payload['amount'] ?? 0, 'display' => (string) ($payload['amount'] ?? '')],
             ['key' => 'wallet_id', 'label' => 'Wallet', 'type' => 'wallet', 'value' => $walletId, 'display' => $walletName ?? ('#' . $walletId)],
+            ['key' => 'party_id', 'label' => 'Party', 'type' => 'party', 'value' => $partyId, 'display' => $partyName ?? ($partyId ? '#' . $partyId : '')],
             [
                 'key' => 'description',
                 'label' => 'Description',

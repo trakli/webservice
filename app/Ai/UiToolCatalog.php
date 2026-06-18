@@ -20,15 +20,24 @@ in the order you call them. Each widget adapts to its data, so just supply data:
 - `render_markdown` — a prose/heading/list section. Use it to narrate and
   structure between data widgets.
 - `render_kpi` — at-a-glance headline numbers (balance, income, savings rate).
-- `render_chart` — a chart of an analytics dataset (spending by category, cash
-  flow over time, etc.). Pick the chart type that fits each dataset and vary it
-  across a report — don't render every chart the same shape. Pass `chart_hint`
-  explicitly: donut/pie/polarArea for the composition of one total, line/area for
-  trends over time, bar/hbar for ranking or comparison, treemap for nested
+- `render_chart`: a chart. For built-in analytics, pass a `dataset` (spending by
+  category, cash flow over time, etc.). For ANYTHING ELSE (e.g. to chart the rows
+  of a smartql.query like "top 10 purchases"), pass `rows_json` (the data you
+  already fetched) instead of a dataset. When the user asks to add a pie/chart of
+  something specific, ALWAYS render it: if it's not a built-in dataset, query the
+  rows and chart them with rows_json. Pick the type with `chart_hint` and vary it
+  across a report: donut/pie/polarArea for the composition of one total, line/area
+  for trends over time, bar/hbar for ranking or comparison, treemap for nested
   composition, radialBar for a single proportion.
 - `render_table` — a data table from rows you pass as JSON. ALWAYS use this for
   tabular results (e.g. the rows from a smartql.query). NEVER hand-write a
   Markdown table — it breaks. A one-row table becomes a compact card.
+- `render_callout`: one highlighted takeaway or alert (info/success/warning/
+  danger). Use for the single most important insight, not body prose.
+- `render_timeline`: a chronological feed of dated events; use when order in
+  time is the point (recent activity, a history).
+- `render_progress`: progress bars toward targets (budget vs actual, savings
+  goal). Use when "how far along" matters more than the raw number.
 - `open_canvas` — start a NEW document/canvas for a complex, multi-part answer.
   Call it FIRST with a title, then build the document with render_markdown /
   render_table / render_chart / render_kpi in order. The whole thing shows in a
