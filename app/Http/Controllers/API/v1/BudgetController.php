@@ -479,7 +479,7 @@ class BudgetController extends ApiController
                 $transaction->amount_in_budget_currency = $transaction->amount;
 
                 if ($transaction->wallet->currency != $budget->currency) {
-                    $exchangeRate = $this->exchangeRateService->getRate($budget->currency, $transaction->wallet->currency);
+                    $exchangeRate = $this->exchangeRateService->getRate($transaction->wallet->currency, $budget->currency);
                     $transaction->amount_in_budget_currency = $transaction->amount * $exchangeRate;
                 }
 
