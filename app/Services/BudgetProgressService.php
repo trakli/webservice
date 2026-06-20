@@ -249,13 +249,13 @@ class BudgetProgressService
     /**
      * Calculates the total transaction amount, taking into account different currencies
     */
-    private function getReducedSum($query, $baseCurrency): float
+    private function getReducedSum($query, $targetCurrency): float
     {
-        return (float) $query->with('wallet')->cursor()->reduce(function ($carry, Transaction $transaction) use ($baseCurrency) {
+        return (float) $query->with('wallet')->cursor()->reduce(function ($carry, Transaction $transaction) use ($targetCurrency) {
             $amount = $transaction->amount;
 
-            if ($transaction->wallet->currency != $baseCurrency) {
-                $exchangeRate = $this->exchangeRateService->getRate($baseCurrency, $transaction->wallet->currency);
+            if ($transaction->wallet->currency != $targetCurrency) {
+                $exchangeRate = $this->exchangeRateService->getRate($transaction->wallet->currency, $targetCurrency);
                 $amount = $transaction->amount * $exchangeRate;
             }
 
