@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Contracts\Entitlements;
 use App\Contracts\OwnerResolver;
 use App\Services\DocumentProcessorManager;
 use App\Services\DocumentProcessors\CsvProcessor;
 use App\Services\DocumentProcessors\RemoteDocumentProcessor;
 use App\Services\SchemaConformance\SchemaConformanceService;
+use App\Support\AllowAllEntitlements;
 use App\Support\UserOwnerResolver;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Carbon;
@@ -26,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->register(PluginServiceProvider::class);
 
         $this->app->singleton(OwnerResolver::class, UserOwnerResolver::class);
+
+        $this->app->singleton(Entitlements::class, AllowAllEntitlements::class);
 
         $this->app->singleton(DocumentProcessorManager::class, function ($app) {
             $manager = new DocumentProcessorManager();
