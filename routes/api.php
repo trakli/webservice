@@ -9,6 +9,7 @@ use App\Http\Controllers\API\v1\CategoryController;
 use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
+use App\Http\Controllers\API\v1\IntegrationController;
 use App\Http\Controllers\API\v1\NotificationController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\ReminderController;
@@ -47,6 +48,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
 
         Route::get('stats', [StatsController::class, 'index']);
     });
+    Route::get('integrations', [IntegrationController::class, 'index']);
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
