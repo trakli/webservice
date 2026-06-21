@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\Entitlements;
 use App\Models\ChatMessage;
 use App\Services\AgentRunner;
 use App\Services\AiRouter;
@@ -10,6 +11,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -43,6 +45,12 @@ class ProcessChatMessageJob implements ShouldQueue
 
         if ($userMessage === null) {
             $this->markFailed(__('No question found for this assistant message.'));
+
+            return;
+        }
+
+        if (app(Entitlements::class)->remaining($this->owner(), 'ai_tokens') <= 0) {
+            $this->answerQuotaExceeded();
 
             return;
         }
@@ -173,6 +181,39 @@ class ProcessChatMessageJob implements ShouldQueue
                 'tool_calls' => $result['tool_calls'] ?? [],
                 'usage' => $result['usage'] ?? [],
             ],
+            'completed_at' => now(),
+        ]);
+
+        $this->recordTokenUsage($result['usage'] ?? []);
+    }
+
+    /**
+     * The entity that owns this conversation: the user today, a shared
+     * workspace or couple once those land. Usage and limits are keyed on it.
+     */
+    private function owner(): ?Model
+    {
+        return $this->assistantMessage->session->owner;
+    }
+
+    /**
+     * @param  array{prompt_tokens?: int, completion_tokens?: int}  $usage
+     */
+    private function recordTokenUsage(array $usage): void
+    {
+        $tokens = (int) ($usage['prompt_tokens'] ?? 0) + (int) ($usage['completion_tokens'] ?? 0);
+
+        if ($tokens > 0) {
+            app(Entitlements::class)->consume($this->owner(), 'ai_tokens', $tokens);
+        }
+    }
+
+    private function answerQuotaExceeded(): void
+    {
+        $this->assistantMessage->update([
+            'status' => ChatMessage::STATUS_COMPLETED,
+            'content' => __('You have reached your AI usage limit for this period.'),
+            'result' => ['source' => 'quota_exceeded', 'format_type' => 'raw', 'rows' => []],
             'completed_at' => now(),
         ]);
     }
