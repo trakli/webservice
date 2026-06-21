@@ -11,6 +11,7 @@ use App\Services\StatsService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
@@ -612,6 +613,57 @@ class StatsControllerTest extends TestCase
         // 100 EUR * 1.1 = 110 USD
         $this->assertEqualsWithDelta(110, $response->json('data.overview.total_income'), 0.001);
         $this->assertEquals('USD', $response->json('data.currency'));
+    }
+
+    /** @test */
+    public function it_converts_party_spending_across_wallet_currencies(): void
+    {
+        $this->user->setConfigValue('default-currency', 'USD', ConfigValueType::String);
+        $this->user->setConfigValue('manual-exchange-rates', ['EUR-USD' => 1.1], ConfigValueType::Json);
+
+        $party = Party::factory()->create(['user_id' => $this->user->id, 'name' => 'Acme']);
+        $usdWallet = Wallet::factory()->create(['user_id' => $this->user->id, 'currency' => 'USD']);
+        $eurWallet = Wallet::factory()->create(['user_id' => $this->user->id, 'currency' => 'EUR']);
+
+        Transaction::factory()->create([
+            'user_id' => $this->user->id, 'wallet_id' => $usdWallet->id, 'party_id' => $party->id,
+            'type' => 'expense', 'amount' => 50, 'datetime' => Carbon::now()->subHours(2),
+        ]);
+        Transaction::factory()->create([
+            'user_id' => $this->user->id, 'wallet_id' => $eurWallet->id, 'party_id' => $party->id,
+            'type' => 'expense', 'amount' => 100, 'datetime' => Carbon::now()->subHours(3),
+        ]);
+
+        $response = $this->statsRequest('?preset=all_time');
+        $response->assertStatus(200);
+
+        $spending = collect($response->json('data.charts.party_spending'))
+            ->firstWhere('name', 'Acme');
+
+        // Each leg converts from its own wallet currency: 50 USD + (100 EUR * 1.1) = 160 USD
+        $this->assertNotNull($spending);
+        $this->assertEqualsWithDelta(160, $spending['amount'], 0.001);
+    }
+
+    /** @test */
+    public function it_flags_stats_as_partial_when_an_exchange_rate_is_missing(): void
+    {
+        // No manual rate and no API rate available, so the foreign amount can't convert.
+        Http::fake(['*' => Http::response([], 200)]);
+
+        $this->user->setConfigValue('default-currency', 'USD', ConfigValueType::String);
+
+        $eurWallet = Wallet::factory()->create(['user_id' => $this->user->id, 'currency' => 'EUR']);
+        Transaction::factory()->create([
+            'user_id' => $this->user->id, 'wallet_id' => $eurWallet->id,
+            'type' => 'income', 'amount' => 100, 'datetime' => Carbon::now()->subHours(2),
+        ]);
+
+        $response = $this->statsRequest('?preset=all_time');
+        $response->assertStatus(200);
+
+        $this->assertTrue($response->json('data.partial'));
+        $this->assertContains('EUR', $response->json('data.unconverted_currencies'));
     }
 
     /** @test */
