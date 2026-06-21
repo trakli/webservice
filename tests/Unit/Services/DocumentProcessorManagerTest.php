@@ -79,6 +79,28 @@ class DocumentProcessorManagerTest extends TestCase
         $this->assertSame($firstProcessor, $this->manager->getProcessor('text/csv', 'csv'));
     }
 
+    public function test_higher_priority_wins_over_earlier_registration(): void
+    {
+        $default = $this->createMockProcessor('application/pdf', 'pdf');
+        $preferred = $this->createMockProcessor('application/pdf', 'pdf');
+
+        $this->manager->register($default);
+        $this->manager->register($preferred, 100);
+
+        $this->assertSame($preferred, $this->manager->getProcessor('application/pdf', 'pdf'));
+    }
+
+    public function test_equal_priority_preserves_registration_order(): void
+    {
+        $first = $this->createMockProcessor('text/csv', 'csv');
+        $second = $this->createMockProcessor('text/csv', 'csv');
+
+        $this->manager->register($first, 5);
+        $this->manager->register($second, 5);
+
+        $this->assertSame($first, $this->manager->getProcessor('text/csv', 'csv'));
+    }
+
     private function createMockProcessor(string $supportedMime, string $supportedExt): DocumentProcessor
     {
         $processor = $this->createMock(DocumentProcessor::class);
