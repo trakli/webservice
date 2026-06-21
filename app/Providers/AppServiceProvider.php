@@ -7,6 +7,7 @@ use App\Contracts\OwnerResolver;
 use App\Services\DocumentProcessorManager;
 use App\Services\DocumentProcessors\CsvProcessor;
 use App\Services\DocumentProcessors\RemoteDocumentProcessor;
+use App\Services\IntegrationRegistry;
 use App\Services\SchemaConformance\SchemaConformanceService;
 use App\Support\AllowAllEntitlements;
 use App\Support\UserOwnerResolver;
@@ -30,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(OwnerResolver::class, UserOwnerResolver::class);
 
         $this->app->singleton(Entitlements::class, AllowAllEntitlements::class);
+
+        $this->app->singleton(IntegrationRegistry::class);
 
         $this->app->singleton(DocumentProcessorManager::class, function ($app) {
             $manager = new DocumentProcessorManager();
