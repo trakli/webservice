@@ -1,0 +1,114 @@
+name: Build Hosted Image
+
+on:
+  workflow_call:
+    inputs:
+      plugins:
+        description: 'JSON array of plugins to bundle, e.g. [{"repo":"<org>/<plugin>","ref":"main"}]'
+        type: string
+        required: true
+      base_image:
+        description: 'Public base image to stack on'
+        type: string
+        default: 'ghcr.io/trakli/webservice:latest'
+      image_name:
+        description: 'Target hosted image'
+        type: string
+        default: 'ghcr.io/trakli/webservice-hosted'
+      tag:
+        description: 'Tag for the hosted image'
+        type: string
+        default: 'latest'
+    secrets:
+      PLUGINS_TOKEN:
+        description: 'Token with read access to the private plugin repositories'
+        required: true
+  workflow_dispatch:
+    inputs:
+      plugins:
+        description: 'JSON array of plugins to bundle'
+        type: string
+        required: true
+      base_image:
+        type: string
+        default: 'ghcr.io/trakli/webservice:latest'
+      image_name:
+        type: string
+        default: 'ghcr.io/trakli/webservice-hosted'
+      tag:
+        type: string
+        default: 'latest'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout webservice
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Clone private plugins
+        env:
+          PLUGINS_TOKEN: ${{ secrets.PLUGINS_TOKEN }}
+        run: |
+          echo '${{ inputs.plugins }}' | jq -c '.[]' | while read -r plugin; do
+            repo=$(echo "$plugin" | jq -r '.repo')
+            ref=$(echo "$plugin" | jq -r '.ref // "main"')
+            dir=$(echo "$plugin" | jq -r '.id // (.repo | split("/") | .[1])')
+            git clone --depth 1 --branch "$ref" \
+              "https://x-access-token:${PLUGINS_TOKEN}@github.com/${repo}.git" \
+              "plugins/${dir}"
+            rm -rf "plugins/${dir}/.git"
+          done
+
+      - name: Install core and plugin dependencies
+        run: |
+          for d in plugins/*/; do
+            [ -f "${d}composer.json" ] || continue
+            composer config "repositories.$(basename "$d")" path "./${d%/}" --no-interaction
+          done
+          for d in plugins/*/; do
+            [ -f "${d}composer.json" ] || continue
+            name=$(php -r "echo json_decode(file_get_contents('${d}composer.json'))->name;")
+            composer require "${name}:*" --no-interaction --no-scripts --ignore-platform-reqs
+          done
+          composer install --no-dev --no-interaction --no-scripts --ignore-platform-reqs --prefer-dist
+          composer dump-autoload -o --no-interaction
+
+      - name: Prepare application environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Enable and cache bundled plugins
+        run: |
+          for id in $(ls -1 plugins); do
+            php artisan plugin:enable "$id" || true
+          done
+          php artisan plugin:cache
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push hosted image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/hosted/Dockerfile
+          push: true
+          build-args: |
+            BASE_IMAGE=${{ inputs.base_image }}
+          tags: ${{ inputs.image_name }}:${{ inputs.tag }}
