@@ -60,29 +60,46 @@ jobs:
         env:
           PLUGINS_TOKEN: ${{ secrets.PLUGINS_TOKEN }}
         run: |
-          echo '${{ inputs.plugins }}' | jq -c '.[]' | while read -r plugin; do
+          set -euo pipefail
+          mkdir -p plugins
+          while read -r plugin; do
             repo=$(echo "$plugin" | jq -r '.repo')
             ref=$(echo "$plugin" | jq -r '.ref // "main"')
-            dir=$(echo "$plugin" | jq -r '.id // (.repo | split("/") | .[1])')
+            tmp=$(mktemp -d ./plugins/.clone.XXXXXX)
             git clone --depth 1 --branch "$ref" \
-              "https://x-access-token:${PLUGINS_TOKEN}@github.com/${repo}.git" \
-              "plugins/${dir}"
-            rm -rf "plugins/${dir}/.git"
-          done
+              "https://x-access-token:${PLUGINS_TOKEN}@github.com/${repo}.git" "$tmp"
+            rm -rf "$tmp/.git"
+            if [ ! -f "$tmp/plugin.json" ]; then
+              echo "::error::${repo} has no plugin.json; it is not a plugin-engine plugin" >&2
+              exit 1
+            fi
+            id=$(jq -r '.id // empty' "$tmp/plugin.json")
+            if [ -z "$id" ]; then
+              echo "::error::${repo} plugin.json is missing an 'id'" >&2
+              exit 1
+            fi
+            rm -rf "plugins/${id}"
+            mv "$tmp" "plugins/${id}"
+          done < <(echo '${{ inputs.plugins }}' | jq -c '.[]')
 
-      - name: Install core and plugin dependencies
+      - name: Install core dependencies
         run: |
+          composer install --no-dev --no-interaction --no-scripts --ignore-platform-reqs --prefer-dist --optimize-autoloader
+
+      - name: Verify bundled plugins carry no unbundled dependencies
+        run: |
+          set -euo pipefail
           for d in plugins/*/; do
-            [ -f "${d}composer.json" ] || continue
-            composer config "repositories.$(basename "$d")" path "./${d%/}" --no-interaction
+            cj="${d}composer.json"
+            [ -f "$cj" ] || continue
+            extra=$(jq -r '.require // {} | keys[]' "$cj" | grep -ivE '^(php|laravel/framework)$' || true)
+            if [ -n "$extra" ]; then
+              echo "::error::Plugin '${d}' declares dependencies the bundler does not install:" >&2
+              echo "$extra" >&2
+              echo "::error::Extend this workflow to install plugin dependencies before bundling it." >&2
+              exit 1
+            fi
           done
-          for d in plugins/*/; do
-            [ -f "${d}composer.json" ] || continue
-            name=$(php -r "echo json_decode(file_get_contents('${d}composer.json'))->name;")
-            composer require "${name}:*" --no-interaction --no-scripts --ignore-platform-reqs
-          done
-          composer install --no-dev --no-interaction --no-scripts --ignore-platform-reqs --prefer-dist
-          composer dump-autoload -o --no-interaction
 
       - name: Prepare application environment
         run: |
@@ -91,8 +108,10 @@ jobs:
 
       - name: Enable and cache bundled plugins
         run: |
-          for id in $(ls -1 plugins); do
-            php artisan plugin:enable "$id" || true
+          set -euo pipefail
+          for d in plugins/*/; do
+            [ -f "${d}plugin.json" ] || continue
+            php artisan plugin:enable "$(jq -r '.id' "${d}plugin.json")"
           done
           php artisan plugin:cache
 
