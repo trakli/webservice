@@ -18,6 +18,8 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "prism-php/prism": "^0.100.1",
+        "prism-php/relay": "^1.8",
+        "laravel/mcp": "^0.8",
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-activities": "^1.0",

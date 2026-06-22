@@ -27,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(PluginServiceProvider::class);
+        $this->app->register(\App\Mcp\McpServiceProvider::class);
 
         $this->app->singleton(OwnerResolver::class, UserOwnerResolver::class);
 
