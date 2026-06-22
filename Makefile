@@ -34,7 +34,10 @@ include laravel.mk
 # Trakli-specific targets
 # ──────────────────────────────────────────────
 
-.PHONY: phpmd phpstan format format-fix openapi openapi-test ci prod-build prod-push prod-up prod-down
+.PHONY: run phpmd phpstan format format-fix openapi openapi-test ci prod-build prod-push prod-up prod-down
+
+run: ## Run a custom command in the app container. Example: make run cmd="php artisan route:list"
+	$(EXEC) $(or $(cmd),$(command))
 
 ci: lint test ## Run every check that CI runs (lint + tests with coverage)
 

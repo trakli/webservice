@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
+use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\UserDevices\Models\Device;
 
 #[OA\Schema(
@@ -90,6 +91,7 @@ class Transaction extends Model
     use Refundable;
     use SoftDeletes;
     use Syncable;
+    use Configurable;
 
     protected static function boot()
     {
@@ -248,6 +250,15 @@ class Transaction extends Model
         return $query->whereNull($this->getTable() . '.transfer_id');
     }
 
+    /**
+     * Scope a query to filter models by configuration key and value.
+     */
+    public function scopeWhereConfig($query, string $key, mixed $value)
+    {
+        return $query->whereHas('configurations', function ($q) use ($key, $value) {
+            $q->where('key', $key)->where('value', $value);
+        });
+    }
     public static function findByClientId(string $clientId, User $user): ?self
     {
         $parts = explode(':', $clientId);
