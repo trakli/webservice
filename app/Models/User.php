@@ -45,6 +45,7 @@ class User extends Authenticatable implements HasLocalePreference
      */
     protected $appends = [
         'avatar_url',
+        'is_admin',
     ];
 
     /**
@@ -130,6 +131,11 @@ class User extends Authenticatable implements HasLocalePreference
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->getConfigValue('avatar');
+    }
+
+    public function getIsAdminAttribute(): bool
+    {
+        return $this->hasRole('admin');
     }
 
     public function preferredLocale(): ?string
