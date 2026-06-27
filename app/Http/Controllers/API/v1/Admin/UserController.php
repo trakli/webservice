@@ -69,7 +69,25 @@ class UserController extends ApiController
             return $this->failure('User not found.', 404);
         }
 
-        return $this->success($user);
+        $counts = [
+            'transactions' => $user->transactions()->count(),
+            'wallets' => $user->wallets()->count(),
+            'categories' => $user->categories()->count(),
+            'parties' => $user->parties()->count(),
+            'groups' => $user->groups()->count(),
+            'budgets' => $user->budgets()->count(),
+        ];
+
+        return $this->success([
+            'user' => $user,
+            'counts' => $counts,
+            'preferences' => [
+                'country' => $user->getConfigValue('default-country'),
+                'language' => $user->getConfigValue('default-lang'),
+                'currency' => $user->getConfigValue('default-currency'),
+            ],
+            'last_transaction_at' => optional($user->transactions()->max('datetime')),
+        ]);
     }
 
     #[OA\Delete(

@@ -21,6 +21,7 @@
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-activities": "^1.0",
         "whilesmart/eloquent-agents": "dev-main",
+        "whilesmart/eloquent-engagement": "dev-dev",
         "whilesmart/eloquent-holdings": "^1.0",
         "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/eloquent-roles": "dev-dev",

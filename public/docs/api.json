@@ -119,6 +119,117 @@
                 }
             }
         },
+        "/admin/metrics": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "App-wide engagement and usage metrics",
+                "operationId": "9cd3dc0d567f44e6d7bf1813051db075",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "granularity",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Metrics report"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/preview": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Render the outreach email as it will appear to a recipient",
+                "operationId": "e7c58174b57bc6fd9c0b758d865107ba",
+                "responses": {
+                    "200": {
+                        "description": "Rendered HTML"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/media": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Upload an image to embed in an outreach email",
+                "operationId": "a4dd526d9845410ca492dc870d5b301a",
+                "responses": {
+                    "200": {
+                        "description": "Public URL of the stored image"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/send": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Send a personalized outreach email to an audience",
+                "operationId": "fa92d4bb5682b3068db9c1c9b2f1ea7e",
+                "responses": {
+                    "200": {
+                        "description": "Sent"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/outreach": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List past outreaches",
+                "operationId": "62f95253a8fd23fd9288e42f2e27dd17",
+                "responses": {
+                    "200": {
+                        "description": "Outreach history"
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "tags": [
@@ -4618,6 +4729,7 @@
                                             "default-currency",
                                             "default-group",
                                             "default-lang",
+                                            "default-country",
                                             "onboarding-complete",
                                             "theme",
                                             "timezone",
@@ -4703,6 +4815,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "default-country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
@@ -4761,6 +4874,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "default-country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
@@ -4857,6 +4971,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "default-country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
