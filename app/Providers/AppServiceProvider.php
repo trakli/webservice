@@ -30,6 +30,15 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(OwnerResolver::class, UserOwnerResolver::class);
 
+        $this->app->bind(
+            \Whilesmart\OwnerAccess\Contracts\OwnerAuthorizer::class,
+            \App\Holdings\UserOwnerAuthorizer::class
+        );
+        $this->app->bind(
+            \Whilesmart\Holdings\Contracts\HoldingPriceProvider::class,
+            \App\Holdings\CoingeckoPriceProvider::class
+        );
+
         $this->app->singleton(Entitlements::class, AllowAllEntitlements::class);
 
         $this->app->singleton(IntegrationRegistry::class);

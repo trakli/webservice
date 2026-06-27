@@ -99,6 +99,47 @@ class AgentActionTest extends TestCase
         ]);
     }
 
+    public function test_record_transaction_carries_intent_through_confirm(): void
+    {
+        $action = $this->propose([
+            'amount' => 5000,
+            'type' => 'income',
+            'wallet_name' => 'Cash',
+            'intent' => 'loan_received',
+        ]);
+
+        $this->assertEquals('loan_received', $action->payload['intent']);
+
+        $this->actingAs($this->user)
+            ->postJson("/api/v1/ai/chats/{$this->session->id}/actions/{$action->id}/confirm")
+            ->assertStatus(200);
+
+        $this->assertDatabaseHas('transactions', [
+            'user_id' => $this->user->id,
+            'amount' => 5000,
+            'type' => 'income',
+            'intent' => 'loan_received',
+        ]);
+    }
+
+    public function test_record_transaction_rejects_unknown_intent(): void
+    {
+        $this->app->instance(BlockCollector::class, new BlockCollector());
+        $tool = $this->app->make(RecordTransactionTool::class);
+        $context = ToolContext::forUser($this->user, 'en', ['chat_session_id' => $this->session->id]);
+
+        $before = AgentProposedAction::count();
+        $out = $tool->handle([
+            'amount' => 20,
+            'type' => 'expense',
+            'wallet_name' => 'Cash',
+            'intent' => 'not_a_real_intent',
+        ], $context);
+
+        $this->assertArrayHasKey('error', $out);
+        $this->assertSame($before, AgentProposedAction::count(), 'An invalid intent must not persist a proposal.');
+    }
+
     public function test_confirm_is_idempotent(): void
     {
         $action = $this->propose(['amount' => 20, 'type' => 'expense', 'wallet_name' => 'Cash']);

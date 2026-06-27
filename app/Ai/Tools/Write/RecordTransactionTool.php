@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools\Write;
 
+use App\Enums\TransactionIntent;
 use InvalidArgumentException;
 use Whilesmart\Agents\ValueObjects\ParameterSpec;
 use Whilesmart\Agents\ValueObjects\ToolContext;
@@ -36,6 +37,15 @@ class RecordTransactionTool extends AbstractWriteTool
         return [
             ParameterSpec::number('amount', 'The transaction amount, a positive number.'),
             ParameterSpec::enum('type', 'Whether money came in or went out.', ['income', 'expense']),
+            ParameterSpec::enum(
+                'intent',
+                'What the money movement really is. Default "regular" for ordinary earnings or spending. '
+                . 'Use loan_received/debt_owed (income) or loan_repayment/debt_settled (expense) for borrowing, '
+                . 'investment_buy (expense) / investment_return (income) for investments, and gift (income) for gifts. '
+                . 'Only set this when the user clearly indicates it.',
+                TransactionIntent::values(),
+                required: false
+            ),
             ParameterSpec::number('wallet_id', 'The id of the wallet (preferred; get it from list_wallets).', required: false),
             ParameterSpec::string('wallet_name', 'The exact wallet name, if you do not have its id.', required: false),
             ParameterSpec::string('description', 'Free text describing the purchase, e.g. "coffee". This is NOT a category.', required: false),
@@ -60,6 +70,11 @@ class RecordTransactionTool extends AbstractWriteTool
             throw new InvalidArgumentException('Type must be income or expense.');
         }
 
+        $intent = $arguments['intent'] ?? null;
+        if ($intent !== null && ! in_array($intent, TransactionIntent::values(), true)) {
+            throw new InvalidArgumentException('Unknown transaction intent.');
+        }
+
         $walletId = $this->resolveWalletId($user, $arguments);
         $categoryIds = $this->resolveCategoryIds($user, (array) ($arguments['category_names'] ?? []));
         $partyId = $this->resolvePartyId($user, $arguments);
@@ -67,6 +82,7 @@ class RecordTransactionTool extends AbstractWriteTool
         return array_filter([
             'amount' => $amount,
             'type' => $type,
+            'intent' => $intent,
             'wallet_id' => $walletId,
             'party_id' => $partyId,
             'description' => $arguments['description'] ?? null,
@@ -102,8 +118,18 @@ class RecordTransactionTool extends AbstractWriteTool
             ? optional($user->parties()->find($partyId))->name
             : null;
 
+        $intent = (string) ($payload['intent'] ?? 'regular');
+
         return [
             ['key' => 'type', 'label' => 'Type', 'type' => 'enum', 'value' => $type, 'display' => ucfirst($type), 'options' => ['income', 'expense']],
+            [
+                'key' => 'intent',
+                'label' => 'Intent',
+                'type' => 'enum',
+                'value' => $intent,
+                'display' => ucwords(str_replace('_', ' ', $intent)),
+                'options' => TransactionIntent::values(),
+            ],
             ['key' => 'amount', 'label' => 'Amount', 'type' => 'number', 'value' => $payload['amount'] ?? 0, 'display' => (string) ($payload['amount'] ?? '')],
             ['key' => 'wallet_id', 'label' => 'Wallet', 'type' => 'wallet', 'value' => $walletId, 'display' => $walletName ?? ('#' . $walletId)],
             ['key' => 'party_id', 'label' => 'Party', 'type' => 'party', 'value' => $partyId, 'display' => $partyName ?? ($partyId ? '#' . $partyId : '')],

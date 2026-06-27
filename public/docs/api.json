@@ -578,6 +578,20 @@
                 }
             }
         },
+        "/asset-prices/search": {
+            "get": {
+                "tags": [
+                    "Holdings"
+                ],
+                "summary": "Search CoinGecko for a coin id",
+                "operationId": "c77e77d29462543ff689cd7a7cf53fed",
+                "responses": {
+                    "200": {
+                        "description": "Matching coins"
+                    }
+                }
+            }
+        },
         "/budgets": {
             "get": {
                 "tags": [
@@ -3226,7 +3240,8 @@
                                 "comparisons",
                                 "categories",
                                 "parties",
-                                "cashflow"
+                                "cashflow",
+                                "position"
                             ]
                         }
                     }
@@ -3368,6 +3383,16 @@
                         }
                     },
                     {
+                        "name": "intent",
+                        "in": "query",
+                        "description": "Filter by one or more transaction intents (comma-separated)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "investment_buy,investment_return"
+                        }
+                    },
+                    {
                         "$ref": "#/components/parameters/limitParam"
                     },
                     {
@@ -3436,6 +3461,20 @@
                                         "enum": [
                                             "income",
                                             "expense"
+                                        ]
+                                    },
+                                    "intent": {
+                                        "type": "string",
+                                        "default": "regular",
+                                        "enum": [
+                                            "regular",
+                                            "loan_received",
+                                            "loan_repayment",
+                                            "debt_owed",
+                                            "debt_settled",
+                                            "investment_buy",
+                                            "investment_return",
+                                            "gift"
                                         ]
                                     },
                                     "description": {
@@ -3707,6 +3746,20 @@
                                         "enum": [
                                             "income",
                                             "expense"
+                                        ]
+                                    },
+                                    "intent": {
+                                        "type": "string",
+                                        "default": "regular",
+                                        "enum": [
+                                            "regular",
+                                            "loan_received",
+                                            "loan_repayment",
+                                            "debt_owed",
+                                            "debt_settled",
+                                            "investment_buy",
+                                            "investment_return",
+                                            "gift"
                                         ]
                                     },
                                     "date": {
@@ -4579,7 +4632,10 @@
                                             "inactivity-reminders-enabled",
                                             "inactivity-reminder-count",
                                             "last-inactivity-reminder-sent",
-                                            "wallets-allow-negative-balance"
+                                            "wallets-allow-negative-balance",
+                                            "transaction-intents-enabled",
+                                            "asset-tracking-enabled",
+                                            "landing-experience"
                                         ],
                                         "example": "theme"
                                     },
@@ -4661,7 +4717,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -4716,7 +4775,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -4809,7 +4871,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -6259,6 +6324,10 @@
         {
             "name": "Admin",
             "description": "Admin"
+        },
+        {
+            "name": "Holdings",
+            "description": "Holdings"
         },
         {
             "name": "Groups",

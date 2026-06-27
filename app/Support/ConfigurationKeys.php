@@ -24,6 +24,12 @@ class ConfigurationKeys
     public const LAST_INACTIVITY_REMINDER_SENT = 'last-inactivity-reminder-sent';
     public const WALLETS_ALLOW_NEGATIVE_BALANCE = 'wallets-allow-negative-balance';
 
+    public const TRANSACTION_INTENTS_ENABLED = 'transaction-intents-enabled';
+
+    public const ASSET_TRACKING_ENABLED = 'asset-tracking-enabled';
+
+    public const LANDING_EXPERIENCE = 'landing-experience';
+
     public const NAMES = [
         self::DEFAULT_WALLET,
         self::DEFAULT_CURRENCY,
@@ -44,6 +50,9 @@ class ConfigurationKeys
         self::INACTIVITY_REMINDER_COUNT,
         self::LAST_INACTIVITY_REMINDER_SENT,
         self::WALLETS_ALLOW_NEGATIVE_BALANCE,
+        self::TRANSACTION_INTENTS_ENABLED,
+        self::ASSET_TRACKING_ENABLED,
+        self::LANDING_EXPERIENCE,
     ];
 
     public const RULES = [
@@ -66,5 +75,8 @@ class ConfigurationKeys
         self::INACTIVITY_REMINDER_COUNT => 'integer|min:0',
         self::LAST_INACTIVITY_REMINDER_SENT => 'date',
         self::WALLETS_ALLOW_NEGATIVE_BALANCE => 'boolean',
+        self::TRANSACTION_INTENTS_ENABLED => 'boolean',
+        self::ASSET_TRACKING_ENABLED => 'boolean',
+        self::LANDING_EXPERIENCE => 'string|in:chat,dashboard',
     ];
 }

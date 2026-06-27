@@ -112,6 +112,7 @@ class Transaction extends Model
         'datetime',
         'description',
         'type',
+        'intent',
         'party_id',
         'wallet_id',
         'user_id',
@@ -128,6 +129,10 @@ class Transaction extends Model
     protected $casts = [
         'datetime' => 'datetime',
         'amount' => 'decimal:2',
+    ];
+
+    protected $attributes = [
+        'intent' => 'regular',
     ];
 
     protected $hidden = ['transfer'];
