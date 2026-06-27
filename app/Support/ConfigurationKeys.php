@@ -8,6 +8,7 @@ class ConfigurationKeys
     public const DEFAULT_CURRENCY = 'default-currency';
     public const DEFAULT_GROUP = 'default-group';
     public const DEFAULT_LANG = 'default-lang';
+    public const DEFAULT_COUNTRY = 'default-country';
     public const ONBOARDING_COMPLETE = 'onboarding-complete';
     public const THEME = 'theme';
     public const TIMEZONE = 'timezone';
@@ -35,6 +36,7 @@ class ConfigurationKeys
         self::DEFAULT_CURRENCY,
         self::DEFAULT_GROUP,
         self::DEFAULT_LANG,
+        self::DEFAULT_COUNTRY,
         self::ONBOARDING_COMPLETE,
         self::THEME,
         self::TIMEZONE,
@@ -60,6 +62,7 @@ class ConfigurationKeys
         self::DEFAULT_CURRENCY => 'string|max:10',
         self::DEFAULT_GROUP => 'string',
         self::DEFAULT_LANG => 'string|max:10',
+        self::DEFAULT_COUNTRY => 'string|max:60',
         self::ONBOARDING_COMPLETE => 'boolean',
         self::THEME => 'string|in:light,dark,system',
         self::TIMEZONE => 'timezone',

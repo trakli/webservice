@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\API\v1\AccountController;
+use App\Http\Controllers\API\v1\Admin\MetricsController as AdminMetricsController;
+use App\Http\Controllers\API\v1\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
 use App\Http\Controllers\API\v1\BudgetController;
@@ -112,6 +114,11 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
 
     // Admin routes
     Route::group(['prefix' => 'admin', 'middleware' => ['role:admin']], function () {
+        Route::get('metrics', [AdminMetricsController::class, 'show']);
+        Route::get('outreach', [AdminOutreachController::class, 'index']);
+        Route::post('outreach/preview', [AdminOutreachController::class, 'preview']);
+        Route::post('outreach/media', [AdminOutreachController::class, 'media']);
+        Route::post('outreach/send', [AdminOutreachController::class, 'send']);
         Route::get('users', [AdminUserController::class, 'index']);
         Route::get('users/{id}', [AdminUserController::class, 'show']);
         Route::delete('users/{id}', [AdminUserController::class, 'destroy']);
