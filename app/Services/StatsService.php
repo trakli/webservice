@@ -2,11 +2,18 @@
 
 namespace App\Services;
 
+use App\Enums\TransactionIntent;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Wallet;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
+use Whilesmart\Holdings\Models\Holding;
 
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class StatsService
 {
     private $user;
@@ -38,7 +45,7 @@ class StatsService
      * for a single section computes only that section so the client can load
      * the dashboard progressively instead of waiting for the whole payload.
      */
-    public const SECTIONS = ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow'];
+    public const SECTIONS = ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow', 'position'];
 
     /**
      * Compute stats for the given parameters. When $section is null the full
@@ -118,6 +125,7 @@ class StatsService
                     'expense_by_wallet' => $this->getExpenseByWalletData(),
                 ],
             ],
+            'position' => [['position' => $this->getFinancialPosition()], []],
             default => [[], []],
         };
     }
@@ -147,6 +155,80 @@ class StatsService
         }
 
         return ['overview' => $overview, 'period_summary' => $this->getPeriodSummary()];
+    }
+
+    /**
+     * Financial Position: separates real earned income and discretionary spend
+     * from loan, debt and investment movement so borrowed money is not counted
+     * as earnings. Driven by each transaction's intent tag.
+     */
+    private function getFinancialPosition(): array
+    {
+        $rows = $this->baseJoinedQuery()
+            ->select('transactions.type', 'transactions.intent', 'wallets.currency')
+            ->selectRaw('SUM(transactions.amount) as total_amount')
+            ->groupBy('transactions.type', 'transactions.intent', 'wallets.currency')
+            ->get();
+
+        // Conversion is linear, so summing per currency in the database and
+        // converting each group once matches converting every row individually.
+        $byIntent = array_fill_keys(TransactionIntent::values(), 0.0);
+        $earnedIncome = 0.0;
+        $discretionarySpend = 0.0;
+
+        foreach ($rows as $row) {
+            $amount = $this->convertCurrency((float) $row->total_amount, $row->currency);
+            $intent = TransactionIntent::tryFrom($row->intent ?? 'regular') ?? TransactionIntent::REGULAR;
+
+            if ($intent === TransactionIntent::REGULAR) {
+                if ($row->type === 'income') {
+                    $earnedIncome += $amount;
+                } else {
+                    $discretionarySpend += $amount;
+                }
+
+                continue;
+            }
+
+            $byIntent[$intent->value] += $amount;
+        }
+
+        $loanReceived = $byIntent[TransactionIntent::LOAN_RECEIVED->value];
+        $loanRepayment = $byIntent[TransactionIntent::LOAN_REPAYMENT->value];
+        $debtOwed = $byIntent[TransactionIntent::DEBT_OWED->value];
+        $debtSettled = $byIntent[TransactionIntent::DEBT_SETTLED->value];
+        $investmentPrincipal = $byIntent[TransactionIntent::INVESTMENT_BUY->value];
+        $investmentReturns = $byIntent[TransactionIntent::INVESTMENT_RETURN->value];
+        $giftsReceived = $byIntent[TransactionIntent::GIFT->value];
+
+        // Buying an investment moves cash into an asset of equal value, so it is
+        // net-worth-neutral and excluded here (the app does not track asset
+        // market value). Loans and debt are likewise balance-neutral. Only real
+        // earnings, realised returns and gifts build net worth; spending erodes it.
+        $netWorthDelta = $earnedIncome
+            - $discretionarySpend
+            + $investmentReturns
+            + $giftsReceived;
+
+        $cashBalance = $this->getTotalBalance();
+        $holdingsValue = $this->getHoldingsValue();
+
+        return [
+            'earned_income' => $earnedIncome,
+            'cash_balance' => $cashBalance,
+            'holdings_value' => $holdingsValue,
+            'total_net_worth' => $cashBalance + $holdingsValue,
+            'discretionary_spend' => $discretionarySpend,
+            'loan_received' => $loanReceived,
+            'loan_repayment' => $loanRepayment,
+            'debt_owed' => $debtOwed,
+            'debt_settled' => $debtSettled,
+            'loans_debt_net' => ($loanReceived + $debtOwed) - ($loanRepayment + $debtSettled),
+            'investment_principal' => $investmentPrincipal,
+            'investment_returns' => $investmentReturns,
+            'gifts_received' => $giftsReceived,
+            'net_worth_delta' => $netWorthDelta,
+        ];
     }
 
     /**
@@ -198,7 +280,7 @@ class StatsService
     /**
      * Base query with wallet join for currency access.
      */
-    private function baseJoinedQuery(): \Illuminate\Database\Eloquent\Builder
+    private function baseJoinedQuery(): Builder
     {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $this->user->id)
@@ -216,7 +298,7 @@ class StatsService
     /**
      * Base query with eager-loaded relationships.
      */
-    private function baseEagerQuery(array $relations = ['wallet']): \Illuminate\Database\Eloquent\Builder
+    private function baseEagerQuery(array $relations = ['wallet']): Builder
     {
         $query = Transaction::with($relations)
             ->where('user_id', $this->user->id)
@@ -233,7 +315,7 @@ class StatsService
     /**
      * Base query with table-qualified columns for joins.
      */
-    private function baseQualifiedQuery(): \Illuminate\Database\Eloquent\Builder
+    private function baseQualifiedQuery(): Builder
     {
         $query = Transaction::where('transactions.user_id', $this->user->id)
             ->nonTransfer()
@@ -291,6 +373,25 @@ class StatsService
 
         foreach ($wallets as $wallet) {
             $total += $this->convertCurrency((float) $wallet->balance, $wallet->currency);
+        }
+
+        return $total;
+    }
+
+    /**
+     * Current market value of all the user's holdings, converted to the target
+     * currency. Holdings are user-wide and not scoped by the wallet filter.
+     */
+    private function getHoldingsValue(): float
+    {
+        $total = 0.0;
+
+        $holdings = Holding::where('owner_type', User::class)
+            ->where('owner_id', $this->user->id)
+            ->get();
+
+        foreach ($holdings as $holding) {
+            $total += $this->convertCurrency((float) $holding->value, $holding->currency);
         }
 
         return $total;

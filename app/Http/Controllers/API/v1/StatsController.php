@@ -68,7 +68,7 @@ class StatsController extends ApiController
                 required: false,
                 schema: new OA\Schema(
                     type: 'string',
-                    enum: ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow'],
+                    enum: ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow', 'position'],
                     description: 'Compute only one section of the response for progressive loading. Omit for the full payload.'
                 )
             ),

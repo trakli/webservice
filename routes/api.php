@@ -18,6 +18,7 @@ use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransactionRefundController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
+use App\Http\Controllers\API\v1\AssetPriceController;
 use App\Http\Controllers\API\v1\WalletController;
 use App\Http\Controllers\API\VersionController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transfers', TransferController::class);
+
+        Route::get('asset-prices/search', [AssetPriceController::class, 'search']);
 
         Route::get('stats', [StatsController::class, 'index']);
     });

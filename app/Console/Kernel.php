@@ -33,6 +33,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('budgets:send-digests')
             ->weeklyOn(1, '08:00')
             ->withoutOverlapping();
+
+        $schedule->command('holdings:reprice')
+            ->dailyAt('06:00')
+            ->withoutOverlapping();
     }
 
     /**

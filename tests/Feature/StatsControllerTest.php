@@ -143,6 +143,75 @@ class StatsControllerTest extends TestCase
     }
 
     /** @test */
+    public function it_includes_cash_and_holdings_in_total_net_worth(): void
+    {
+        Wallet::factory()->create(['user_id' => $this->user->id, 'balance' => 1000, 'currency' => 'USD']);
+        \Whilesmart\Holdings\Models\Holding::create([
+            'owner_type' => \App\Models\User::class,
+            'owner_id' => $this->user->id,
+            'name' => 'Bitcoin',
+            'quantity' => 2, 'unit_price' => 500, 'currency' => 'USD',
+        ]);
+
+        $response = $this->withHeaders(['Authorization' => 'Bearer '.$this->token])
+            ->getJson('/api/v1/stats?preset=all_time&section=position');
+
+        $response->assertStatus(200);
+        $position = $response->json('data.position');
+        $this->assertEquals(1000, $position['cash_balance']);
+        $this->assertEquals(1000, $position['holdings_value']); // 2 * 500
+        $this->assertEquals(2000, $position['total_net_worth']);
+    }
+
+    /** @test */
+    public function it_computes_financial_position_separating_intents(): void
+    {
+        $wallet = Wallet::factory()->create(['user_id' => $this->user->id, 'balance' => 1000]);
+
+        $cases = [
+            ['income', 'regular', 5000],
+            ['expense', 'regular', 500],
+            ['income', 'loan_received', 3000],
+            ['expense', 'loan_repayment', 1000],
+            ['expense', 'investment_buy', 2000],
+            ['income', 'investment_return', 400],
+            ['income', 'gift', 100],
+        ];
+
+        foreach ($cases as [$type, $intent, $amount]) {
+            Transaction::factory()->create([
+                'user_id' => $this->user->id,
+                'wallet_id' => $wallet->id,
+                'type' => $type,
+                'intent' => $intent,
+                'amount' => $amount,
+                'datetime' => Carbon::now()->subHours(2),
+            ]);
+        }
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer '.$this->token,
+        ])->getJson('/api/v1/stats?preset=all_time&section=position');
+
+        $response->assertStatus(200);
+
+        $position = $response->json('data.position');
+        $this->assertEquals(5000, $position['earned_income']); // excludes loan, gift, investment return
+        $this->assertEquals(500, $position['discretionary_spend']); // excludes loan repayment, investment buy
+        $this->assertEquals(3000, $position['loan_received']);
+        $this->assertEquals(1000, $position['loan_repayment']);
+        $this->assertEquals(0, $position['debt_owed']);
+        $this->assertEquals(0, $position['debt_settled']);
+        $this->assertEquals(2000, $position['loans_debt_net']); // 3000 received - 1000 repaid
+        $this->assertEquals(2000, $position['investment_principal']);
+        $this->assertEquals(400, $position['investment_returns']);
+        $this->assertEquals(100, $position['gifts_received']);
+        // Net worth excludes investment principal (cash converted to an asset)
+        // and loan/debt movement (balance-neutral): 5000 - 500 + 400 + 100.
+        $this->assertEquals(5000, $position['net_worth_delta']);
+    }
+
+    /** @test */
     public function it_calculates_correct_totals(): void
     {
         $this->createTestData();

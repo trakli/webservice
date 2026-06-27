@@ -26,14 +26,19 @@ class GetStatsTool extends AbstractTool
     public function description(): string
     {
         return 'Get pre-computed financial analytics for the user: balances, income, expenses, '
-            . 'savings rate, top categories, parties and cash flow. Choose a section. Returns '
-            . 'authoritative numbers; never invent figures.';
+            . 'savings rate, top categories, parties, cash flow, and financial position '
+            . '(net worth, earned income vs discretionary spend, loans/debt, investments). '
+            . 'Choose a section. Returns authoritative numbers; never invent figures.';
     }
 
     public function parameters(): array
     {
         return [
-            ParameterSpec::enum('section', 'Which analytics section to compute.', ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow']),
+            ParameterSpec::enum(
+                'section',
+                'Which analytics section to compute. "position" returns net worth and the intent-based money-in/out breakdown.',
+                ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow', 'position']
+            ),
             ParameterSpec::enum('period', 'Bucketing period for trends.', ['day', 'week', 'month', 'year'], required: false),
             ParameterSpec::string('start_date', 'Window start (YYYY-MM-DD). Defaults to 30 days ago.', required: false),
             ParameterSpec::string('end_date', 'Window end (YYYY-MM-DD). Defaults to today.', required: false),

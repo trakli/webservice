@@ -87,6 +87,11 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->hasMany(Wallet::class);
     }
 
+    public function holdings(): HasMany
+    {
+        return $this->hasMany(Holding::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

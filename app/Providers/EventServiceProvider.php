@@ -61,6 +61,7 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Transaction::observe(TransactionObserver::class);
+        \Whilesmart\Holdings\Models\Holding::observe(\App\Observers\HoldingObserver::class);
     }
 
     /**

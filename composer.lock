@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2843f02ae7b0c06b628e0dcef9347441",
+    "content-hash": "4a25ad621db24aa1be6cd13837be9453",
     "packages": [
         {
             "name": "beste/clock",
@@ -8601,6 +8601,60 @@
             "time": "2026-06-14T16:23:46+00:00"
         },
         {
+            "name": "whilesmart/eloquent-holdings",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-holdings.git",
+                "reference": "f58e8543f0ea10fa24458aed26f736426b16fc52"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-holdings/zipball/f58e8543f0ea10fa24458aed26f736426b16fc52",
+                "reference": "f58e8543f0ea10fa24458aed26f736426b16fc52",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2",
+                "whilesmart/eloquent-owner-access": "^1.0"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Holdings\\HoldingsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Holdings\\": "src/",
+                    "Whilesmart\\Holdings\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Polymorphic holdings register (crypto, stocks, property, any asset) for Laravel: track quantity and value, with pluggable live pricing.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-holdings/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-holdings/tree/v1.0.0"
+            },
+            "time": "2026-06-27T11:16:36+00:00"
+        },
+        {
             "name": "whilesmart/eloquent-model-configuration",
             "version": "1.0.11",
             "source": {
@@ -8653,6 +8707,57 @@
                 "source": "https://github.com/whilesmartphp/eloquent-model-configs/tree/v1.0.11"
             },
             "time": "2026-01-11T10:14:02+00:00"
+        },
+        {
+            "name": "whilesmart/eloquent-owner-access",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-owner-access.git",
+                "reference": "3edbda3296eca3bbb141b7f8368fd482308677b0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-owner-access/zipball/3edbda3296eca3bbb141b7f8368fd482308677b0",
+                "reference": "3edbda3296eca3bbb141b7f8368fd482308677b0",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\OwnerAccess\\OwnerAccessServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\OwnerAccess\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Pluggable polymorphic owner authorization for Laravel packages with owner_type/owner_id columns. Lets host apps decide who can see and modify owner-scoped records without coupling the underlying packages to a specific tenancy model.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-owner-access/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-owner-access/tree/v1.0.0"
+            },
+            "time": "2026-06-10T17:45:50+00:00"
         },
         {
             "name": "whilesmart/eloquent-roles",
