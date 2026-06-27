@@ -39,7 +39,7 @@ class OutreachControllerTest extends TestCase
 
         $response->assertStatus(200)->assertJsonPath('data.sent', 1);
 
-        Mail::assertSent(OutreachMail::class, function (OutreachMail $mail) {
+        Mail::assertQueued(OutreachMail::class, function (OutreachMail $mail) {
             return $mail->subject === 'Hi Ada'
                 && str_contains($mail->body, 'Welcome Ada')
                 && $mail->ctaLabel === 'Open Trakli'
@@ -59,7 +59,7 @@ class OutreachControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public function test_admin_previews_the_rendered_email(): void
@@ -93,9 +93,9 @@ class OutreachControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)->assertJsonPath('data.sent', 2);
-        Mail::assertSent(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($a->email));
-        Mail::assertSent(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($b->email));
-        Mail::assertNotSent(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($other->email));
+        Mail::assertQueued(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($a->email));
+        Mail::assertQueued(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($b->email));
+        Mail::assertNotQueued(OutreachMail::class, fn (OutreachMail $m) => $m->hasTo($other->email));
     }
 
     public function test_specific_audience_requires_user_ids(): void
@@ -109,12 +109,13 @@ class OutreachControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 
     public function test_admin_can_attach_a_file(): void
     {
         Mail::fake();
+        Storage::fake('local');
 
         $response = $this->actingAs($this->admin)->post('/api/v1/admin/outreach/send', [
             'subject' => 'Hello',
@@ -124,7 +125,7 @@ class OutreachControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        Mail::assertSent(OutreachMail::class, function (OutreachMail $mail) {
+        Mail::assertQueued(OutreachMail::class, function (OutreachMail $mail) {
             return count($mail->files) === 1 && $mail->files[0]['name'] === 'report.pdf';
         });
     }
@@ -195,6 +196,6 @@ class OutreachControllerTest extends TestCase
         ]);
 
         $response->assertStatus(403);
-        Mail::assertNothingSent();
+        Mail::assertNothingQueued();
     }
 }
