@@ -10,6 +10,7 @@ use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
 
 /**
@@ -97,16 +98,20 @@ class OutreachController extends ApiController
             'files.*' => ['file', 'mimes:' . FileService::ALLOWED_EXTENSIONS, 'max:' . FileService::MAX_KILOBYTES],
         ]);
 
-        $attachments = array_map(fn ($file) => [
-            'path' => $file->getRealPath(),
-            'name' => $file->getClientOriginalName(),
-            'mime' => $file->getMimeType(),
-        ], $request->file('files', []));
+        $attachments = array_map(function ($file) {
+            $stored = $file->store('outreach/attachments', 'local');
+
+            return [
+                'path' => Storage::disk('local')->path($stored),
+                'name' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+            ];
+        }, $request->file('files', []));
 
         $recipients = $this->resolveAudience($data['audience'], $request->user(), $data['user_ids'] ?? []);
 
         foreach ($recipients as $user) {
-            Mail::to($user->email)->send(new OutreachMail(
+            Mail::to($user->email)->queue(new OutreachMail(
                 $this->personalize($data['subject'], $user),
                 $this->personalize($data['body'], $user),
                 $data['cta_label'] ?? null,
