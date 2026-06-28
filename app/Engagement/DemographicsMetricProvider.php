@@ -27,7 +27,7 @@ class DemographicsMetricProvider implements MetricProvider
     public function metrics(Period $period): array
     {
         return [
-            Metric::ranking('users_by_country', 'Users by country', $this->distribution(ConfigurationKeys::DEFAULT_COUNTRY)),
+            Metric::ranking('users_by_country', 'Users by country', $this->distribution(ConfigurationKeys::COUNTRY)),
             Metric::ranking('users_by_language', 'Users by language', $this->distribution(ConfigurationKeys::DEFAULT_LANG)),
             Metric::ranking('users_by_currency', 'Users by currency', $this->distribution(ConfigurationKeys::DEFAULT_CURRENCY)),
         ];
