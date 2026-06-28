@@ -67,6 +67,7 @@ class ExchangeRateController extends ApiController
                     ]
                 )
             ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
