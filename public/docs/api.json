@@ -703,6 +703,71 @@
                 }
             }
         },
+        "/asset-prices": {
+            "get": {
+                "tags": [
+                    "Holdings"
+                ],
+                "summary": "Get current prices for assets",
+                "description": "Returns current CoinGecko prices for the given coin ids in the requested fiat currency, so clients value holdings against the same feed the server uses.",
+                "operationId": "f2fdfd5f7e91557937161fe3e6d2658e",
+                "parameters": [
+                    {
+                        "name": "ids",
+                        "in": "query",
+                        "description": "Comma-separated CoinGecko coin ids.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "bitcoin,ethereum"
+                        }
+                    },
+                    {
+                        "name": "vs_currency",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "usd",
+                            "example": "usd"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prices retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "vs_currency": {
+                                                    "type": "string",
+                                                    "example": "usd"
+                                                },
+                                                "prices": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "bitcoin": 65000,
+                                                        "ethereum": 3200
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
         "/budgets": {
             "get": {
                 "tags": [
@@ -1562,6 +1627,89 @@
                     },
                     "500": {
                         "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/exchange-rates": {
+            "get": {
+                "tags": [
+                    "Currency"
+                ],
+                "summary": "Get current exchange rates from a base currency",
+                "description": "Returns rates from the base currency to each requested target, honoring the authenticated user's manual exchange rates. Targets with no available rate are listed under \"unavailable\" rather than returned as a rate.",
+                "operationId": "9721eaa414c337abf0fd466303a275e2",
+                "parameters": [
+                    {
+                        "name": "base",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "USD"
+                        }
+                    },
+                    {
+                        "name": "targets",
+                        "in": "query",
+                        "description": "Comma-separated target currency codes. Use this or \"target\".",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "EUR,GBP,JPY"
+                        }
+                    },
+                    {
+                        "name": "target",
+                        "in": "query",
+                        "description": "A single target currency code. Use this or \"targets\".",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "EUR"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rates retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "base": {
+                                                    "type": "string",
+                                                    "example": "USD"
+                                                },
+                                                "rates": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "EUR": 0.92,
+                                                        "GBP": 0.79
+                                                    }
+                                                },
+                                                "unavailable": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "JPY"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -6391,6 +6539,10 @@
         {
             "name": "Category",
             "description": "Endpoints for managing transaction categories"
+        },
+        {
+            "name": "Currency",
+            "description": "Exchange rates and asset prices"
         },
         {
             "name": "Files",
