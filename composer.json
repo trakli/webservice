@@ -29,6 +29,7 @@
         "whilesmart/laravel-plugin-engine": "^1.0.0",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
+        "wikimedia/composer-merge-plugin": "^2.1",
         "zircote/swagger-php": "^5.0"
     },
     "require-dev": {
@@ -96,6 +97,11 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "merge-plugin": {
+            "include": [
+                "plugins/*/composer.json"
+            ]
         }
     },
     "config": {
@@ -104,7 +110,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "wikimedia/composer-merge-plugin": true
         }
     },
     "minimum-stability": "stable",
