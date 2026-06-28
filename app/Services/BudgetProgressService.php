@@ -6,6 +6,7 @@ use App\Contracts\OwnerResolver;
 use App\Models\Budget;
 use App\Models\BudgetPeriodState;
 use App\Models\Transaction;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +20,21 @@ class BudgetProgressService
     public const STATUS_OVER_BUDGET = 'over_budget';
 
     public const STATUS_FORECAST_BREACH = 'forecast_breach';
+
+    /**
+     * Owner whose manual exchange rates apply while converting this budget's
+     * spend. Set per compute() run; null when the owner is not a single user.
+     */
+    private ?User $convertUser = null;
+
+    /**
+     * Currencies encountered with no available rate during the current
+     * compute() run. A non-empty set flags the snapshot partial instead of
+     * silently counting unconverted spend as zero.
+     *
+     * @var array<string, true>
+     */
+    private array $unconvertedCurrencies = [];
 
     public function __construct(
         protected OwnerResolver $ownerResolver,
@@ -55,6 +71,9 @@ class BudgetProgressService
             : CarbonImmutable::now();
 
         [$periodStart, $periodEnd] = $this->resolvePeriodWindow($budget, $reference);
+
+        $this->convertUser = $budget->owner instanceof User ? $budget->owner : null;
+        $this->unconvertedCurrencies = [];
 
         $userIds = $this->ownerResolver->resolveUserIds($budget->owner);
         $categoryIds = $this->targetIds($budget, 'categories');
@@ -123,7 +142,7 @@ class BudgetProgressService
 
         $status = $this->deriveStatus($netSpent, $effectiveLimit, $thresholdCrossed, $forecastBreach);
 
-        return [
+        $snapshot = [
             'period_start' => $periodStart->toDateString(),
             'period_end' => $periodEnd->toDateString(),
             'limit' => $limit,
@@ -139,6 +158,13 @@ class BudgetProgressService
             'is_threshold_crossed' => $thresholdCrossed,
             'is_forecast_breach' => $forecastBreach,
         ];
+
+        if ($this->unconvertedCurrencies !== []) {
+            $snapshot['partial'] = true;
+            $snapshot['unconverted_currencies'] = array_keys($this->unconvertedCurrencies);
+        }
+
+        return $snapshot;
     }
 
     /**
@@ -248,18 +274,33 @@ class BudgetProgressService
 
     /**
      * Calculates the total transaction amount, taking into account different currencies
-    */
+     */
     private function getReducedSum($query, $targetCurrency): float
     {
         return (float) $query->with('wallet')->cursor()->reduce(function ($carry, Transaction $transaction) use ($targetCurrency) {
-            $amount = $transaction->amount;
+            $walletCurrency = $transaction->wallet->currency;
 
-            if ($transaction->wallet->currency != $targetCurrency) {
-                $exchangeRate = $this->exchangeRateService->getRate($transaction->wallet->currency, $targetCurrency);
-                $amount = $transaction->amount * $exchangeRate;
+            if ($walletCurrency == $targetCurrency) {
+                return $carry + (float) $transaction->amount;
             }
 
-            return $amount + $carry;
+            $converted = $this->exchangeRateService->convert(
+                (float) $transaction->amount,
+                $walletCurrency,
+                $targetCurrency,
+                $this->convertUser,
+            );
+
+            if ($converted === null) {
+                // No rate available: exclude this amount and flag the snapshot
+                // partial, rather than letting amount * null collapse to 0 and
+                // silently under-report budget spend.
+                $this->unconvertedCurrencies[$walletCurrency] = true;
+
+                return $carry;
+            }
+
+            return $carry + (float) $converted;
         }, 0);
     }
 
