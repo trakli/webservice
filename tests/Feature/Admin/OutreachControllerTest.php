@@ -177,11 +177,13 @@ class OutreachControllerTest extends TestCase
             'audience' => 'test',
         ])->assertStatus(200);
 
-        $this->assertDatabaseHas('outreaches', ['subject' => 'June update', 'audience' => 'test', 'sent' => 1]);
+        $this->assertDatabaseHas('outreaches', ['subject' => 'June update']);
 
         $list = $this->actingAs($this->admin)->getJson('/api/v1/admin/outreach');
         $list->assertStatus(200);
         $this->assertSame('June update', $list->json('data.0.subject'));
+        $this->assertSame('test', $list->json('data.0.audience'));
+        $this->assertSame(1, $list->json('data.0.sent'));
     }
 
     public function test_non_admin_cannot_send_outreach(): void

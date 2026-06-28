@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7be0f0695865a0f8083332cf5485a5dc",
+    "content-hash": "0c85505a7c495c855607ee7b6b51847d",
     "packages": [
         {
             "name": "beste/clock",
@@ -8766,6 +8766,60 @@
             "time": "2026-01-11T10:14:02+00:00"
         },
         {
+            "name": "whilesmart/eloquent-outreach",
+            "version": "dev-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-outreach.git",
+                "reference": "6110f08c9e7f84b477fba9a7c29c4eb835c091fe"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-outreach/zipball/6110f08c9e7f84b477fba9a7c29c4eb835c091fe",
+                "reference": "6110f08c9e7f84b477fba9a7c29c4eb835c091fe",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Outreach\\OutreachServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Outreach\\": "src/",
+                    "Whilesmart\\Outreach\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Host-agnostic user outreach for Laravel: compose messages with a call to action, target audiences, and track per-recipient deliveries across pluggable channels.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-outreach/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-outreach/tree/dev"
+            },
+            "time": "2026-06-27T17:09:49+00:00"
+        },
+        {
             "name": "whilesmart/eloquent-owner-access",
             "version": "1.0.0",
             "source": {
@@ -12431,6 +12485,7 @@
         "smartpings/php-sdk": 20,
         "whilesmart/eloquent-agents": 20,
         "whilesmart/eloquent-engagement": 20,
+        "whilesmart/eloquent-outreach": 20,
         "whilesmart/eloquent-roles": 20
     },
     "prefer-stable": true,
