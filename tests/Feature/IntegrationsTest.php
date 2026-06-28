@@ -14,6 +14,17 @@ class IntegrationsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The registry is a boot-populated singleton; enabled plugins register
+        // into it. Start each test from a clean registry so assertions are
+        // deterministic regardless of which plugins are installed.
+        $this->app->forgetInstance(IntegrationRegistry::class);
+        $this->app->singleton(IntegrationRegistry::class);
+    }
+
     public function test_lists_registered_integrations(): void
     {
         app(IntegrationRegistry::class)->register($this->fakeIntegration());

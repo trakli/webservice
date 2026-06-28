@@ -2454,6 +2454,14 @@
                                                     },
                                                     "configured": {
                                                         "type": "boolean"
+                                                    },
+                                                    "entitled": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "ui": {
+                                                        "description": "Where and how this integration surfaces in the client. Null when the integration declares no UI.",
+                                                        "type": "object",
+                                                        "nullable": true
                                                     }
                                                 },
                                                 "type": "object"
