@@ -110,6 +110,8 @@ PROMPT;
             'list_wallets',
             'list_categories',
             'list_parties',
+            'get_exchange_rate',
+            'get_asset_price',
             'render_kpi',
             'render_chart',
             'render_table',

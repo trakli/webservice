@@ -58,6 +58,8 @@ return [
         App\Ai\Tools\Read\ListCategoriesTool::class,
         App\Ai\Tools\Read\ListPartiesTool::class,
         App\Ai\Tools\Read\ListHoldingsTool::class,
+        App\Ai\Tools\Read\GetExchangeRateTool::class,
+        App\Ai\Tools\Read\GetAssetPriceTool::class,
         App\Ai\Tools\Render\RenderKpiTool::class,
         App\Ai\Tools\Render\RenderChartTool::class,
         App\Ai\Tools\Render\RenderTableTool::class,
