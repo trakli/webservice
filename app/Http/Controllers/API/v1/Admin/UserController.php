@@ -82,7 +82,7 @@ class UserController extends ApiController
             'user' => $user,
             'counts' => $counts,
             'preferences' => [
-                'country' => $user->getConfigValue('default-country'),
+                'country' => $user->getConfigValue('country'),
                 'language' => $user->getConfigValue('default-lang'),
                 'currency' => $user->getConfigValue('default-currency'),
             ],
