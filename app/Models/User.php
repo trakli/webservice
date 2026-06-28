@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
+use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
@@ -22,6 +23,7 @@ class User extends Authenticatable implements HasLocalePreference
     use HasFactory;
     use HasRoles;
     use Notifiable;
+    use SendsOutreach;
 
     /**
      * The attributes that are mass assignable.

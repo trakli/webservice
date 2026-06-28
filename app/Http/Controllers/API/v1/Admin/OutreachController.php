@@ -4,14 +4,14 @@ namespace App\Http\Controllers\API\v1\Admin;
 
 use App\Http\Controllers\API\ApiController;
 use App\Mail\OutreachMail;
-use App\Models\Outreach;
-use App\Models\User;
 use App\Services\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
+use Whilesmart\Outreach\Contracts\MessageRenderer;
+use Whilesmart\Outreach\Models\Outreach;
+use Whilesmart\Outreach\Services\OutreachDispatcher;
 
 /**
  * @OA\Tag(name="Admin", description="Admin operations")
@@ -37,12 +37,20 @@ class OutreachController extends ApiController
             'image_url' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $user = $request->user();
+        $draft = new Outreach([
+            'subject' => $data['subject'] ?? '',
+            'body' => $data['body'] ?? '',
+            'cta_label' => $data['cta_label'] ?? null,
+            'cta_url' => $data['cta_url'] ?? null,
+        ]);
+
+        $rendered = app(MessageRenderer::class)->render($draft, $request->user());
+
         $mail = new OutreachMail(
-            $this->personalize($data['subject'] ?? '', $user) ?: __('Subject'),
-            $this->personalize($data['body'] ?? '', $user),
-            $data['cta_label'] ?? null,
-            $data['cta_url'] ?? null,
+            $rendered->subject ?: __('Subject'),
+            $rendered->body,
+            $rendered->ctaLabel,
+            $rendered->ctaUrl,
             $data['image_url'] ?? null,
         );
 
@@ -108,34 +116,29 @@ class OutreachController extends ApiController
             ];
         }, $request->file('files', []));
 
-        $recipients = $this->resolveAudience($data['audience'], $request->user(), $data['user_ids'] ?? []);
-
-        foreach ($recipients as $user) {
-            Mail::to($user->email)->queue(new OutreachMail(
-                $this->personalize($data['subject'], $user),
-                $this->personalize($data['body'], $user),
-                $data['cta_label'] ?? null,
-                $data['cta_url'] ?? null,
-                $data['image_url'] ?? null,
-                $attachments,
-            ));
-        }
-
-        Outreach::create([
-            'user_id' => $request->user()->id,
+        $outreach = $request->user()->outreaches()->create([
+            'channel' => 'email',
             'subject' => $data['subject'],
             'body' => $data['body'],
             'cta_label' => $data['cta_label'] ?? null,
             'cta_url' => $data['cta_url'] ?? null,
-            'image_url' => $data['image_url'] ?? null,
-            'audience' => $data['audience'],
-            'recipients' => $recipients->count(),
-            'sent' => $recipients->count(),
+            'audience' => [
+                'mode' => $data['audience'],
+                'user_ids' => $data['user_ids'] ?? [],
+                'actor_id' => $request->user()->id,
+            ],
+            'metadata' => [
+                'image_url' => $data['image_url'] ?? null,
+                'attachments' => $attachments,
+            ],
         ]);
 
+        $outreach = app(OutreachDispatcher::class)->dispatch($outreach);
+        $sent = $outreach->stats['sent'] ?? 0;
+
         return $this->success(
-            ['sent' => $recipients->count()],
-            __('Outreach sent to :count recipients', ['count' => $recipients->count()])
+            ['sent' => $sent],
+            __('Outreach sent to :count recipients', ['count' => $sent])
         );
     }
 
@@ -147,44 +150,16 @@ class OutreachController extends ApiController
     )]
     public function index(): JsonResponse
     {
-        $outreaches = Outreach::query()->latest()->limit(50)->get([
-            'id', 'subject', 'audience', 'recipients', 'sent', 'created_at',
+        $outreaches = Outreach::query()->latest()->limit(50)->get()->map(fn (Outreach $o) => [
+            'id' => $o->id,
+            'subject' => $o->subject,
+            'audience' => $o->audience['mode'] ?? null,
+            'recipients' => $o->stats['recipients'] ?? 0,
+            'sent' => $o->stats['sent'] ?? 0,
+            'image_url' => $o->metadata['image_url'] ?? null,
+            'created_at' => $o->created_at,
         ]);
 
         return $this->success($outreaches);
-    }
-
-    /**
-     * Resolve a named audience to its users. Segments are host-defined here;
-     * a future package will let these be configured rather than hard-coded.
-     *
-     * @param  int[]  $userIds
-     * @return \Illuminate\Support\Collection<int, User>
-     */
-    private function resolveAudience(string $audience, User $actor, array $userIds = []): \Illuminate\Support\Collection
-    {
-        return match ($audience) {
-            'test' => collect([$actor]),
-            'specific' => User::query()->whereIn('id', $userIds)->get(),
-            'active' => User::query()->whereHas('transactions', function ($q) {
-                $q->where('datetime', '>=', now()->subDays(30));
-            })->get(),
-            'inactive' => User::query()->whereDoesntHave('transactions', function ($q) {
-                $q->where('datetime', '>=', now()->subDays(30));
-            })->get(),
-            default => User::query()->get(),
-        };
-    }
-
-    private function personalize(string $text, User $user): string
-    {
-        $name = trim("{$user->first_name} {$user->last_name}");
-
-        return strtr($text, [
-            '{{first_name}}' => $user->first_name ?? '',
-            '{{last_name}}' => $user->last_name ?? '',
-            '{{name}}' => $name !== '' ? $name : ($user->first_name ?? ''),
-            '{{email}}' => $user->email,
-        ]);
     }
 }
