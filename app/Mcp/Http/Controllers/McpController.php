@@ -33,7 +33,7 @@ class McpController extends Controller
         );
 
         $server = new TrakliMcpServer($transport);
-        
+
         // Merge plugin capabilities
         $pluginManager = app(McpPluginManager::class);
         $server->mergePluginCapabilities($pluginManager);

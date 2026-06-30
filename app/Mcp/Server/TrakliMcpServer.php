@@ -126,9 +126,9 @@ class TrakliMcpServer extends BaseServer
     {
         return [
             new Icon(
-                href: '/icon.svg',
-                sizes: '1024x1024',
-                type: 'image/svg+xml'
+                src: '/icon.svg',
+                mimeType: 'image/svg+xml',
+                sizes: ['1024x1024']
             ),
         ];
     }

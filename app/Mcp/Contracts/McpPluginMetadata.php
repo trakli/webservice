@@ -19,7 +19,8 @@ final class McpPluginMetadata
         public readonly string $description,
         public readonly array $dependencies = [],
         public readonly array $permissions = [],
-    ) {}
+    ) {
+    }
 
     /**
      * Create from array (e.g., from plugin config).
@@ -58,6 +59,7 @@ final class McpPluginMetadata
      */
     public function getSlug(): string
     {
-        return strtolower(preg_replace('/[^a-z0-9]+/i', '-', $this->name));
+        $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $this->name));
+        return trim($slug, '-') ?: 'plugin-' . substr(md5($this->name), 0, 8);
     }
 }
