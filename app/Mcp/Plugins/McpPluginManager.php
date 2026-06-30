@@ -7,14 +7,15 @@ namespace App\Mcp\Plugins;
 use App\Mcp\Auth\McpGateRegistrar;
 use App\Mcp\Contracts\McpPluginMetadata;
 use App\Mcp\Contracts\ProvidesMcpCapabilities;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 use Laravel\Mcp\Server\Prompt;
 use Laravel\Mcp\Server\Resource;
 use Laravel\Mcp\Server\Tool;
+use RuntimeException;
 
 /**
  * Manages MCP plugin discovery, registration, and capability aggregation.
@@ -128,7 +129,11 @@ final class McpPluginManager
             return $this->installedPackages = [];
         }
 
-        $lockData = json_decode(file_get_contents($composerLockPath), true);
+        try {
+            $lockData = json_decode(file_get_contents($composerLockPath), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return $this->installedPackages = [];
+        }
         $packages = $lockData['packages'] ?? [];
 
         return $this->installedPackages = array_merge($packages, $lockData['packages-dev'] ?? []);
@@ -140,11 +145,11 @@ final class McpPluginManager
     private function registerPlugin(string $class): void
     {
         if (! class_exists($class)) {
-            throw new \InvalidArgumentException("Plugin class {$class} does not exist");
+            throw new InvalidArgumentException("Plugin class {$class} does not exist");
         }
 
         if (! is_subclass_of($class, ProvidesMcpCapabilities::class)) {
-            throw new \InvalidArgumentException("Plugin class {$class} must implement " . ProvidesMcpCapabilities::class);
+            throw new InvalidArgumentException("Plugin class {$class} must implement " . ProvidesMcpCapabilities::class);
         }
 
         /** @var ProvidesMcpCapabilities $plugin */
@@ -153,7 +158,7 @@ final class McpPluginManager
         $slug = $metadata->getSlug();
 
         if (isset($this->registeredPlugins[$slug])) {
-            throw new \RuntimeException("Duplicate MCP plugin slug: {$slug}");
+            throw new RuntimeException("Duplicate MCP plugin slug: {$slug}");
         }
 
         $this->validateDependencies($metadata);
@@ -195,7 +200,7 @@ final class McpPluginManager
             if (! isset($this->registeredPlugins[$dependency])) {
                 // Check if it's a package dependency
                 if (! $this->isPackageInstalled($dependency)) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         "Plugin {$metadata->name} requires dependency: {$dependency}"
                     );
                 }
@@ -231,7 +236,6 @@ final class McpPluginManager
     {
         $strictMode = Config::get('mcp.auth.strict_permissions', false);
         $configuredPermissions = Config::get('mcp.permissions', []);
-        $hasWarnings = false;
 
         foreach ($metadata->permissions as $permission) {
             $isConfigured = isset($configuredPermissions[$permission]);
@@ -241,16 +245,15 @@ final class McpPluginManager
                 Log::warning("MCP plugin {$metadata->name} declares unknown permission: {$permission}");
 
                 if ($strictMode) {
-                    throw new \RuntimeException(
+                    throw new RuntimeException(
                         "MCP plugin {$metadata->name} declares permission '{$permission}' " .
                         'which is not defined in config/mcp.php'
                     );
                 }
-                $hasWarnings = true;
             }
 
             if ($strictMode && ! $gateExists) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     "MCP plugin {$metadata->name} requires permission '{$permission}' " .
                     "but no Gate is registered for it"
                 );
@@ -258,7 +261,6 @@ final class McpPluginManager
 
             if (! $gateExists) {
                 Log::warning("MCP plugin {$metadata->name} declares permission '{$permission}' but no Gate is registered");
-                $hasWarnings = true;
             }
         }
 

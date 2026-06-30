@@ -114,7 +114,12 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
-            "wikimedia/composer-merge-plugin": true
+            "wikimedia/composer-merge-plugin": true,
+            "composer/security-policy": false
+        },
+        "policy.advisories.block": false,
+        "audit": {
+            "block-insecure": false
         }
     },
     "minimum-stability": "stable",

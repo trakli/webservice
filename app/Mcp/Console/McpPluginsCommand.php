@@ -105,8 +105,6 @@ class McpPluginsCommand extends Command
 
     private function runVerification(McpPluginManager $manager, array $plugins): int
     {
-        $exitCode = 0;
-
         $this->info('Running MCP plugin verification...');
         $this->newLine();
 
@@ -116,8 +114,35 @@ class McpPluginsCommand extends Command
             return 0;
         }
 
-        // 1. Plugin contract checks
+        $contractsPass = $this->verifyPluginContracts($manager, $plugins);
+        $this->verifyCapabilityAggregation($manager, $plugins);
+        $this->detectCollisions($manager);
+
+        // 4. Total aggregated capabilities
+        $this->newLine();
+        $this->line('4. Aggregated Totals:');
+        $this->line('   Tools: ' . count($manager->getTools()));
+        $this->line('   Resources: ' . count($manager->getResources()));
+        $this->line('   Prompts: ' . count($manager->getPrompts()));
+
+        $this->newLine();
+        if ($contractsPass) {
+            $this->info('Verification: PASS');
+            return 0;
+        }
+
+        $this->error('Verification: FAIL');
+        return 1;
+    }
+
+    /**
+     * @param array<string, \App\Mcp\Contracts\McpPluginMetadata> $plugins
+     */
+    private function verifyPluginContracts(McpPluginManager $manager, array $plugins): bool
+    {
         $this->line('1. Plugin Contract Checks:');
+        $allPass = true;
+
         foreach ($plugins as $slug => $metadata) {
             $plugin = $manager->getPlugin($slug);
 
@@ -125,7 +150,7 @@ class McpPluginsCommand extends Command
 
             if ($plugin === null) {
                 $this->error('FAIL (not retrievable)');
-                $exitCode = 1;
+                $allPass = false;
 
                 continue;
             }
@@ -133,25 +158,32 @@ class McpPluginsCommand extends Command
             $checks = [
                 'name' => ! empty($metadata->name),
                 'version' => ! empty($metadata->version) && preg_match('/^\d+\.\d+\.\d+$/', $metadata->version),
-                'tools_array' => is_array($plugin->registerTools()),
-                'resources_array' => is_array($plugin->registerResources()),
-                'prompts_array' => is_array($plugin->registerPrompts()),
+                'tools_array' => collect($plugin->registerTools())->every(fn ($t) => class_exists((string) $t)),
+                'resources_array' => collect($plugin->registerResources())->every(fn ($t) => class_exists((string) $t)),
+                'prompts_array' => collect($plugin->registerPrompts())->every(fn ($t) => class_exists((string) $t)),
                 'slug' => ! empty($slug) && preg_match('/^[a-z0-9-]+$/', $slug),
             ];
 
-            $failures = array_filter($checks, fn ($v) => ! $v);
+            $failures = array_filter($checks, fn ($isValid) => ! $isValid);
             if ($failures === []) {
                 $this->info('PASS');
             } else {
                 $this->error('FAIL (' . implode(', ', array_keys($failures)) . ')');
-                $exitCode = 1;
+                $allPass = false;
             }
         }
 
-        // 2. Capability aggregation checks
+        return $allPass;
+    }
+
+    /**
+     * @param array<string, \App\Mcp\Contracts\McpPluginMetadata> $plugins
+     */
+    private function verifyCapabilityAggregation(McpPluginManager $manager, array $plugins): void
+    {
         $this->newLine();
         $this->line('2. Capability Aggregation:');
-        foreach ($plugins as $slug => $metadata) {
+        foreach (array_keys($plugins) as $slug) {
             $plugin = $manager->getPlugin($slug);
 
             $toolCount = count($plugin?->registerTools() ?? []);
@@ -160,14 +192,16 @@ class McpPluginsCommand extends Command
 
             $this->line("   {$slug}: {$toolCount} tool(s), {$resourceCount} resource(s), {$promptCount} prompt(s)");
         }
+    }
 
-        // 3. Collision check
+    private function detectCollisions(McpPluginManager $manager): void
+    {
         $this->newLine();
         $this->line('3. Collision Detection:');
         $allNames = [];
         $collisions = [];
-        foreach ($manager->getAllCapabilities() as $prefixedName => $class) {
-            $base = preg_replace('/^[a-z0-9-]+\./', '', $prefixedName);
+        foreach (array_keys($manager->getAllCapabilities()) as $prefixedName) {
+            $base = preg_replace('/^[a-z0-9-]+\./', '', (string) $prefixedName);
             if (isset($allNames[$base])) {
                 $collisions[] = "{$base} (from {$allNames[$base]} and {$prefixedName})";
             }
@@ -181,21 +215,5 @@ class McpPluginsCommand extends Command
                 $this->warn("   Collision: {$collision}");
             }
         }
-
-        // 4. Total aggregated capabilities
-        $this->newLine();
-        $this->line('4. Aggregated Totals:');
-        $this->line('   Tools: ' . count($manager->getTools()));
-        $this->line('   Resources: ' . count($manager->getResources()));
-        $this->line('   Prompts: ' . count($manager->getPrompts()));
-
-        $this->newLine();
-        if ($exitCode === 0) {
-            $this->info('Verification: PASS');
-        } else {
-            $this->error('Verification: FAIL');
-        }
-
-        return $exitCode;
     }
 }

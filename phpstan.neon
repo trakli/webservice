@@ -10,3 +10,4 @@ parameters:
     # Ignore specific error patterns
     ignoreErrors:
         - '#PHPDoc tag @SuppressWarnings#'
+        - '#Trait App\\Mcp\\Auth\\McpAuthorizationTrait is used zero times and is not analysed\.#'

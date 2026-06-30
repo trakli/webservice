@@ -35,9 +35,11 @@ class SseTransport implements Transport
         // Check if there is an active SSE stream listener for this session
         if (Cache::has("mcp:active_session:{$session}")) {
             $key = "mcp:sse:{$session}";
-            $existing = Cache::get($key, []);
-            $existing[] = $message;
-            Cache::put($key, $existing, 60);
+            Cache::lock("lock:{$key}", 5)->block(2, function () use ($key, $message): void {
+                $existing = Cache::get($key, []);
+                $existing[] = $message;
+                Cache::put($key, $existing, 60);
+            });
 
             $this->reply = null;
             $this->replySessionId = $session;
@@ -72,12 +74,17 @@ class SseTransport implements Transport
                     Cache::put($sessionKey, true, 60);
 
                     // Process pending messages
-                    if (Cache::has($msgKey)) {
-                        $messages = Cache::pull($msgKey);
-                        if (is_array($messages)) {
-                            foreach ($messages as $message) {
-                                $this->sendStreamMessage((string) $message, 'message');
+                    $lock = Cache::lock("lock:{$msgKey}", 5);
+                    if ($lock->get()) {
+                        try {
+                            $messages = Cache::pull($msgKey);
+                            if (is_array($messages)) {
+                                foreach ($messages as $message) {
+                                    $this->sendStreamMessage((string) $message, 'message');
+                                }
                             }
+                        } finally {
+                            $lock->release();
                         }
                     }
 
@@ -91,7 +98,7 @@ class SseTransport implements Transport
                         $lastHeartbeat = time();
                     }
 
-                    usleep(100000); // 100ms
+                    usleep(250000); // 250ms
                 }
 
                 Cache::forget($sessionKey);
@@ -164,7 +171,8 @@ class SseTransport implements Transport
 
         $headers = [
             'Content-Type' => $isSse ? 'text/event-stream' : 'application/json',
-            'Cache-Control' => 'no-cache',
+            'Cache-Control' => $isSse ? 'no-cache, private' : 'no-cache',
+            'Connection' => $isSse ? 'keep-alive' : 'close',
             'X-Accel-Buffering' => 'no',
         ];
 
