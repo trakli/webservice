@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0635fd09d1774c0cfb7dadfafc82e49e",
+    "content-hash": "2979e99e43e1df97eb572c40ec5cd166",
     "packages": [
         {
             "name": "beste/clock",
@@ -8923,16 +8923,16 @@
         },
         {
             "name": "whilesmart/eloquent-holdings",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-holdings.git",
-                "reference": "f58e8543f0ea10fa24458aed26f736426b16fc52"
+                "reference": "9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-holdings/zipball/f58e8543f0ea10fa24458aed26f736426b16fc52",
-                "reference": "f58e8543f0ea10fa24458aed26f736426b16fc52",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-holdings/zipball/9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2",
+                "reference": "9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2",
                 "shasum": ""
             },
             "require": {
@@ -8971,9 +8971,9 @@
             "description": "Polymorphic holdings register (crypto, stocks, property, any asset) for Laravel: track quantity and value, with pluggable live pricing.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-holdings/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-holdings/tree/v1.0.0"
+                "source": "https://github.com/whilesmartphp/eloquent-holdings/tree/v1.1.0"
             },
-            "time": "2026-06-27T11:16:36+00:00"
+            "time": "2026-07-04T21:10:17+00:00"
         },
         {
             "name": "whilesmart/eloquent-model-configuration",
