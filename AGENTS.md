@@ -1,13 +1,37 @@
 # AGENTS.md
 
-Conventions for keeping the AI assistant in sync with the data model. The
-assistant can only see and act on what we expose to it, so adding a model
-without tools leaves a feature the AI is blind to.
+Conventions for changing the Trakli backend. See `CLAUDE.md` for the wider
+project map.
+
+## Rule: API responses use one envelope
+
+Every response an API controller returns goes through the shared envelope. Do
+not return a bare `response()->json([...])`.
+
+- Success: `{ success, message, data }` via `$this->success($data, $message, $status)`.
+- Failure: `{ success, message, errors }` via `$this->failure($message, $status, $errors)`.
+- Lists: the flat pagination shape (`data: { data: [...], current_page, last_page, per_page, total }`)
+  built by `applyApiQuery()` in `app/Http/Traits/ApiQueryable.php`. Never expose Laravel's
+  `links`/`meta` resource-collection wrapper.
+
+Controllers extend `ApiController`, which provides `success()`/`failure()`. The envelope is
+defined once in the response formatter (`config('user-authentication.response_formatter')`),
+so shape it there, not inline per controller.
+
+A reusable package must not hardcode its response shape. Expose a formatter the host app can
+bind, the way `laravel-user-authentication` and `eloquent-holdings` do, then bind Trakli's own
+formatter so the package's responses match this envelope.
+
+Why it is a hard rule: the mobile and web clients parse `success`, `message`, and the flat
+pagination keys as required fields. A response missing any of them does not degrade, it
+crashes the client.
 
 ## Rule: new user-facing models ship with AI access
 
-When you add an Eloquent model / table that holds user data (or a meaningful new
-field on one), in the same change also do the following.
+The assistant can only see and act on what we expose to it, so adding a model
+without tools leaves a feature the AI is blind to. When you add an Eloquent
+model / table that holds user data (or a meaningful new field on one), in the
+same change also do the following.
 
 ### 1. Read tool
 

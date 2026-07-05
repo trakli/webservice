@@ -346,7 +346,8 @@ class StatsControllerTest extends TestCase
         ])->getJson('/api/v1/stats?wallet_ids=999999');
 
         $response->assertStatus(422)
-            ->assertJsonStructure(['message', 'invalid_wallet_ids']);
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['message', 'errors' => ['invalid_wallet_ids']]);
     }
 
     /** @test */
@@ -906,7 +907,8 @@ class StatsControllerTest extends TestCase
 
         $response = $this->statsRequest('?section=bogus');
         $response->assertStatus(422)
-            ->assertJsonStructure(['message', 'invalid_section', 'valid_sections']);
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['message', 'errors' => ['invalid_section', 'valid_sections']]);
     }
 
     /** @test */

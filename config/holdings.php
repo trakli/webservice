@@ -8,4 +8,7 @@ return [
 
     // Default fiat currency for new holdings when none is supplied.
     'default_currency' => env('HOLDINGS_DEFAULT_CURRENCY', 'USD'),
+
+    // Shape holdings responses like the rest of the Trakli API.
+    'response_formatter' => \App\Holdings\TrakliHoldingResponseFormatter::class,
 ];
