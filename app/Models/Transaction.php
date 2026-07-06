@@ -117,6 +117,7 @@ class Transaction extends Model
         'wallet_id',
         'user_id',
         'transfer_id',
+        'metadata',
         'updated_at',
         'created_at',
     ];
@@ -129,6 +130,7 @@ class Transaction extends Model
     protected $casts = [
         'datetime' => 'datetime',
         'amount' => 'decimal:2',
+        'metadata' => 'array',
     ];
 
     protected $attributes = [

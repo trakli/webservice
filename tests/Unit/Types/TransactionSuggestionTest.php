@@ -35,6 +35,10 @@ class TransactionSuggestionTest extends TestCase
             'date' => '2025-01-15',
             'confidence' => 0.95,
             'document_type' => 'csv',
+            'fee' => null,
+            'tax' => null,
+            'account' => null,
+            'reference' => null,
         ], $array);
     }
 
@@ -128,6 +132,29 @@ class TransactionSuggestionTest extends TestCase
         $this->assertNull($suggestion->date);
         $this->assertEquals(1.0, $suggestion->confidence);
         $this->assertNull($suggestion->documentType);
+        $this->assertNull($suggestion->fee);
+        $this->assertNull($suggestion->tax);
+        $this->assertNull($suggestion->account);
+        $this->assertNull($suggestion->reference);
+    }
+
+    public function test_fee_account_and_reference_round_trip(): void
+    {
+        $original = new TransactionSuggestion(
+            amount: 2000.0,
+            type: 'expense',
+            fee: 8.0,
+            tax: 0.0,
+            account: '+237 68 09 11 37 4',
+            reference: '17544382009',
+        );
+
+        $restored = TransactionSuggestion::fromArray($original->toArray());
+
+        $this->assertEquals(8.0, $restored->fee);
+        $this->assertEquals(0.0, $restored->tax);
+        $this->assertEquals('+237 68 09 11 37 4', $restored->account);
+        $this->assertEquals('17544382009', $restored->reference);
     }
 
     public function test_from_array_handles_missing_keys_gracefully(): void
