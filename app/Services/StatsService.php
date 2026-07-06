@@ -180,7 +180,9 @@ class StatsService
             $amount = $this->convertCurrency((float) $row->total_amount, $row->currency);
             $intent = TransactionIntent::tryFrom($row->intent ?? 'regular') ?? TransactionIntent::REGULAR;
 
-            if ($intent === TransactionIntent::REGULAR) {
+            // A fee is real spending that erodes net worth; treat it like a
+            // regular expense here even though it is tagged separately.
+            if ($intent === TransactionIntent::REGULAR || $intent === TransactionIntent::FEE) {
                 if ($row->type === 'income') {
                     $earnedIncome += $amount;
                 } else {

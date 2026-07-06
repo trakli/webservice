@@ -499,11 +499,12 @@ class ImportController extends ApiController
             'parties' => $request->boolean('auto_create_parties', false),
             'categories' => $request->boolean('auto_create_categories', false),
         ];
+        $linkFees = $request->boolean('link_fees', false);
         $createdCount = 0;
         $errors = [];
 
         foreach ($accepted as $item) {
-            $result = $this->processAcceptedItem($item, $suggestions, $user, $autoCreate);
+            $result = $this->processAcceptedItem($item, $suggestions, $user, $autoCreate, $linkFees);
 
             if ($result === true) {
                 $createdCount++;
@@ -535,7 +536,7 @@ class ImportController extends ApiController
      *
      * @return true|string True on success, error message string on failure
      */
-    private function processAcceptedItem(array $item, array $suggestions, $user, array $autoCreate = []): true|string
+    private function processAcceptedItem(array $item, array $suggestions, $user, array $autoCreate = [], bool $linkFees = false): true|string
     {
         $index = $item['index'];
 
@@ -558,6 +559,7 @@ class ImportController extends ApiController
                 autoCreateWallets: $autoCreate['wallets'] ?? false,
                 autoCreateParties: $autoCreate['parties'] ?? false,
                 autoCreateCategories: $autoCreate['categories'] ?? false,
+                linkFee: $linkFees,
             );
 
             return true;
@@ -577,7 +579,7 @@ class ImportController extends ApiController
     private function mergeUserEdits(array $suggestion, array $item): array
     {
         $fields = [
-            'amount', 'type', 'description', 'date',
+            'amount', 'type', 'description', 'date', 'fee',
             'wallet_id', 'party_id', 'category_id',
         ];
         foreach ($fields as $field) {

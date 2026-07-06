@@ -19,9 +19,11 @@ class ImportConfirmRequest extends FormRequest
             'accepted.*.type' => 'nullable|string|in:income,expense',
             'accepted.*.description' => 'nullable|string',
             'accepted.*.date' => 'nullable|date_format:Y-m-d',
+            'accepted.*.fee' => 'nullable|numeric|min:0',
             'auto_create_wallets' => 'nullable|boolean',
             'auto_create_parties' => 'nullable|boolean',
             'auto_create_categories' => 'nullable|boolean',
+            'link_fees' => 'nullable|boolean',
         ];
     }
 }

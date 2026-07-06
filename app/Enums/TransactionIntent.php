@@ -12,6 +12,7 @@ enum TransactionIntent: string
     case INVESTMENT_BUY = 'investment_buy';
     case INVESTMENT_RETURN = 'investment_return';
     case GIFT = 'gift';
+    case FEE = 'fee';
 
     /**
      * @return string[]
@@ -29,6 +30,7 @@ enum TransactionIntent: string
             self::DEBT_OWED, self::DEBT_SETTLED => 'debt',
             self::INVESTMENT_BUY, self::INVESTMENT_RETURN => 'investment',
             self::GIFT => 'gift',
+            self::FEE => 'fee',
         };
     }
 
@@ -39,7 +41,7 @@ enum TransactionIntent: string
     public function sign(): int
     {
         return match ($this) {
-            self::LOAN_REPAYMENT, self::DEBT_SETTLED, self::INVESTMENT_BUY => -1,
+            self::LOAN_REPAYMENT, self::DEBT_SETTLED, self::INVESTMENT_BUY, self::FEE => -1,
             default => 1,
         };
     }
