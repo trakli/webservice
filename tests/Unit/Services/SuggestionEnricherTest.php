@@ -291,6 +291,119 @@ class SuggestionEnricherTest extends TestCase
         $this->assertEquals('expense', $result[0]->type);
     }
 
+    public function test_document_context_corrects_account_number_mistaken_for_amount(): void
+    {
+        $this->user->wallets()->create([
+            'name' => 'MoMo',
+            'currency' => 'GHS',
+            'type' => 'mobile',
+        ]);
+
+        // The reviewer, given the source document, replaces the account-number
+        // amount with the real transaction value and echoes date/currency.
+        $llmResponse = json_encode([
+            [
+                'wallet' => 'MoMo',
+                'category' => null,
+                'party' => 'Airtime',
+                'type' => 'expense',
+                'description' => 'Airtime purchase',
+                'amount' => 25.00,
+                'currency' => 'GHS',
+                'date' => '2025-03-16',
+            ],
+        ]);
+
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: $llmResponse,
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(0, 0),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+
+        // Parsed amount is actually an account number picked from the statement.
+        $suggestions = [
+            new TransactionSuggestion(
+                amount: 244123456.0,
+                currency: 'GHS',
+                type: 'expense',
+                description: 'Airtime purchase',
+                date: '2025-03-16',
+                confidence: 0.8,
+            ),
+        ];
+
+        $context = "2025-03-16\nAirtime purchase to 0244123456\nAmount: GHS 25.00";
+
+        $result = $this->enricher->enrich($suggestions, $this->user, $context);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(25.00, $result[0]->amount);
+        $this->assertEquals('GHS', $result[0]->currency);
+        $this->assertEquals('2025-03-16', $result[0]->date);
+    }
+
+    public function test_invalid_corrected_amount_falls_back_to_original(): void
+    {
+        $this->user->wallets()->create([
+            'name' => 'MoMo',
+            'currency' => 'GHS',
+            'type' => 'mobile',
+        ]);
+
+        // LLM returns a non-numeric amount and a malformed date; both must be
+        // ignored in favour of the originally parsed values.
+        $llmResponse = json_encode([
+            [
+                'wallet' => 'MoMo',
+                'category' => null,
+                'party' => null,
+                'type' => 'expense',
+                'description' => 'Groceries',
+                'amount' => 'not-a-number',
+                'currency' => 'GH',
+                'date' => 'March 16',
+            ],
+        ]);
+
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: $llmResponse,
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(0, 0),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+
+        $suggestions = [
+            new TransactionSuggestion(
+                amount: 42.50,
+                currency: 'GHS',
+                type: 'expense',
+                description: 'Groceries',
+                date: '2025-03-16',
+                confidence: 0.8,
+            ),
+        ];
+
+        $result = $this->enricher->enrich($suggestions, $this->user, 'some document text');
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(42.50, $result[0]->amount);
+        $this->assertEquals('GHS', $result[0]->currency);
+        $this->assertEquals('2025-03-16', $result[0]->date);
+    }
+
     public function test_enrichment_strips_markdown_fences_from_llm_response(): void
     {
         $this->user->wallets()->create([
@@ -299,7 +412,7 @@ class SuggestionEnricherTest extends TestCase
             'type' => 'cash',
         ]);
 
-        $llmResponse = "```json\n" . json_encode([
+        $llmResponse = "```json\n".json_encode([
             [
                 'wallet' => 'Wallet',
                 'category' => 'Travel',
@@ -307,7 +420,7 @@ class SuggestionEnricherTest extends TestCase
                 'type' => 'expense',
                 'description' => 'Flight ticket',
             ],
-        ]) . "\n```";
+        ])."\n```";
 
         Prism::fake([
             new TextResponse(

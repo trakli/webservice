@@ -327,6 +327,73 @@ class RemoteDocumentProcessorTest extends TestCase
         $this->assertEquals(100.00, $result[0]->amount);
     }
 
+    public function test_leading_zero_account_number_is_not_treated_as_amount(): void
+    {
+        config([
+            'services.document_processor.url' => 'https://example.com/parse',
+            'services.document_processor.auth_type' => 'none',
+            'services.document_processor.response_mapping' => [
+                'mode' => 'text_block',
+                'transactions_path' => 'elements',
+                'content_field' => 'content',
+                'line_mapping' => [
+                    'date' => 0,
+                    'description' => 1,
+                    'amount' => 2,
+                    'currency' => 3,
+                ],
+            ],
+        ]);
+
+        // First block's "amount" line is really an account/phone number
+        // (leading zero, long digit run); the second is a genuine amount.
+        Http::fake([
+            'https://example.com/parse' => Http::response([
+                'elements' => [
+                    ['content' => "2025-03-15\nMoMo transfer\n0244123456\nGHS"],
+                    ['content' => "2025-03-16\nAirtime purchase\n25.00\nGHS"],
+                ],
+            ], 200),
+        ]);
+
+        $file = UploadedFile::fake()->create('momo.pdf', 100, 'application/pdf');
+
+        $result = $this->processor->process($file, $this->user);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(25.00, $result[0]->amount);
+        $this->assertEquals('Airtime purchase', $result[0]->description);
+    }
+
+    public function test_last_extraction_context_is_populated_from_response(): void
+    {
+        config([
+            'services.document_processor.url' => 'https://example.com/parse',
+            'services.document_processor.auth_type' => 'none',
+            'services.document_processor.response_mapping' => [
+                'mode' => 'fields',
+                'transactions_path' => 'transactions',
+            ],
+        ]);
+
+        Http::fake([
+            'https://example.com/parse' => Http::response([
+                'transactions' => [],
+                'elements' => [
+                    ['content' => 'MoMo transfer to 0244123456 amount GHS 25.00'],
+                ],
+            ], 200),
+        ]);
+
+        $file = UploadedFile::fake()->create('momo.pdf', 100, 'application/pdf');
+
+        $this->processor->process($file, $this->user);
+
+        $context = $this->processor->lastExtractionContext();
+        $this->assertNotNull($context);
+        $this->assertStringContainsString('GHS 25.00', $context);
+    }
+
     public function test_llm_fallback_when_mapping_returns_empty(): void
     {
         config([
