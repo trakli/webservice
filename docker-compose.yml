@@ -13,6 +13,19 @@ services:
         depends_on:
             - mysql
 
+    worker:
+        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        # queue:listen (not queue:work) reboots the framework per job so code
+        # edits are picked up without restarting the worker.
+        command: php artisan queue:listen --tries=3 --timeout=120
+        tty: true
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - trakli
+        depends_on:
+            - mysql
+
     mysql:
         image: 'mysql:8.0'
         ports:
