@@ -16,6 +16,10 @@ readonly class TransactionSuggestion
         public ?string $date = null,
         public float $confidence = 1.0,
         public ?string $documentType = null,
+        public ?float $fee = null,
+        public ?float $tax = null,
+        public ?string $account = null,
+        public ?string $reference = null,
     ) {
     }
 
@@ -32,6 +36,10 @@ readonly class TransactionSuggestion
             'date' => $this->date,
             'confidence' => $this->confidence,
             'document_type' => $this->documentType,
+            'fee' => $this->fee,
+            'tax' => $this->tax,
+            'account' => $this->account,
+            'reference' => $this->reference,
         ];
     }
 
@@ -65,6 +73,10 @@ readonly class TransactionSuggestion
             date: $data['date'] ?? null,
             confidence: (float) ($data['confidence'] ?? 1.0),
             documentType: $data['document_type'] ?? null,
+            fee: isset($data['fee']) ? (float) $data['fee'] : null,
+            tax: isset($data['tax']) ? (float) $data['tax'] : null,
+            account: $data['account'] ?? null,
+            reference: $data['reference'] ?? null,
         );
     }
 }

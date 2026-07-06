@@ -5,6 +5,7 @@ namespace App\Services\DocumentProcessors;
 use App\Contracts\DocumentProcessor;
 use App\Contracts\ProvidesExtractionContext;
 use App\Models\User;
+use App\Services\StatementStructurer;
 use App\Types\TransactionSuggestion;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
@@ -85,6 +86,17 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         // parsed values (amount, date, currency) against the source document.
         $rawText = $this->extractRawText($response);
         $this->lastContext = $rawText !== '' ? $rawText : null;
+
+        // OCR/text services collapse each row's columns into one string, so the
+        // fixed line-index mapping mis-slots values (an account number or phone
+        // code becomes the amount). Read the header semantically instead.
+        $mode = config('services.document_processor.response_mapping.mode', 'fields');
+        if ($mode === 'text_block' && $rawText !== '') {
+            $structured = (new StatementStructurer())->structure($rawText);
+            if (! empty($structured)) {
+                return $structured;
+            }
+        }
 
         $suggestions = $this->parseResponse($response);
 
