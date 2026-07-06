@@ -3,6 +3,7 @@
 namespace App\Services\DocumentProcessors;
 
 use App\Contracts\DocumentProcessor;
+use App\Contracts\ProvidesExtractionContext;
 use App\Models\User;
 use App\Types\TransactionSuggestion;
 use Carbon\Carbon;
@@ -35,9 +36,11 @@ use Prism\Prism\Facades\Prism;
  *       line_mapping: { date: 0, description: 1, amount: 2, currency: 3 } (line index per field)
  *       filter: { key: "subtype", value: "paragraph" } (optional, only process items matching this)
  */
-class RemoteDocumentProcessor implements DocumentProcessor
+class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionContext
 {
     private const SUPPORTED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'tiff', 'tif', 'bmp'];
+
+    private ?string $lastContext = null;
 
     private const SUPPORTED_MIMES = [
         'application/pdf',
@@ -64,6 +67,8 @@ class RemoteDocumentProcessor implements DocumentProcessor
      */
     public function process(UploadedFile $file, User $user): array
     {
+        $this->lastContext = null;
+
         $url = config('services.document_processor.url');
 
         if (empty($url)) {
@@ -76,18 +81,25 @@ class RemoteDocumentProcessor implements DocumentProcessor
             return [];
         }
 
+        // Retain the extracted text/tables so the downstream review can validate
+        // parsed values (amount, date, currency) against the source document.
+        $rawText = $this->extractRawText($response);
+        $this->lastContext = $rawText !== '' ? $rawText : null;
+
         $suggestions = $this->parseResponse($response);
 
         // Fallback: if mapping couldn't extract transactions, send raw data to LLM
-        if (empty($suggestions)) {
-            $rawText = $this->extractRawText($response);
-            if (! empty($rawText)) {
-                Log::info('RemoteDocumentProcessor: mapping returned empty, falling back to LLM');
-                $suggestions = $this->extractViaLlm($rawText);
-            }
+        if (empty($suggestions) && ! empty($rawText)) {
+            Log::info('RemoteDocumentProcessor: mapping returned empty, falling back to LLM');
+            $suggestions = $this->extractViaLlm($rawText);
         }
 
         return $suggestions;
+    }
+
+    public function lastExtractionContext(): ?string
+    {
+        return $this->lastContext;
     }
 
     private function callRemote(UploadedFile $file): ?array
@@ -197,6 +209,10 @@ class RemoteDocumentProcessor implements DocumentProcessor
                 continue;
             }
 
+            if ($this->isLikelyNonMonetary((string) $amount)) {
+                continue;
+            }
+
             $rawAmount = (float) str_replace(',', '', (string) $amount);
             $type = Arr::get($tx, $typeField);
 
@@ -265,6 +281,10 @@ class RemoteDocumentProcessor implements DocumentProcessor
             return null;
         }
 
+        if ($this->isLikelyNonMonetary($amount)) {
+            return null;
+        }
+
         $normalizedDate = $this->normalizeDate($date);
         if ($normalizedDate === null) {
             return null;
@@ -309,6 +329,20 @@ class RemoteDocumentProcessor implements DocumentProcessor
         }
 
         return null;
+    }
+
+    /**
+     * Conservative, non-AI floor: reject tokens that are clearly identifiers
+     * rather than money. A monetary amount never has a leading zero on its
+     * integer part, so a long leading-zero digit run (e.g. "0244123456") is an
+     * account/phone/reference number, not an amount. Deliberately narrow so it
+     * never drops a valid amount; the nuanced correction is the reviewer's job.
+     */
+    private function isLikelyNonMonetary(string $raw): bool
+    {
+        $digits = preg_replace('/[\s,]/', '', trim($raw));
+
+        return (bool) preg_match('/^0\d{6,}$/', (string) $digits);
     }
 
     private function getLine(array $lines, ?int $index): ?string

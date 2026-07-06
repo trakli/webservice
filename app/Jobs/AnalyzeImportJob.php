@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Contracts\ProvidesExtractionContext;
 use App\Models\ImportSession;
 use App\Services\DocumentProcessorManager;
 use App\Services\DuplicateDetectionService;
@@ -72,6 +73,10 @@ class AnalyzeImportJob implements ShouldQueue
             $processor = $processorManager->getProcessor($this->mimeType, $this->extension);
             $suggestions = $processor->process($file, $user);
 
+            $documentContext = $processor instanceof ProvidesExtractionContext
+                ? $processor->lastExtractionContext()
+                : null;
+
             if (empty($suggestions)) {
                 $session->update([
                     'status' => 'failed',
@@ -85,7 +90,7 @@ class AnalyzeImportJob implements ShouldQueue
             // Stage 2: Enriching
             $session->update(['status' => 'enriching']);
 
-            $suggestions = $enricher->enrich($suggestions, $user);
+            $suggestions = $enricher->enrich($suggestions, $user, $documentContext);
 
             // Stage 3: Checking duplicates
             $session->update(['status' => 'checking']);
