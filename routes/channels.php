@@ -16,3 +16,11 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
+Broadcast::channel('chat-session.{id}', function ($user, $id) {
+    $session = \App\Models\ChatSession::find($id);
+
+    return $session
+        && $session->owner_type === $user->getMorphClass()
+        && (int) $session->owner_id === (int) $user->getKey();
+});

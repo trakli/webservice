@@ -14,6 +14,7 @@
         "cviebrock/eloquent-sluggable": "^11.0",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^11.45.1",
+        "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "prism-php/prism": "^0.100.1",

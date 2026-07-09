@@ -57,12 +57,14 @@ class ChatMessage extends Model
         'format_hint',
         'language',
         'result',
+        'progress',
         'error',
         'completed_at',
     ];
 
     protected $casts = [
         'result' => 'array',
+        'progress' => 'array',
         'completed_at' => 'datetime',
     ];
 

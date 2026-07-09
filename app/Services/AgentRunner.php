@@ -4,8 +4,11 @@ namespace App\Services;
 
 use App\Ai\BlockBuilder;
 use App\Ai\BlockCollector;
+use App\Events\ChatTurnEvent;
 use App\Models\ChatMessage;
+use Whilesmart\Agents\Enums\StreamEventType;
 use Whilesmart\Agents\Facades\Agents;
+use Whilesmart\Agents\ValueObjects\AgentStreamEvent;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
 /**
@@ -44,7 +47,12 @@ class AgentRunner
         $collector = new BlockCollector();
         app()->instance(BlockCollector::class, $collector);
 
-        $result = Agents::run('trakli', $this->buildInput($userMessage), $context);
+        $result = Agents::stream(
+            'trakli',
+            $this->buildInput($userMessage),
+            $context,
+            fn (AgentStreamEvent $event) => $this->reportProgress($assistantMessage, $event),
+        );
 
         if (! $result->ok) {
             return ['ok' => false, 'error' => $result->error ?? __('The assistant could not complete the request.')];
@@ -75,6 +83,61 @@ class AgentRunner
             'tool_calls' => $result->toolCalls,
             'usage' => $result->usage,
         ];
+    }
+
+    /**
+     * Append a human-readable step to the assistant message as the agent works,
+     * so a client polling the message shows live progress instead of a spinner.
+     * Consecutive identical labels collapse (the model emits several render_*
+     * calls in a row that all mean "building the report").
+     */
+    private function reportProgress(?ChatMessage $assistantMessage, AgentStreamEvent $event): void
+    {
+        if ($assistantMessage === null || $event->type !== StreamEventType::ToolCall || $event->toolName === null) {
+            return;
+        }
+
+        $label = $this->progressLabel($event->toolName);
+        if ($label === null) {
+            return;
+        }
+
+        $progress = $assistantMessage->progress ?? [];
+        if (end($progress) === $label) {
+            return;
+        }
+
+        $progress[] = $label;
+        $assistantMessage->progress = $progress;
+        $assistantMessage->save();
+
+        // Push the step live; the saved progress remains the poll/reconnect
+        // fallback. A broadcaster that is down must never break the turn.
+        try {
+            ChatTurnEvent::dispatch($assistantMessage->chat_session_id, $assistantMessage->id, 'progress', $label);
+        } catch (\Throwable $e) {
+            // Ignored: streaming is best-effort, the answer still completes.
+        }
+    }
+
+    private function progressLabel(string $tool): ?string
+    {
+        if (str_starts_with($tool, 'render_') || $tool === 'open_canvas' || $tool === 'update_canvas') {
+            return __('Putting your report together');
+        }
+
+        return match ($tool) {
+            'smartql.query' => __('Looking through your records'),
+            'get_stats' => __('Crunching the numbers'),
+            'list_wallets', 'list_categories', 'list_parties' => __('Checking your accounts'),
+            'get_exchange_rate', 'get_asset_price' => __('Fetching current rates'),
+            'calculator' => __('Working out the figures'),
+            'record_transaction', 'record_transfer', 'create_wallet',
+            'create_category', 'create_party', 'categorize_transaction',
+            'attach_to_transaction' => __('Preparing your changes'),
+            'import_document', 'extract_receipt' => __('Reading your document'),
+            default => null,
+        };
     }
 
     /**
@@ -116,7 +179,7 @@ class AgentRunner
                 return "- {$name}{$kind}";
             })->implode("\n");
 
-            $parts[] = "The user attached the following file(s) to this message; "
+            $parts[] = 'The user attached the following file(s) to this message; '
                 . "use the import or receipt tools to process them:\n{$list}";
         }
 
