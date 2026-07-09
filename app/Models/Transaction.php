@@ -137,7 +137,7 @@ class Transaction extends Model
         'intent' => 'regular',
     ];
 
-    protected $hidden = ['transfer'];
+    protected $hidden = ['transfer', 'groups', 'recurringTransactionRule', 'refund'];
 
     protected $appends = [
         'wallet',
@@ -176,7 +176,7 @@ class Transaction extends Model
 
     public function getCategoriesAttribute()
     {
-        return $this->categories()->get();
+        return $this->getRelationValue('categories');
     }
 
     public function categories(): MorphToMany
@@ -186,7 +186,7 @@ class Transaction extends Model
 
     public function getWalletAttribute()
     {
-        return $this->wallet()->first();
+        return $this->getRelationValue('wallet');
     }
 
     public function transfer()
@@ -201,7 +201,7 @@ class Transaction extends Model
 
     public function getPartyAttribute()
     {
-        return $this->party()->first();
+        return $this->getRelationValue('party');
     }
 
     public function party()
@@ -216,7 +216,7 @@ class Transaction extends Model
 
     public function getFilesAttribute()
     {
-        return $this->files()->get();
+        return $this->getRelationValue('files');
     }
 
     /**
@@ -229,7 +229,7 @@ class Transaction extends Model
 
     public function getRecurringRulesAttribute()
     {
-        return $this->recurringTransactionRule()->first();
+        return $this->getRelationValue('recurringTransactionRule');
     }
 
     public function recurringTransactionRule(): HasOne
@@ -239,7 +239,7 @@ class Transaction extends Model
 
     public function getIsRefundAttribute(): bool
     {
-        return $this->refund()->exists();
+        return $this->getRelationValue('refund') !== null;
     }
 
     public function getRefundOfTransactionIdAttribute(): ?int
