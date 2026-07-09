@@ -9,12 +9,12 @@ trait Groupable
 {
     public function getGroupsAttribute()
     {
-        return $this->groups()->get();
+        return $this->getRelationValue('groups');
     }
 
     public function getGroupAttribute()
     {
-        return $this->groups()->first();
+        return $this->getRelationValue('groups')->first();
     }
 
     public function groups(): MorphToMany

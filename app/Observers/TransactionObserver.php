@@ -60,11 +60,11 @@ class TransactionObserver
 
     protected function updateWalletBalance(Transaction $transaction): void
     {
-        if (! $transaction->wallet || ! is_null($transaction->transfer_id)) {
+        $wallet = $this->freshWalletFor($transaction);
+        if (! $wallet) {
             return;
         }
 
-        $wallet = $transaction->wallet;
         $amount = $transaction->amount;
 
         $wallet->balance += ($transaction->type === 'expense') ? -$amount : $amount;
@@ -73,15 +73,29 @@ class TransactionObserver
 
     protected function revertTransaction(Transaction $transaction): void
     {
-        if (! $transaction->wallet || ! is_null($transaction->transfer_id)) {
+        $wallet = $this->freshWalletFor($transaction);
+        if (! $wallet) {
             return;
         }
 
-        $wallet = $transaction->wallet;
         $amount = $transaction->amount;
 
         $wallet->balance += ($transaction->type === 'expense') ? $amount : -$amount;
         $wallet->save();
+    }
+
+    /**
+     * Balance mutations must read the current persisted wallet, not the
+     * transaction's cached relation, or a stale in-memory balance clobbers a
+     * concurrent revert/update on the same row.
+     */
+    protected function freshWalletFor(Transaction $transaction): ?\App\Models\Wallet
+    {
+        if (! $transaction->wallet_id || ! is_null($transaction->transfer_id)) {
+            return null;
+        }
+
+        return \App\Models\Wallet::find($transaction->wallet_id);
     }
 
     protected function emitRecorded(
