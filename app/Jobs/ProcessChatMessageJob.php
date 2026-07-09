@@ -14,7 +14,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Throwable;
 
 class ProcessChatMessageJob implements ShouldQueue
@@ -66,14 +65,14 @@ class ProcessChatMessageJob implements ShouldQueue
 
         if ($route === AiRouter::ROUTE_GENERAL) {
             $this->answerGeneral($router, $userMessage->content);
-            $this->maybeGenerateTitle($router, $userMessage->content);
+            $this->maybeGenerateTitle($userMessage->content);
 
             return;
         }
 
         if ($route === AiRouter::ROUTE_AGENT) {
             $this->answerAgent($agentRunner, $router, $userMessage);
-            $this->maybeGenerateTitle($router, $userMessage->content);
+            $this->maybeGenerateTitle($userMessage->content);
 
             return;
         }
@@ -92,7 +91,7 @@ class ProcessChatMessageJob implements ShouldQueue
         // fault, so don't tell them to rephrase; say the service is unavailable.
         if (! ($response['success'] ?? false)) {
             $this->answerUnavailable();
-            $this->maybeGenerateTitle($router, $userMessage->content);
+            $this->maybeGenerateTitle($userMessage->content);
 
             return;
         }
@@ -101,7 +100,7 @@ class ProcessChatMessageJob implements ShouldQueue
         $rows = $response['data']['rows'] ?? null;
         if (is_array($rows) && $rows === []) {
             $this->answerGeneral($router, $userMessage->content, __('The data query returned no results.'));
-            $this->maybeGenerateTitle($router, $userMessage->content);
+            $this->maybeGenerateTitle($userMessage->content);
 
             return;
         }
@@ -118,7 +117,7 @@ class ProcessChatMessageJob implements ShouldQueue
             'completed_at' => now(),
         ]);
 
-        $this->maybeGenerateTitle($router, $userMessage->content);
+        $this->maybeGenerateTitle($userMessage->content);
     }
 
     /**
@@ -242,7 +241,7 @@ class ProcessChatMessageJob implements ShouldQueue
         ]);
     }
 
-    private function maybeGenerateTitle(AiRouter $router, string $firstQuestion): void
+    private function maybeGenerateTitle(string $firstQuestion): void
     {
         $session = $this->assistantMessage->session;
 
@@ -259,9 +258,7 @@ class ProcessChatMessageJob implements ShouldQueue
             return;
         }
 
-        $session->update([
-            'title' => $router->generateTitle($firstQuestion) ?? Str::limit($firstQuestion, 60),
-        ]);
+        GenerateChatTitleJob::dispatch($session, $firstQuestion);
     }
 
     private function markFailed(string $error): void
