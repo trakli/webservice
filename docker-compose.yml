@@ -26,6 +26,22 @@ services:
         depends_on:
             - mysql
 
+    reverb:
+        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        # The websocket server for real-time chat streaming. The browser
+        # connects on the published port; the app publishes to it over the
+        # trakli network as host "reverb".
+        command: php artisan reverb:start --host=0.0.0.0 --port=8080
+        ports:
+            - '${REVERB_HOST_PORT:-6001}:8080'
+        tty: true
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - trakli
+        depends_on:
+            - mysql
+
     mysql:
         image: 'mysql:8.0'
         ports:

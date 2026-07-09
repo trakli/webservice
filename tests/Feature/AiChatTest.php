@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Ai\Tools\Read\SmartqlQueryTool;
 use App\Jobs\ProcessChatMessageJob;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
@@ -18,6 +19,7 @@ use Mockery;
 use Tests\TestCase;
 use Whilesmart\Agents\Facades\Agents;
 use Whilesmart\Agents\ValueObjects\AgentResult;
+use Whilesmart\Agents\ValueObjects\ToolContext;
 use Whilesmart\Roles\Models\Role;
 
 class AiChatTest extends TestCase
@@ -139,7 +141,7 @@ class AiChatTest extends TestCase
         ]);
 
         $captured = null;
-        Agents::shouldReceive('run')->once()->andReturnUsing(function ($harness, $input) use (&$captured) {
+        Agents::shouldReceive('stream')->once()->andReturnUsing(function ($harness, $input) use (&$captured) {
             $captured = $input;
 
             return AgentResult::success('ok');
@@ -479,8 +481,8 @@ class AiChatTest extends TestCase
             ]),
         ]);
 
-        $tool = app(\App\Ai\Tools\Read\SmartqlQueryTool::class);
-        $context = \Whilesmart\Agents\ValueObjects\ToolContext::forUser($this->user);
+        $tool = app(SmartqlQueryTool::class);
+        $context = ToolContext::forUser($this->user);
 
         $out = $tool->handle(['question' => 'total spent last month'], $context);
 
