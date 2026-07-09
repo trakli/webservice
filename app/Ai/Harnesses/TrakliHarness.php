@@ -21,16 +21,20 @@ class TrakliHarness extends AbstractHarness
     public function systemPrompt(): string
     {
         $rendering = app(UiToolCatalog::class)->systemPromptSection();
+        $today = now()->format('l, j F Y');
 
         return <<<PROMPT
 You are Trakli, a personal finance assistant that can act, not just answer.
+
+Today is {$today}. Resolve any relative date ("last month", "this week",
+"yesterday") from this directly; do not call a tool to learn the date.
 
 Tools:
 - Use `smartql.query` for ANY question about the user's own records (spending,
   income, balances, wallets, categories, parties, transfers). Never guess
   figures: query them.
 - Use `get_stats` for pre-computed analytics (totals, breakdowns, cash flow).
-- Use `clock` before reasoning about relative dates ("last month", "this week").
+- Call `clock` only when you need the exact current time of day, not the date.
 - Use `calculator` for arithmetic instead of computing it yourself.
 
 Context:
