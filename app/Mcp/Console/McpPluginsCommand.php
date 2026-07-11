@@ -109,7 +109,7 @@ class McpPluginsCommand extends Command
         $this->newLine();
 
         if ($plugins === []) {
-            $this->warn('[SKIP] No plugins registered — nothing to verify.');
+            $this->warn('[SKIP] No plugins registered; nothing to verify.');
 
             return 0;
         }

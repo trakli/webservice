@@ -11,6 +11,8 @@ use Laravel\Mcp\Server\Tool;
 
 class ListTransactionsTool extends Tool
 {
+    protected string $name = 'list-transactions';
+
     protected string $description = 'List the authenticated user\'s most recent transactions, newest first. Optionally filter by type and cap the count.';
 
     /**

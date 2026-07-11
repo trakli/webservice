@@ -14,6 +14,8 @@ use Laravel\Mcp\Server\Tool;
 
 class RecordTransactionTool extends Tool
 {
+    protected string $name = 'record-transaction';
+
     protected string $description = 'Record an income or expense against one of the user\'s wallets. Requires the transactions.write permission.';
 
     /**
