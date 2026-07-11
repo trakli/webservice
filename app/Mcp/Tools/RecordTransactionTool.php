@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools;
 
-use App\Mcp\Auth\McpAuthorizationTrait;
+use App\Mcp\Auth\McpGateRegistrar;
 use App\Services\TransactionWriter;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +14,6 @@ use Laravel\Mcp\Server\Tool;
 
 class RecordTransactionTool extends Tool
 {
-    use McpAuthorizationTrait;
-
     protected string $description = 'Record an income or expense against one of the user\'s wallets. Requires the transactions.write permission.';
 
     /**
@@ -34,9 +32,9 @@ class RecordTransactionTool extends Tool
         ];
     }
 
-    public function handle(Request $request, TransactionWriter $writer): Response
+    public function handle(Request $request): Response
     {
-        if (! $this->canMcp('transactions.write')) {
+        if (! McpGateRegistrar::allows($request->user(), 'transactions.write')) {
             return Response::json(['error' => 'Permission denied: transactions.write']);
         }
 
@@ -69,6 +67,7 @@ class RecordTransactionTool extends Tool
             'datetime' => $validated['datetime'] ?? now(),
         ];
 
+        $writer = app(TransactionWriter::class);
         $writer->validateOwnership($user, $data);
 
         $transaction = DB::transaction(fn () => $writer->createCore($user, $data));

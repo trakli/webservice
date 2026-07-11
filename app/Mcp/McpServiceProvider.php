@@ -7,6 +7,7 @@ namespace App\Mcp;
 use App\Mcp\Auth\McpGateRegistrar;
 use App\Mcp\Plugins\McpPluginManager;
 use App\Mcp\Server\TrakliMcpServer;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Mcp\Facades\Mcp;
 
@@ -30,12 +31,27 @@ class McpServiceProvider extends ServiceProvider
         }
 
         McpGateRegistrar::register();
+        $this->grantDefaultWriteGates();
 
         if (! config('mcp.enabled', false)) {
             return;
         }
 
         $this->registerRoutes();
+    }
+
+    /**
+     * A user acts on their own data through their own token, so the write gates
+     * default to allowed. An operator can define these gates elsewhere to scope
+     * or lock down MCP writes without touching this code.
+     */
+    protected function grantDefaultWriteGates(): void
+    {
+        foreach (['transactions.manage', 'wallets.manage'] as $gate) {
+            if (! Gate::has($gate)) {
+                Gate::define($gate, fn () => true);
+            }
+        }
     }
 
     /**
