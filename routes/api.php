@@ -5,6 +5,7 @@ use App\Http\Controllers\API\v1\Admin\MetricsController as AdminMetricsControlle
 use App\Http\Controllers\API\v1\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
+use App\Http\Controllers\API\v1\McpTokenController;
 use App\Http\Controllers\API\v1\BudgetController;
 use App\Http\Controllers\API\v1\BudgetPeriodStateController;
 use App\Http\Controllers\API\v1\CategoryController;
@@ -92,6 +93,11 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('ai/chats/{chat}/actions/{action}/confirm', [AiController::class, 'confirmAction']);
     Route::post('ai/chats/{chat}/actions/{action}/reject', [AiController::class, 'rejectAction']);
     Route::get('ai/health', [AiController::class, 'health']);
+
+    // MCP client credentials (personal access tokens)
+    Route::get('ai/mcp/tokens', [McpTokenController::class, 'index']);
+    Route::post('ai/mcp/tokens', [McpTokenController::class, 'store']);
+    Route::delete('ai/mcp/tokens/{id}', [McpTokenController::class, 'destroy']);
 
     // Reminder routes
     Route::apiResource('reminders', ReminderController::class);
