@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83cfe80391fc1617f1e91bde8b2e5884",
+    "content-hash": "5e053bc4acf50903fda82d5a1d78f604",
     "packages": [
         {
             "name": "beste/clock",
@@ -9833,6 +9833,60 @@
                 "source": "https://github.com/whilesmartphp/eloquent-activities/tree/v1.0.0"
             },
             "time": "2026-03-08T19:36:46+00:00"
+        },
+        {
+            "name": "whilesmart/eloquent-agent-metrics",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-agent-metrics.git",
+                "reference": "df13cebd71c7e83c42990c894337b25d3b651201"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agent-metrics/zipball/df13cebd71c7e83c42990c894337b25d3b651201",
+                "reference": "df13cebd71c7e83c42990c894337b25d3b651201",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2",
+                "whilesmart/eloquent-owner-access": "^1.0"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\AgentMetrics\\AgentMetricsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\AgentMetrics\\": "src/",
+                    "Whilesmart\\AgentMetrics\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Metrics for AI agent runs in Laravel, starting with a polymorphic, cost-aware LLM token-usage ledger.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-agent-metrics/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-agent-metrics/tree/v1.0.0"
+            },
+            "time": "2026-07-06T18:31:01+00:00"
         },
         {
             "name": "whilesmart/eloquent-agents",
