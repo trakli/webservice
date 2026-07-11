@@ -5,9 +5,6 @@ declare(strict_types=1);
 namespace App\Mcp\Server;
 
 use App\Mcp\Plugins\McpPluginManager;
-use Laravel\Mcp\Enums\ProtocolVersion;
-use Laravel\Mcp\Schema\Icon;
-use Laravel\Mcp\Server\Contracts\Transport;
 use Laravel\Mcp\Server as BaseServer;
 
 class TrakliMcpServer extends BaseServer
@@ -17,21 +14,10 @@ class TrakliMcpServer extends BaseServer
     protected string $version = '1.0.0';
 
     protected string $instructions = <<<'MARKDOWN'
-        Trakli MCP Server provides access to personal finance data.
-        
-        The server is extensible via plugins. Tools, resources, and prompts
-        are registered separately and announced in the capability manifest.
-    MARKDOWN;
-
-    protected array $supportedProtocolVersion = [
-        ProtocolVersion::V2025_06_18->value,
-    ];
-
-    protected array $tools = [];
-
-    protected array $resources = [];
-
-    protected array $prompts = [];
+        Trakli MCP Server provides access to personal finance data: wallets,
+        transactions, categories, parties, and statistics. Write actions are
+        gated by the connecting user's permissions.
+        MARKDOWN;
 
     protected array $capabilities = [
         self::CAPABILITY_TOOLS => [
@@ -45,91 +31,33 @@ class TrakliMcpServer extends BaseServer
         ],
     ];
 
-    public function __construct(Transport $transport)
+    protected array $tools = [];
+
+    protected array $resources = [];
+
+    protected array $prompts = [];
+
+    /**
+     * Fold plugin-provided capabilities into the server's own before it starts,
+     * so a plugin's tools/resources/prompts are announced alongside the built-in
+     * ones on the same connection.
+     */
+    protected function boot(): void
     {
-        parent::__construct($transport);
+        $plugins = app(McpPluginManager::class);
+
+        $this->tools = $this->mergeUnique($this->tools, $plugins->getTools());
+        $this->resources = $this->mergeUnique($this->resources, $plugins->getResources());
+        $this->prompts = $this->mergeUnique($this->prompts, $plugins->getPrompts());
     }
 
     /**
-     * Merge plugin capabilities into the server.
+     * @param  array<int, mixed>  $own
+     * @param  array<string, class-string>  $plugin
+     * @return array<int, mixed>
      */
-    public function mergePluginCapabilities(McpPluginManager $pluginManager): void
+    private function mergeUnique(array $own, array $plugin): array
     {
-        $pluginTools = $pluginManager->getTools();
-        $pluginResources = $pluginManager->getResources();
-        $pluginPrompts = $pluginManager->getPrompts();
-
-        $this->tools = array_merge($this->tools, array_values($pluginTools));
-        $this->resources = array_merge($this->resources, array_values($pluginResources));
-        $this->prompts = array_merge($this->prompts, array_values($pluginPrompts));
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getVersion(): string
-    {
-        return $this->version;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    public function getSupportedProtocolVersion(): array
-    {
-        return $this->supportedProtocolVersion;
-    }
-
-    public function getInstructions(): string
-    {
-        return $this->instructions;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function getCapabilities(): array
-    {
-        return $this->capabilities;
-    }
-
-    /**
-     * @return array<int, class-string<\Laravel\Mcp\Server\Tool>>
-     */
-    public function getTools(): array
-    {
-        return $this->tools;
-    }
-
-    /**
-     * @return array<int, class-string<\Laravel\Mcp\Server\Resource>>
-     */
-    public function getResources(): array
-    {
-        return $this->resources;
-    }
-
-    /**
-     * @return array<int, class-string<\Laravel\Mcp\Server\Prompt>>
-     */
-    public function getPrompts(): array
-    {
-        return $this->prompts;
-    }
-
-    /**
-     * @return list<Icon>
-     */
-    protected function icons(): array
-    {
-        return [
-            new Icon(
-                src: '/icon.svg',
-                mimeType: 'image/svg+xml',
-                sizes: ['1024x1024']
-            ),
-        ];
+        return array_values(array_unique(array_merge($own, array_values($plugin))));
     }
 }

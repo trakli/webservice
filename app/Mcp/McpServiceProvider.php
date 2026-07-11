@@ -6,8 +6,9 @@ namespace App\Mcp;
 
 use App\Mcp\Auth\McpGateRegistrar;
 use App\Mcp\Plugins\McpPluginManager;
-use Illuminate\Support\Facades\Route;
+use App\Mcp\Server\TrakliMcpServer;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Mcp\Facades\Mcp;
 
 class McpServiceProvider extends ServiceProvider
 {
@@ -15,72 +16,44 @@ class McpServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__ . '/../../config/mcp.php', 'mcp');
 
-        // Register the plugin manager as a singleton
-        $this->app->singleton(McpPluginManager::class, function () {
-            return new McpPluginManager();
-        });
+        $this->app->singleton(McpPluginManager::class, fn () => new McpPluginManager());
     }
 
     public function boot(): void
     {
         if ($this->app->runningInConsole()) {
-            $this->commands([
-                Console\McpPluginsCommand::class,
-            ]);
+            $this->commands([Console\McpPluginsCommand::class]);
+
+            $this->publishes([
+                __DIR__ . '/../../config/mcp.php' => config_path('mcp.php'),
+            ], 'mcp-config');
         }
 
-        $this->registerGates();
+        McpGateRegistrar::register();
 
-        if (! config('mcp.enabled', true)) {
+        if (! config('mcp.enabled', false)) {
             return;
         }
 
         $this->registerRoutes();
-        $this->publishConfig();
     }
 
     /**
-     * Register MCP permission Gates from configuration.
+     * Register the MCP endpoint on the package's own Streamable-HTTP transport.
+     * Clients authenticate with a Sanctum bearer token; the returned route lets
+     * us layer the app's guard and rate limit on top.
      */
-    protected function registerGates(): void
-    {
-        McpGateRegistrar::register();
-    }
-
     protected function registerRoutes(): void
     {
         $middleware = ['auth:' . config('mcp.auth.guard', 'sanctum')];
 
         if (config('mcp.rate_limit.enabled', true)) {
-            $middleware[] = 'throttle:' . config('mcp.rate_limit.max_requests', 60) . ',' . config('mcp.rate_limit.decay_minutes', 1);
+            $middleware[] = 'throttle:'
+                . config('mcp.rate_limit.max_requests', 60)
+                . ',' . config('mcp.rate_limit.decay_minutes', 1);
         }
 
-        Route::prefix('mcp')
-            ->middleware($middleware)
-            ->group(function () {
-                Route::get('sse', [\App\Mcp\Http\Controllers\McpController::class, 'handle'])
-                    ->name('mcp.sse');
-
-                Route::post('sse', [\App\Mcp\Http\Controllers\McpController::class, 'handle'])
-                    ->name('mcp.sse.post');
-
-                Route::post('initialize', [\App\Mcp\Http\Controllers\McpController::class, 'initialize'])
-                    ->name('mcp.initialize');
-
-                // Inspection endpoint — only available when explicitly enabled.
-                if (config('mcp.inspect_enabled', false)) {
-                    Route::get('inspect', [\App\Mcp\Http\Controllers\McpController::class, 'inspect'])
-                        ->name('mcp.inspect');
-                }
-            });
-    }
-
-    protected function publishConfig(): void
-    {
-        if ($this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__ . '/../../config/mcp.php' => config_path('mcp.php'),
-            ], 'mcp-config');
-        }
+        Mcp::web(config('mcp.endpoint', 'mcp'), TrakliMcpServer::class)
+            ->middleware($middleware);
     }
 }
