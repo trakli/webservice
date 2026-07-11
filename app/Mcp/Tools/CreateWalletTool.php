@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Tools;
 
 use App\Contracts\Entitlements;
-use App\Mcp\Auth\McpAuthorizationTrait;
+use App\Mcp\Auth\McpGateRegistrar;
 use App\Models\Wallet;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
@@ -14,8 +14,6 @@ use Laravel\Mcp\Server\Tool;
 
 class CreateWalletTool extends Tool
 {
-    use McpAuthorizationTrait;
-
     protected string $description = 'Create a new wallet for the authenticated user. Requires the wallets.write permission.';
 
     /**
@@ -34,7 +32,7 @@ class CreateWalletTool extends Tool
 
     public function handle(Request $request): Response
     {
-        if (! $this->canMcp('wallets.write')) {
+        if (! McpGateRegistrar::allows($request->user(), 'wallets.write')) {
             return Response::json(['error' => 'Permission denied: wallets.write']);
         }
 
