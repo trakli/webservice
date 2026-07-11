@@ -17,9 +17,8 @@
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
-        "prism-php/prism": "^0.100.1",
-        "prism-php/relay": "^1.8",
         "laravel/mcp": "^0.8",
+        "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-activities": "^1.0",
@@ -114,10 +113,8 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true,
-            "wikimedia/composer-merge-plugin": true,
-            "composer/security-policy": false
+            "wikimedia/composer-merge-plugin": true
         },
-        "policy.advisories.block": false,
         "audit": {
             "block-insecure": false
         }
