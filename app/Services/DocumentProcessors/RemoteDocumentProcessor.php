@@ -7,7 +7,6 @@ use App\Contracts\ProvidesExtractionContext;
 use App\Models\User;
 use App\Services\StatementStructurer;
 use App\Types\TransactionSuggestion;
-use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
@@ -39,6 +38,8 @@ use Prism\Prism\Facades\Prism;
  */
 class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionContext
 {
+    use ParsesLlmData;
+
     private const SUPPORTED_EXTENSIONS = ['pdf', 'png', 'jpg', 'jpeg', 'tiff', 'tif', 'bmp'];
 
     private ?string $lastContext = null;
@@ -368,28 +369,6 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         return $val !== '' ? $val : null;
     }
 
-    private function normalizeDate(?string $value): ?string
-    {
-        if ($value === null) {
-            return null;
-        }
-
-        $value = trim($value);
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
-            return $value;
-        }
-
-        // Remove commas that confuse Carbon (e.g. "05 Apr, 2024" → "05 Apr 2024")
-        $value = str_replace(',', '', $value);
-
-        try {
-            return Carbon::parse($value)->format('Y-m-d');
-        } catch (\Exception) {
-            return null;
-        }
-    }
-
     /**
      * Extract all readable text from the processor response for LLM fallback.
      */
@@ -498,17 +477,23 @@ PROMPT)
         }
     }
 
-    private function parseLlmJson(string $text): ?array
+    /**
+     * Read a store/shop receipt as a single purchase (printed total, merchant,
+     * date, category), not the generic per-line-item extraction.
+     */
+    public function extractReceipt(UploadedFile $file): ?TransactionSuggestion
     {
-        $text = trim($text);
-
-        if (str_starts_with($text, '```')) {
-            $text = preg_replace('/^```(?:json)?\s*/', '', $text);
-            $text = preg_replace('/\s*```$/', '', $text);
+        if (empty(config('services.document_processor.url'))) {
+            return null;
         }
 
-        $decoded = json_decode($text, true);
+        $response = $this->callRemote($file);
+        if ($response === null) {
+            return null;
+        }
 
-        return (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : null;
+        $rawText = mb_substr($this->extractRawText($response), 0, 8000);
+
+        return $rawText === '' ? null : (new ReceiptReader())->read($rawText);
     }
 }

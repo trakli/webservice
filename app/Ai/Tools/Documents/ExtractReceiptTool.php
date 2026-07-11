@@ -4,7 +4,10 @@ namespace App\Ai\Tools\Documents;
 
 use App\Ai\Tools\ResolvesChatAttachment;
 use App\Ai\Tools\Write\RecordTransactionTool;
+use App\Models\User;
 use App\Services\DocumentProcessorManager;
+use App\Services\DocumentProcessors\RemoteDocumentProcessor;
+use App\Types\TransactionSuggestion;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
@@ -57,24 +60,59 @@ class ExtractReceiptTool extends RecordTransactionTool
             throw new InvalidArgumentException('That file type cannot be read as a receipt.');
         }
 
-        $uploaded = new UploadedFile(Storage::path($path), basename($path), $mimeType, null, true);
-        $suggestions = $this->processors->getProcessor($mimeType, $extension)->process($uploaded, $user);
+        $processor = $this->processors->getProcessor($mimeType, $extension);
+        if (! $processor instanceof RemoteDocumentProcessor) {
+            throw new InvalidArgumentException('That file type cannot be read as a receipt.');
+        }
 
-        $suggestion = $suggestions[0] ?? null;
-        if (! is_array($suggestion) || empty($suggestion['amount'])) {
+        $uploaded = new UploadedFile(Storage::path($path), basename($path), $mimeType, null, true);
+        $suggestion = $processor->extractReceipt($uploaded);
+        if ($suggestion === null || ! $suggestion->amount) {
             throw new InvalidArgumentException('Could not read a transaction from that receipt.');
         }
 
-        // Default to the user's first wallet so confirm works; the user can change
-        // it in the review form.
-        $walletId = $user->wallets()->value('id');
+        return parent::buildPayload($this->receiptArguments($user, $suggestion), $context);
+    }
 
-        return array_filter([
-            'amount' => (float) $suggestion['amount'],
-            'type' => in_array($suggestion['type'] ?? null, ['income', 'expense'], true) ? $suggestion['type'] : 'expense',
-            'wallet_id' => $walletId,
-            'description' => $suggestion['description'] ?? 'Receipt',
-            'datetime' => $suggestion['date'] ?? null,
-        ], fn ($value) => $value !== null);
+    /**
+     * Turn the extracted receipt into RecordTransactionTool arguments. The store
+     * becomes the party only when it already exists (the resolver rejects an
+     * unknown one); otherwise it stays in the description.
+     *
+     * @return array<string, mixed>
+     */
+    private function receiptArguments(User $user, TransactionSuggestion $suggestion): array
+    {
+        $description = trim((string) $suggestion->description);
+
+        // Default to the user's first wallet so confirm works; the user can
+        // change it in the review form.
+        $args = [
+            'amount' => $suggestion->amount,
+            'type' => 'expense',
+            'wallet_id' => $user->wallets()->value('id'),
+            'datetime' => $suggestion->date,
+        ];
+
+        $merchant = trim((string) $suggestion->party);
+        if ($merchant !== '') {
+            $party = $user->parties()->whereRaw('LOWER(name) = ?', [mb_strtolower($merchant)])->first();
+            if ($party !== null) {
+                $args['party_id'] = $party->id;
+            } elseif ($description === '') {
+                $description = $merchant;
+            } else {
+                $description = "{$merchant}: {$description}";
+            }
+        }
+
+        $args['description'] = $description === '' ? 'Receipt' : $description;
+
+        $category = trim((string) $suggestion->category);
+        if ($category !== '' && $user->categories()->whereRaw('LOWER(name) = ?', [mb_strtolower($category)])->exists()) {
+            $args['category_names'] = [$category];
+        }
+
+        return $args;
     }
 }
