@@ -12,31 +12,19 @@ return [
     |
     */
 
-    'enabled' => env('MCP_ENABLED', true),
-
-    /*
-    |--------------------------------------------------------------------------
-    | Inspection Endpoint
-    |--------------------------------------------------------------------------
-    |
-    | When enabled, a GET /mcp/inspect endpoint is registered that returns
-    | all registered tools, resources, prompts, and plugin metadata.
-    | Disable in production to avoid leaking implementation details.
-    |
-    */
-
-    'inspect_enabled' => env('MCP_INSPECT_ENABLED', false),
+    'enabled' => env('MCP_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------
     | Server Endpoint
     |--------------------------------------------------------------------------
     |
-    | The endpoint path for the MCP SSE transport.
+    | The route path the MCP server is served from. Clients POST JSON-RPC to
+    | this path (Streamable HTTP transport).
     |
     */
 
-    'endpoint' => env('MCP_ENDPOINT', '/mcp/sse'),
+    'endpoint' => env('MCP_ENDPOINT', 'mcp'),
 
     /*
     |--------------------------------------------------------------------------
