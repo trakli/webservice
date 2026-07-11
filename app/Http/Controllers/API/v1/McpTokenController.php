@@ -47,10 +47,10 @@ class McpTokenController extends ApiController
         ], __('MCP token created'), 201);
     }
 
-    public function destroy(Request $request, string $id): JsonResponse
+    public function destroy(Request $request, string $tokenId): JsonResponse
     {
         $deleted = $request->user()->tokens()
-            ->where('id', $id)
+            ->where('id', $tokenId)
             ->delete();
 
         if (! $deleted) {
