@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-beta] - 2026-07-11
+
+Codename: Ailanthus, first of the tree-name series.
+
+### Added
+
+- AI assistant that can act, not just answer: confirm-before-write actions, live
+  turn progress streamed over websockets, and canvas reports it can render,
+  update, and export
+- Assistant turns attached documents such as bank statements into reviewable
+  imports
+- Admins can run system-wide AI chat queries
+- Per-user agent token-usage metrics
+- Model Context Protocol server: external AI clients (Claude Desktop, Cursor)
+  read and act on a user's finance data with tokens the user issues, across
+  wallet, transaction, category, party, and stats tools
+- CAMT.053 bank-statement import plugin
+- Statement fees recorded as linked charges on import
+- Intent tagging, financial position, and asset holdings
+- Exchange-rate and asset-price endpoints
+- Entitlements seam for gating features, limits, and metered usage
+- Integrations registry and listing endpoint, with integrations describing their
+  own client UI
+- Admin console with engagement metrics and outreach
+- Admin status exposed in the user payload
+- Delivery: hosted-image build, a per-commit image on merge and latest on
+  release, staging deploys, and local docker queue processing
+
+### Changed
+
+- After you confirm an action, the assistant carries on with your original
+  request and completes the step that needed the new record
+- Smarter statement imports: statement fields are matched by reading the header
+  rather than fixed positions, so values map to the right fields
+- Bulk outreach sends are queued
+- Country preference key renamed to `country`
+
+### Fixed
+
+- SmartQL AI queries are scoped to the requesting tenant
+- Budgets track spend accurately across currencies, using the right conversion
+  rate and direction and auto-converting transactions in another currency
+- Holdings and stats return a consistent response envelope
+- The API docs report the running app version
+- Authenticated requests are rate-limited per user
+
+### Performance
+
+- Faster chat turns: two model round-trips dropped from each turn
+- Faster stats: transaction relations come from already-loaded data, and
+  sections load progressively
+
 ## [1.1.2] - 2026-05-18
 
 ### Fixed
