@@ -14,6 +14,8 @@ use Laravel\Mcp\Server\Tool;
 
 class CreateWalletTool extends Tool
 {
+    protected string $name = 'create-wallet';
+
     protected string $description = 'Create a new wallet for the authenticated user. Requires the wallets.write permission.';
 
     /**

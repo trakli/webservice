@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mcp\Server\TrakliMcpServer;
+use App\Mcp\Tools\CreateWalletTool;
 use App\Mcp\Tools\ListWalletsTool;
 use App\Mcp\Tools\RecordTransactionTool;
 use App\Models\User;
@@ -63,6 +64,39 @@ class McpServerTest extends TestCase
             'amount' => 12.5,
             'type' => 'expense',
         ]);
+    }
+
+    public function test_the_create_wallet_tool_creates_a_wallet(): void
+    {
+        TrakliMcpServer::actingAs($this->user)
+            ->tool(CreateWalletTool::class, [
+                'name' => 'Savings',
+                'type' => 'bank',
+                'currency' => 'USD',
+                'balance' => 100,
+            ])
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('wallets', [
+            'user_id' => $this->user->id,
+            'name' => 'Savings',
+            'currency' => 'USD',
+        ]);
+    }
+
+    public function test_creating_a_wallet_is_denied_when_a_restricting_gate_forbids_it(): void
+    {
+        Gate::define('wallets.manage', fn () => false);
+
+        TrakliMcpServer::actingAs($this->user)
+            ->tool(CreateWalletTool::class, [
+                'name' => 'Blocked',
+                'type' => 'bank',
+                'currency' => 'USD',
+            ])
+            ->assertSee('Permission denied');
+
+        $this->assertDatabaseMissing('wallets', ['name' => 'Blocked']);
     }
 
     public function test_a_write_tool_is_denied_when_a_restricting_gate_forbids_it(): void

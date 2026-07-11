@@ -12,6 +12,8 @@ use Laravel\Mcp\Server\Tool;
 
 class GetStatsTool extends Tool
 {
+    protected string $name = 'get-stats';
+
     protected string $description = 'Get pre-computed financial analytics for the authenticated user: balances, income, expenses, top categories and parties, cash flow, and net-worth position. Returns authoritative figures.';
 
     /**

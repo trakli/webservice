@@ -68,21 +68,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Enabled Tools
-    |--------------------------------------------------------------------------
-    |
-    | Control which tool categories are exposed via MCP.
-    |
-    */
-
-    'tools' => [
-        'transactions' => env('MCP_TOOLS_TRANSACTIONS', true),
-        'budgets' => env('MCP_TOOLS_BUDGETS', true),
-        'wallets' => env('MCP_TOOLS_WALLETS', true),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Rate Limiting
     |--------------------------------------------------------------------------
     |
@@ -94,20 +79,6 @@ return [
         'enabled' => env('MCP_RATE_LIMIT_ENABLED', true),
         'max_requests' => env('MCP_RATE_LIMIT_MAX', 60),
         'decay_minutes' => env('MCP_RATE_LIMIT_DECAY', 1),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Server Metadata
-    |--------------------------------------------------------------------------
-    |
-    | Metadata for the MCP server identification.
-    |
-    */
-
-    'server' => [
-        'name' => env('MCP_SERVER_NAME', 'Trakli'),
-        'version' => env('MCP_SERVER_VERSION', '1.0.0'),
     ],
 
     /*
