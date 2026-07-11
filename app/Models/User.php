@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
@@ -19,6 +20,7 @@ class User extends Authenticatable implements HasLocalePreference
 {
     use Configurable;
     use HasApiTokens;
+    use HasTokenUsage;
     use HasDevices;
     use HasFactory;
     use HasRoles;

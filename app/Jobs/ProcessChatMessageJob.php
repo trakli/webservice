@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Contracts\Entitlements;
 use App\Models\ChatMessage;
 use App\Services\AgentRunner;
+use Whilesmart\AgentMetrics\Facades\TokenMeter;
 use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Bus\Queueable;
@@ -202,8 +203,22 @@ class ProcessChatMessageJob implements ShouldQueue
     {
         $tokens = (int) ($usage['prompt_tokens'] ?? 0) + (int) ($usage['completion_tokens'] ?? 0);
 
-        if ($tokens > 0) {
-            app(Entitlements::class)->consume($this->owner(), 'ai_tokens', $tokens);
+        if ($tokens <= 0) {
+            return;
+        }
+
+        $owner = $this->owner();
+        app(Entitlements::class)->consume($owner, 'ai_tokens', $tokens);
+
+        if ($owner !== null) {
+            TokenMeter::record(
+                owner: $owner,
+                provider: (string) config('agents.provider', 'gemini'),
+                model: (string) config('agents.model', 'gemini-flash-latest'),
+                usage: $usage,
+                operation: 'chat.agent',
+                subject: $this->assistantMessage,
+            );
         }
     }
 
