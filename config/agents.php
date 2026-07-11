@@ -32,6 +32,13 @@ return [
     'max_steps' => (int) env('AGENTS_MAX_STEPS', 16),
 
     /*
+    | How many assistant turns may run since the last real user message before
+    | the assistant stops resuming after a confirmed prerequisite create. Guards
+    | against a runaway create/confirm loop.
+    */
+    'max_continuations' => (int) env('AGENTS_MAX_CONTINUATIONS', 5),
+
+    /*
     |--------------------------------------------------------------------------
     | Routes
     |--------------------------------------------------------------------------

@@ -275,8 +275,47 @@ class AiController extends ApiController
 
         $this->recordActivity($user, $chat, $action, $resource);
         $this->markActionBlockStatus($action, AgentProposedAction::STATUS_EXECUTED, $described);
+        $this->continueChainAfterCreate($chat, $action);
 
         return $this->success(['action' => $action->fresh(), 'resource' => $resource], __('Action completed.'));
+    }
+
+    /**
+     * A wallet/category/party is often created only so the real request (record
+     * a transaction against it) can proceed. Confirming one runs a fresh agent
+     * turn against the user's original message, which now succeeds because the
+     * prerequisite exists, so the assistant carries on on its own without the
+     * user typing anything. Only these prerequisite creates resume (a
+     * transaction or transfer create ends the chain), and a cap on turns since
+     * the last real user message guards against a runaway loop.
+     */
+    private function continueChainAfterCreate(ChatSession $chat, AgentProposedAction $action): void
+    {
+        $prerequisites = ['wallet.create', 'category.create', 'party.create'];
+
+        if (! in_array($action->action_type, $prerequisites, true)) {
+            return;
+        }
+
+        $lastUserMessageId = $chat->messages()->where('role', ChatMessage::ROLE_USER)->max('id') ?? 0;
+
+        $turnsSinceUser = $chat->messages()
+            ->where('role', ChatMessage::ROLE_ASSISTANT)
+            ->where('id', '>', $lastUserMessageId)
+            ->count();
+
+        if ($turnsSinceUser >= (int) config('agents.max_continuations', 5)) {
+            return;
+        }
+
+        $assistantMessage = $chat->messages()->create([
+            'user_id' => null,
+            'role' => ChatMessage::ROLE_ASSISTANT,
+            'status' => ChatMessage::STATUS_PENDING,
+            'language' => $chat->messages()->where('role', ChatMessage::ROLE_USER)->latest('id')->value('language'),
+        ]);
+
+        ProcessChatMessageJob::dispatch($assistantMessage);
     }
 
     #[OA\Post(
