@@ -31,7 +31,15 @@ class TrakliMcpServer extends BaseServer
         ],
     ];
 
-    protected array $tools = [];
+    protected array $tools = [
+        \App\Mcp\Tools\ListWalletsTool::class,
+        \App\Mcp\Tools\ListTransactionsTool::class,
+        \App\Mcp\Tools\ListCategoriesTool::class,
+        \App\Mcp\Tools\ListPartiesTool::class,
+        \App\Mcp\Tools\GetStatsTool::class,
+        \App\Mcp\Tools\CreateWalletTool::class,
+        \App\Mcp\Tools\RecordTransactionTool::class,
+    ];
 
     protected array $resources = [];
 
