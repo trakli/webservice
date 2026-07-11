@@ -97,7 +97,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     // MCP client credentials (personal access tokens)
     Route::get('ai/mcp/tokens', [McpTokenController::class, 'index']);
     Route::post('ai/mcp/tokens', [McpTokenController::class, 'store']);
-    Route::delete('ai/mcp/tokens/{id}', [McpTokenController::class, 'destroy']);
+    Route::delete('ai/mcp/tokens/{tokenId}', [McpTokenController::class, 'destroy']);
 
     // Reminder routes
     Route::apiResource('reminders', ReminderController::class);
