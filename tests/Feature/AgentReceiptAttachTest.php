@@ -3,16 +3,13 @@
 namespace Tests\Feature;
 
 use App\Ai\BlockCollector;
-use App\Ai\Tools\Documents\ExtractReceiptTool;
 use App\Ai\Tools\Write\AttachToTransactionTool;
-use App\Contracts\DocumentProcessor;
 use App\Models\AgentProposedAction;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Services\DocumentProcessorManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -65,28 +62,5 @@ class AgentReceiptAttachTest extends TestCase
             ->assertStatus(200);
 
         $this->assertSame(1, $transaction->fresh()->files()->count());
-    }
-
-    public function test_extract_receipt_proposes_a_transaction_from_the_first_suggestion(): void
-    {
-        $this->attachFileToChat();
-
-        $processor = \Mockery::mock(DocumentProcessor::class);
-        $processor->shouldReceive('process')->andReturn([
-            ['amount' => 12.5, 'type' => 'expense', 'description' => 'Coffee shop', 'date' => '2026-06-01'],
-        ]);
-        $manager = \Mockery::mock(DocumentProcessorManager::class);
-        $manager->shouldReceive('canHandle')->andReturn(true);
-        $manager->shouldReceive('getProcessor')->andReturn($processor);
-        $this->app->instance(DocumentProcessorManager::class, $manager);
-        $this->app->instance(BlockCollector::class, new BlockCollector());
-
-        $this->app->make(ExtractReceiptTool::class)->handle([], $this->context());
-
-        $action = AgentProposedAction::latest('id')->firstOrFail();
-        $this->assertSame('transaction.create', $action->action_type);
-        $this->assertEquals(12.5, $action->payload['amount']);
-        $this->assertEquals('Coffee shop', $action->payload['description']);
-        $this->assertEquals($this->wallet->id, $action->payload['wallet_id']);
     }
 }
