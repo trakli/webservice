@@ -13,8 +13,10 @@ use App\Listeners\QueueBudgetRecompute;
 use App\Listeners\SendAccountDeletedNotifications;
 use App\Listeners\UserRegistered;
 use App\Models\ChatMessage;
+use App\Models\ChatSession;
 use App\Models\Transaction;
 use App\Observers\ChatMessageObserver;
+use App\Observers\ChatSessionObserver;
 use App\Observers\HoldingObserver;
 use App\Observers\TransactionObserver;
 use Illuminate\Auth\Events\Registered;
@@ -66,6 +68,7 @@ class EventServiceProvider extends ServiceProvider
     {
         Transaction::observe(TransactionObserver::class);
         ChatMessage::observe(ChatMessageObserver::class);
+        ChatSession::observe(ChatSessionObserver::class);
         Holding::observe(HoldingObserver::class);
     }
 

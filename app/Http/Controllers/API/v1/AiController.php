@@ -17,6 +17,7 @@ use App\Services\TransactionWriter;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 use Whilesmart\Activities\Models\Activity;
+use Whilesmart\AgentActions\Enums\ActionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -26,6 +27,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Whilesmart\Agents\Registries\ToolRegistry;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
+/**
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ */
 #[OA\Tag(name: 'AI', description: 'AI-powered financial insights')]
 class AiController extends ApiController
 {
@@ -211,14 +215,14 @@ class AiController extends ApiController
         $this->authorizeAction($user, $chat, $action);
 
         // Idempotent replay: a retried confirm returns the already-created resource.
-        if ($action->status === AgentProposedAction::STATUS_EXECUTED) {
+        if ($action->status === ActionStatus::Executed) {
             return $this->success(
                 ['action' => $action, 'resource' => $action->executedResource()->first()],
                 __('Action already completed.')
             );
         }
 
-        if (! in_array($action->status, [AgentProposedAction::STATUS_PROPOSED, AgentProposedAction::STATUS_CONFIRMED], true)) {
+        if (! in_array($action->status, [ActionStatus::Proposed, ActionStatus::Confirmed], true)) {
             return $this->failure(__('This action can no longer be confirmed.'), Response::HTTP_CONFLICT);
         }
 
@@ -258,7 +262,7 @@ class AiController extends ApiController
             $resource = $executor->execute($action);
         } catch (Throwable $e) {
             $action->update([
-                'status' => AgentProposedAction::STATUS_FAILED,
+                'status' => ActionStatus::Failed,
                 'error' => $e->getMessage(),
             ]);
 
@@ -266,7 +270,7 @@ class AiController extends ApiController
         }
 
         $action->update([
-            'status' => AgentProposedAction::STATUS_EXECUTED,
+            'status' => ActionStatus::Executed,
             'confirmed_at' => now(),
             'executed_at' => now(),
             'executed_resource_type' => $resource->getMorphClass(),
@@ -274,7 +278,7 @@ class AiController extends ApiController
         ]);
 
         $this->recordActivity($user, $chat, $action, $resource);
-        $this->markActionBlockStatus($action, AgentProposedAction::STATUS_EXECUTED, $described);
+        $this->markActionBlockStatus($action, ActionStatus::Executed, $described);
         $this->continueChainAfterCreate($chat, $action);
 
         return $this->success(['action' => $action->fresh(), 'resource' => $resource], __('Action completed.'));
@@ -337,12 +341,12 @@ class AiController extends ApiController
         $user = $request->user();
         $this->authorizeAction($user, $chat, $action);
 
-        if ($action->status === AgentProposedAction::STATUS_EXECUTED) {
+        if ($action->status === ActionStatus::Executed) {
             return $this->failure(__('This action was already completed.'), Response::HTTP_CONFLICT);
         }
 
-        $action->update(['status' => AgentProposedAction::STATUS_REJECTED]);
-        $this->markActionBlockStatus($action, AgentProposedAction::STATUS_REJECTED);
+        $action->update(['status' => ActionStatus::Rejected]);
+        $this->markActionBlockStatus($action, ActionStatus::Rejected);
 
         return $this->success(['action' => $action->fresh()], __('Action dismissed.'));
     }
@@ -454,7 +458,7 @@ class AiController extends ApiController
     {
         $this->authorizeOwnership($user, $chat);
 
-        if ((int) $action->chat_session_id !== (int) $chat->id || ! $action->owner?->is($user)) {
+        if (! $action->source?->is($chat) || ! $action->owner?->is($user)) {
             abort(Response::HTTP_NOT_FOUND, 'Action not found.');
         }
     }
@@ -541,7 +545,7 @@ class AiController extends ApiController
             'source_id' => (string) $action->id,
             'summary' => $action->summary,
             'properties' => [
-                'tool_name' => $action->tool_name,
+                'tool_name' => $action->metadata['tool_name'] ?? null,
                 'idempotency_key' => $action->idempotency_key,
                 'proposed_action_id' => $action->id,
             ],
@@ -596,15 +600,16 @@ class AiController extends ApiController
     {
         try {
             $registry = app(ToolRegistry::class);
-            if (! $registry->has($action->tool_name)) {
+            $toolName = $action->metadata['tool_name'] ?? '';
+            if (! $registry->has($toolName)) {
                 return null;
             }
-            $tool = $registry->resolve($action->tool_name);
+            $tool = $registry->resolve($toolName);
             if (! $tool instanceof AbstractWriteTool) {
                 return null;
             }
 
-            $context = ToolContext::forUser($user, null, ['chat_session_id' => $action->chat_session_id]);
+            $context = ToolContext::forUser($user, null, ['chat_session_id' => $action->source_id]);
 
             return $tool->describe($action->payload, $context);
         } catch (Throwable $e) {
@@ -618,9 +623,9 @@ class AiController extends ApiController
      * @param  array{summary?: string, fields?: array}|null  $described  Regenerated
      *   summary/fields to reflect confirmed edits on the rendered block.
      */
-    private function markActionBlockStatus(AgentProposedAction $action, string $status, ?array $described = null): void
+    private function markActionBlockStatus(AgentProposedAction $action, ActionStatus $status, ?array $described = null): void
     {
-        $message = $action->message;
+        $message = ChatMessage::find($action->metadata['chat_message_id'] ?? null);
 
         if ($message === null) {
             return;
@@ -640,7 +645,7 @@ class AiController extends ApiController
                 && ($block['type'] ?? null) === 'proposed_action'
                 && (int) ($block['id'] ?? 0) === (int) $action->id
             ) {
-                $block['status'] = $status;
+                $block['status'] = $status->value;
                 if ($described !== null) {
                     $block['summary'] = $described['summary'];
                     $block['fields'] = $described['fields'];
