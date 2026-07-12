@@ -22,6 +22,7 @@
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-activities": "^1.0",
+        "whilesmart/eloquent-agent-actions": "dev-dev",
         "whilesmart/eloquent-agent-metrics": "^1.0",
         "whilesmart/eloquent-agents": "dev-main",
         "whilesmart/eloquent-engagement": "dev-dev",

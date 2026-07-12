@@ -2,8 +2,8 @@
 
 namespace App\Ai\Tools\Write;
 
-use App\Models\AgentProposedAction;
 use InvalidArgumentException;
+use Whilesmart\AgentActions\Enums\ActionRisk;
 use Whilesmart\Agents\ValueObjects\ParameterSpec;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
@@ -36,9 +36,9 @@ class CreateCategoryTool extends AbstractWriteTool
         ];
     }
 
-    protected function risk(): string
+    protected function risk(): ActionRisk
     {
-        return AgentProposedAction::RISK_LOW;
+        return ActionRisk::Low;
     }
 
     protected function buildPayload(array $arguments, ToolContext $context): array

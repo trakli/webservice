@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Whilesmart\AgentActions\Enums\ActionRisk;
+use Whilesmart\AgentActions\Enums\ActionStatus;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
 class AgentActionTest extends TestCase
@@ -70,7 +72,7 @@ class AgentActionTest extends TestCase
         $this->assertSame($before, Transaction::count(), 'Proposing must not create a transaction.');
 
         $action = AgentProposedAction::latest("id")->firstOrFail();
-        $this->assertEquals(AgentProposedAction::STATUS_PROPOSED, $action->status);
+        $this->assertEquals(ActionStatus::Proposed, $action->status);
         $this->assertEquals($this->wallet->id, $action->payload['wallet_id']);
         $this->assertEquals('proposed_action', $collector->all()[0]['type']);
     }
@@ -85,7 +87,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(200);
 
         $this->assertSame($before + 1, Transaction::count());
-        $this->assertEquals(AgentProposedAction::STATUS_EXECUTED, $action->fresh()->status);
+        $this->assertEquals(ActionStatus::Executed, $action->fresh()->status);
         $this->assertDatabaseHas('transactions', [
             'user_id' => $this->user->id,
             'wallet_id' => $this->wallet->id,
@@ -161,7 +163,7 @@ class AgentActionTest extends TestCase
             ->postJson("/api/v1/ai/chats/{$this->session->id}/actions/{$action->id}/reject")
             ->assertStatus(200);
 
-        $this->assertEquals(AgentProposedAction::STATUS_REJECTED, $action->fresh()->status);
+        $this->assertEquals(ActionStatus::Rejected, $action->fresh()->status);
         $this->assertSame($before, Transaction::count());
     }
 
@@ -176,7 +178,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(404);
 
         $this->assertSame($before, Transaction::count());
-        $this->assertEquals(AgentProposedAction::STATUS_PROPOSED, $action->fresh()->status);
+        $this->assertEquals(ActionStatus::Proposed, $action->fresh()->status);
     }
 
     public function test_unknown_wallet_name_is_rejected_without_proposing(): void
@@ -201,7 +203,7 @@ class AgentActionTest extends TestCase
         $tool->handle(['name' => 'Groceries', 'type' => 'expense'], $context);
 
         $action = AgentProposedAction::latest("id")->firstOrFail();
-        $this->assertEquals(AgentProposedAction::RISK_LOW, $action->risk);
+        $this->assertEquals(ActionRisk::Low, $action->risk);
         $this->assertEquals('category.create', $action->action_type);
 
         $this->actingAs($this->user)
@@ -299,7 +301,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(403);
 
         $this->assertSame($before, Transaction::count());
-        $this->assertEquals(AgentProposedAction::STATUS_PROPOSED, $action->fresh()->status);
+        $this->assertEquals(ActionStatus::Proposed, $action->fresh()->status);
     }
 
     public function test_confirm_override_ignores_unlisted_keys(): void
@@ -348,7 +350,7 @@ class AgentActionTest extends TestCase
                     ['type' => 'proposed_action', 'id' => $action->id, 'status' => 'proposed'],
                 ]],
             ]);
-            $action->update(['chat_message_id' => $message->id]);
+            $action->update(['metadata' => array_merge($action->metadata, ['chat_message_id' => $message->id])]);
 
             $this->actingAs($this->user)
                 ->postJson("/api/v1/ai/chats/{$this->session->id}/actions/{$action->id}/{$verb}")
@@ -356,6 +358,16 @@ class AgentActionTest extends TestCase
 
             $this->assertSame($expected, $message->fresh()->result['blocks'][0]['status']);
         }
+    }
+
+    public function test_deleting_a_chat_removes_its_pending_proposals(): void
+    {
+        $action = $this->propose(['amount' => 20, 'type' => 'expense', 'wallet_id' => $this->wallet->id]);
+        $this->assertDatabaseHas('agent_actions', ['id' => $action->id]);
+
+        $this->session->delete();
+
+        $this->assertDatabaseMissing('agent_actions', ['id' => $action->id]);
     }
 
     public function test_list_tools_return_only_owned_resources(): void

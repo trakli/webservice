@@ -5,8 +5,11 @@ namespace App\Ai\Tools\Write;
 use App\Ai\BlockBuilder;
 use App\Ai\BlockCollector;
 use App\Models\AgentProposedAction;
+use App\Models\ChatSession;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Whilesmart\AgentActions\Enums\ActionRisk;
+use Whilesmart\AgentActions\Enums\ActionStatus;
 use Whilesmart\Agents\Enums\ToolPermission;
 use Whilesmart\Agents\Tools\AbstractTool;
 use Whilesmart\Agents\ValueObjects\ToolContext;
@@ -45,9 +48,9 @@ abstract class AbstractWriteTool extends AbstractTool
      */
     abstract protected function summarize(array $payload, ToolContext $context): string;
 
-    protected function risk(): string
+    protected function risk(): ActionRisk
     {
-        return AgentProposedAction::RISK_HIGH;
+        return ActionRisk::High;
     }
 
     public function handle(array $arguments, ToolContext $context): string|array
@@ -70,18 +73,21 @@ abstract class AbstractWriteTool extends AbstractTool
         }
 
         $proposal = AgentProposedAction::create([
-            'chat_session_id' => $sessionId,
-            'chat_message_id' => $context->get('chat_message_id'),
             'owner_type' => $user->getMorphClass(),
             'owner_id' => $user->getAuthIdentifier(),
-            'tool_name' => $this->name(),
+            'source_type' => (new ChatSession())->getMorphClass(),
+            'source_id' => $sessionId,
             'action_type' => $this->actionType(),
             'payload' => $payload,
             'summary' => $this->summarize($payload, $context),
             'risk' => $this->risk(),
             'auto_confirm' => false,
-            'status' => AgentProposedAction::STATUS_PROPOSED,
+            'status' => ActionStatus::Proposed,
             'idempotency_key' => (string) Str::uuid(),
+            'metadata' => [
+                'chat_message_id' => $context->get('chat_message_id'),
+                'tool_name' => $this->name(),
+            ],
         ]);
 
         app(BlockCollector::class)->add(
@@ -89,12 +95,12 @@ abstract class AbstractWriteTool extends AbstractTool
                 'id' => $proposal->id,
                 'action_type' => $proposal->action_type,
                 'summary' => $proposal->summary,
-                'risk' => $proposal->risk,
-                'status' => $proposal->status,
+                'risk' => $proposal->risk->value,
+                'status' => $proposal->status->value,
                 'payload' => $proposal->payload,
                 'fields' => $this->reviewFields($payload, $context),
-                'confirm_url' => "/api/v1/ai/chats/{$proposal->chat_session_id}/actions/{$proposal->id}/confirm",
-                'reject_url' => "/api/v1/ai/chats/{$proposal->chat_session_id}/actions/{$proposal->id}/reject",
+                'confirm_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/confirm",
+                'reject_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/reject",
             ])
         );
 
