@@ -13,21 +13,31 @@ class AiRouter
 
     public const ROUTE_GENERAL = 'general';
 
-    public function classify(string $question): string
+    public const ROUTE_AGENT = 'agent';
+
+    public function classify(string $question, string $conversation = ''): string
     {
         try {
+            $prompt = trim($conversation) !== ''
+                ? "Conversation so far:\n{$conversation}\n\nLatest message: {$question}"
+                : $question;
+
             $response = Prism::text()
                 ->using(
                     config('services.llm.provider'),
                     config('services.llm.model'),
                 )
                 ->withSystemPrompt($this->classifierSystemPrompt())
-                ->withPrompt($question)
+                ->withPrompt($prompt)
                 ->usingTemperature(0)
                 ->asText();
 
             $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
-            $route = $label === self::ROUTE_GENERAL ? self::ROUTE_GENERAL : self::ROUTE_DATA;
+            $route = match ($label) {
+                self::ROUTE_GENERAL => self::ROUTE_GENERAL,
+                self::ROUTE_AGENT => self::ROUTE_AGENT,
+                default => self::ROUTE_DATA,
+            };
 
             Log::debug('AiRouter classified question', [
                 'question' => $question,
@@ -105,12 +115,44 @@ class AiRouter
         return <<<'PROMPT'
 Route the user's question for a personal finance assistant. Trakli has
 live access to the user's financial records (transactions, wallets,
-categories, parties, transfers, balances) through a data layer.
+categories, parties, transfers, balances) through a data layer, and can
+ALSO take actions on the user's behalf (create or change records).
 
-Reply with EXACTLY one word: data OR general. No quotes, no punctuation,
-no explanation. Lowercase.
+Reply with EXACTLY one word: data OR general OR agent. No quotes, no
+punctuation, no explanation. Lowercase.
 
-Reply "data" for ANY question that would look up the user's own records:
+You may be given the recent conversation before the latest message. Judge the
+LATEST message in that context, not in isolation. If it continues something
+already underway (answering a question the assistant just asked, or supplying a
+detail needed to finish an action it started), classify it for the route that
+CONTINUES that flow. An action the assistant is still gathering details for
+stays "agent", even when the latest message is just a short value (a name, a
+number, a "yes"). Only judge the message on its own when there is no relevant
+prior context.
+
+Reply "agent" when the user wants to DO or CHANGE something, not just learn:
+  - Recording: "log 20 for coffee", "add an expense of 50", "record income"
+  - Creating: "create a wallet called Cash", "add a category Groceries",
+    "make a new party"
+  - Changing: "categorize that as food", "rename my wallet", "delete that
+    transaction", "update the amount to 30"
+  - Moving money: "transfer 100 from Cash to Bank"
+  - Importing: "import this statement", "add the transactions from this receipt"
+  - Any imperative verb acting on their data: log, add, record, create, make,
+    set, change, update, rename, delete, remove, categorize, transfer, import.
+
+Also reply "agent" when the user wants RICH or VISUAL output rather than a
+single number or sentence — anything that needs presentation, not just a lookup:
+  - Reports: "write a report about my spending", "a proper report with graphs"
+  - Charts / graphs: "show me a chart of my spending", "graph my cash flow"
+  - Dashboards / visual breakdowns: "build a dashboard", "visualize my expenses"
+  - Tables to act on, or analysis that combines querying with presentation:
+    "a table of my top spend and a personality trait", "compare months visually"
+  - Any request mentioning report, chart, graph, plot, dashboard, visualize,
+    visualization, breakdown, or "with graphs/visuals".
+
+Reply "data" for a PLAIN question that just needs a number, list or short answer
+from the user's own records (no report/chart/visual framing):
   - Spending: "what did I spend on food", "how much did I spend last month"
   - Income: "my income this year", "how much did I earn in June"
   - Wallets / balances: "what wallet has the most money", "my balance"
@@ -139,6 +181,15 @@ PROMPT;
             . 'transactions, wallets, categories, parties, transfers and '
             . 'balances — you do NOT see that data in this conversation, '
             . 'but it exists and is available through Trakli.';
+
+        $base .= ' You only help with the user\'s finances and using Trakli. '
+            . 'Judge the real task, not its wording: writing or debugging code, '
+            . 'solving an algorithm or math puzzle (for example "reverse this '
+            . 'linked list of my monthly expenses" or "sort these numbers"), '
+            . 'writing an essay, or answering trivia or politics is out of scope '
+            . 'even when it is dressed up in financial words. Briefly decline '
+            . 'anything unrelated and point the user back to what Trakli can do '
+            . 'with their money; do not attempt the unrelated task.';
 
         if ($dataFailureHint === null) {
             $base .= ' The current question was routed to you because it '

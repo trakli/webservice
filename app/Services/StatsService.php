@@ -2,12 +2,18 @@
 
 namespace App\Services;
 
+use App\Enums\TransactionIntent;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Wallet;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
-use RuntimeException;
+use Whilesmart\Holdings\Models\Holding;
 
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class StatsService
 {
     private $user;
@@ -20,13 +26,30 @@ class StatsService
 
     private string $targetCurrency;
 
+    /**
+     * Source currencies that could not be converted to the target this run,
+     * because no exchange rate was available. Their amounts are excluded from
+     * the totals and the response is flagged partial rather than failing.
+     *
+     * @var array<string, true>
+     */
+    private array $unconvertedCurrencies = [];
+
     public function __construct(
         protected ExchangeRateService $exchangeRateService
     ) {
     }
 
     /**
-     * Compute all stats for the given parameters.
+     * Independently computable stats sections, in rough cost order. A request
+     * for a single section computes only that section so the client can load
+     * the dashboard progressively instead of waiting for the whole payload.
+     */
+    public const SECTIONS = ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow', 'position'];
+
+    /**
+     * Compute stats for the given parameters. When $section is null the full
+     * payload is returned; otherwise only that section is computed.
      */
     public function compute(
         $user,
@@ -34,19 +57,90 @@ class StatsService
         Carbon $endDate,
         array $walletIds,
         string $period,
-        string $targetCurrency
+        string $targetCurrency,
+        ?string $section = null
     ): array {
         $this->user = $user;
         $this->startDate = $startDate;
         $this->endDate = $endDate;
         $this->walletIds = $walletIds;
         $this->targetCurrency = $targetCurrency;
+        $this->unconvertedCurrencies = [];
 
+        $result = ['currency' => $targetCurrency];
+        $charts = [];
+
+        foreach ($section === null ? self::SECTIONS : [$section] as $name) {
+            [$fields, $sectionCharts] = $this->sectionData($name, $period);
+            $result += $fields;
+            $charts += $sectionCharts;
+        }
+
+        if ($charts !== [] || $section === null) {
+            $result['charts'] = $charts;
+        }
+
+        if ($this->unconvertedCurrencies !== []) {
+            $result['partial'] = true;
+            $result['unconverted_currencies'] = array_keys($this->unconvertedCurrencies);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Build one section's response fields and chart contributions. Returns
+     * [topLevelFields, chartContributions].
+     */
+    private function sectionData(string $section, string $period): array
+    {
+        return match ($section) {
+            'overview' => [$this->overviewFields(), []],
+            'activity' => [['activity' => $this->getActivityMetrics()], []],
+            'comparisons' => [['comparisons' => $this->getComparisons()], []],
+            'categories' => [
+                [
+                    'top_categories' => $this->getTopCategories(),
+                    'category_distribution' => $this->getCategoryDistribution(),
+                ],
+                [
+                    'category_spending' => $this->getCategorySpendingData('expense'),
+                    'income_sources' => $this->getCategorySpendingData('income'),
+                ],
+            ],
+            'parties' => [
+                [],
+                [
+                    'party_spending' => $this->getPartyData('expense'),
+                    'party_income' => $this->getPartyData('income'),
+                ],
+            ],
+            'cashflow' => [
+                [
+                    'largest_transactions' => $this->getLargestTransactions(),
+                    'spending_trends' => $this->getSpendingTrends($period),
+                ],
+                [
+                    'monthly_cash_flow' => $this->getMonthlyCashFlowData(),
+                    'expense_by_wallet' => $this->getExpenseByWalletData(),
+                ],
+            ],
+            'position' => [['position' => $this->getFinancialPosition()], []],
+            default => [[], []],
+        };
+    }
+
+    /**
+     * Headline totals and the period summary that drive the KPI widgets.
+     */
+    private function overviewFields(): array
+    {
         $periodTotals = $this->getPeriodTotals();
+        $totalBalance = $this->getTotalBalance();
 
         $overview = [
-            'total_balance' => $this->getTotalBalance(),
-            'net_worth' => $this->getTotalBalance(),
+            'total_balance' => $totalBalance,
+            'net_worth' => $totalBalance,
             'total_income' => $periodTotals['income'],
             'total_expenses' => $periodTotals['expense'],
             'net_cash_flow' => $periodTotals['income'] - $periodTotals['expense'],
@@ -60,24 +154,82 @@ class StatsService
                 (($overview['total_income'] - $overview['total_expenses']) / $overview['total_income']) * 100;
         }
 
+        return ['overview' => $overview, 'period_summary' => $this->getPeriodSummary()];
+    }
+
+    /**
+     * Financial Position: separates real earned income and discretionary spend
+     * from loan, debt and investment movement so borrowed money is not counted
+     * as earnings. Driven by each transaction's intent tag.
+     */
+    private function getFinancialPosition(): array
+    {
+        $rows = $this->baseJoinedQuery()
+            ->select('transactions.type', 'transactions.intent', 'wallets.currency')
+            ->selectRaw('SUM(transactions.amount) as total_amount')
+            ->groupBy('transactions.type', 'transactions.intent', 'wallets.currency')
+            ->get();
+
+        // Conversion is linear, so summing per currency in the database and
+        // converting each group once matches converting every row individually.
+        $byIntent = array_fill_keys(TransactionIntent::values(), 0.0);
+        $earnedIncome = 0.0;
+        $discretionarySpend = 0.0;
+
+        foreach ($rows as $row) {
+            $amount = $this->convertCurrency((float) $row->total_amount, $row->currency);
+            $intent = TransactionIntent::tryFrom($row->intent ?? 'regular') ?? TransactionIntent::REGULAR;
+
+            // A fee is real spending that erodes net worth; treat it like a
+            // regular expense here even though it is tagged separately.
+            if ($intent === TransactionIntent::REGULAR || $intent === TransactionIntent::FEE) {
+                if ($row->type === 'income') {
+                    $earnedIncome += $amount;
+                } else {
+                    $discretionarySpend += $amount;
+                }
+
+                continue;
+            }
+
+            $byIntent[$intent->value] += $amount;
+        }
+
+        $loanReceived = $byIntent[TransactionIntent::LOAN_RECEIVED->value];
+        $loanRepayment = $byIntent[TransactionIntent::LOAN_REPAYMENT->value];
+        $debtOwed = $byIntent[TransactionIntent::DEBT_OWED->value];
+        $debtSettled = $byIntent[TransactionIntent::DEBT_SETTLED->value];
+        $investmentPrincipal = $byIntent[TransactionIntent::INVESTMENT_BUY->value];
+        $investmentReturns = $byIntent[TransactionIntent::INVESTMENT_RETURN->value];
+        $giftsReceived = $byIntent[TransactionIntent::GIFT->value];
+
+        // Buying an investment moves cash into an asset of equal value, so it is
+        // net-worth-neutral and excluded here (the app does not track asset
+        // market value). Loans and debt are likewise balance-neutral. Only real
+        // earnings, realised returns and gifts build net worth; spending erodes it.
+        $netWorthDelta = $earnedIncome
+            - $discretionarySpend
+            + $investmentReturns
+            + $giftsReceived;
+
+        $cashBalance = $this->getTotalBalance();
+        $holdingsValue = $this->getHoldingsValue();
+
         return [
-            'currency' => $targetCurrency,
-            'overview' => $overview,
-            'activity' => $this->getActivityMetrics(),
-            'comparisons' => $this->getComparisons(),
-            'top_categories' => $this->getTopCategories(),
-            'largest_transactions' => $this->getLargestTransactions(),
-            'spending_trends' => $this->getSpendingTrends($period),
-            'category_distribution' => $this->getCategoryDistribution(),
-            'period_summary' => $this->getPeriodSummary(),
-            'charts' => [
-                'party_spending' => $this->getPartyData('expense'),
-                'party_income' => $this->getPartyData('income'),
-                'category_spending' => $this->getCategorySpendingData('expense'),
-                'income_sources' => $this->getCategorySpendingData('income'),
-                'monthly_cash_flow' => $this->getMonthlyCashFlowData(),
-                'expense_by_wallet' => $this->getExpenseByWalletData(),
-            ],
+            'earned_income' => $earnedIncome,
+            'cash_balance' => $cashBalance,
+            'holdings_value' => $holdingsValue,
+            'total_net_worth' => $cashBalance + $holdingsValue,
+            'discretionary_spend' => $discretionarySpend,
+            'loan_received' => $loanReceived,
+            'loan_repayment' => $loanRepayment,
+            'debt_owed' => $debtOwed,
+            'debt_settled' => $debtSettled,
+            'loans_debt_net' => ($loanReceived + $debtOwed) - ($loanRepayment + $debtSettled),
+            'investment_principal' => $investmentPrincipal,
+            'investment_returns' => $investmentReturns,
+            'gifts_received' => $giftsReceived,
+            'net_worth_delta' => $netWorthDelta,
         ];
     }
 
@@ -108,7 +260,8 @@ class StatsService
         Carbon $startDate,
         Carbon $endDate,
         array $walletIds,
-        string $period
+        string $period,
+        ?string $section = null
     ): string {
         $version = Cache::get('stats:user:' . $userId . ':version', 1);
 
@@ -117,6 +270,7 @@ class StatsService
             'end' => $endDate->toDateString(),
             'wallets' => implode(',', $walletIds),
             'period' => $period,
+            'section' => $section ?? 'all',
             'v' => $version,
         ];
 
@@ -128,7 +282,7 @@ class StatsService
     /**
      * Base query with wallet join for currency access.
      */
-    private function baseJoinedQuery(): \Illuminate\Database\Eloquent\Builder
+    private function baseJoinedQuery(): Builder
     {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
             ->where('transactions.user_id', $this->user->id)
@@ -146,7 +300,7 @@ class StatsService
     /**
      * Base query with eager-loaded relationships.
      */
-    private function baseEagerQuery(array $relations = ['wallet']): \Illuminate\Database\Eloquent\Builder
+    private function baseEagerQuery(array $relations = ['wallet']): Builder
     {
         $query = Transaction::with($relations)
             ->where('user_id', $this->user->id)
@@ -163,7 +317,7 @@ class StatsService
     /**
      * Base query with table-qualified columns for joins.
      */
-    private function baseQualifiedQuery(): \Illuminate\Database\Eloquent\Builder
+    private function baseQualifiedQuery(): Builder
     {
         $query = Transaction::where('transactions.user_id', $this->user->id)
             ->nonTransfer()
@@ -179,7 +333,8 @@ class StatsService
     // -- Currency conversion --
 
     /**
-     * @throws RuntimeException When currency conversion fails
+     * Convert an amount from its (wallet) currency to the target currency. When
+     * no rate is available the amount is excluded and the run is flagged partial.
      */
     private function convertCurrency(float $amount, string $fromCurrency): float
     {
@@ -195,9 +350,11 @@ class StatsService
         );
 
         if ($converted === null) {
-            throw new RuntimeException(
-                "Failed to convert {$fromCurrency} to {$this->targetCurrency}. Exchange rate unavailable."
-            );
+            // No rate available: exclude this amount and flag the response partial
+            // instead of failing the whole stats request with a 500.
+            $this->unconvertedCurrencies[$fromCurrency] = true;
+
+            return 0.0;
         }
 
         return $converted;
@@ -218,6 +375,25 @@ class StatsService
 
         foreach ($wallets as $wallet) {
             $total += $this->convertCurrency((float) $wallet->balance, $wallet->currency);
+        }
+
+        return $total;
+    }
+
+    /**
+     * Current market value of all the user's holdings, converted to the target
+     * currency. Holdings are user-wide and not scoped by the wallet filter.
+     */
+    private function getHoldingsValue(): float
+    {
+        $total = 0.0;
+
+        $holdings = Holding::where('owner_type', User::class)
+            ->where('owner_id', $this->user->id)
+            ->get();
+
+        foreach ($holdings as $holding) {
+            $total += $this->convertCurrency((float) $holding->value, $holding->currency);
         }
 
         return $total;

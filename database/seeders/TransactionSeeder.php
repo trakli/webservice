@@ -9,12 +9,12 @@ use Illuminate\Database\Seeder;
 
 class TransactionSeeder extends Seeder
 {
+    // Earned income only: gifts and investment returns are seeded separately as
+    // intent-tagged transactions so they are not double-counted here.
     private array $incomeTemplates = [
         ['category' => 'Salary', 'party' => 'Acme Corporation', 'amount_range' => [2500, 4000], 'description' => 'Monthly salary', 'weight' => 1],
         ['category' => 'Freelance', 'party' => 'TechStart Inc', 'amount_range' => [300, 1200], 'description' => 'Freelance project', 'weight' => 2],
         ['category' => 'Freelance', 'party' => 'Digital Solutions Ltd', 'amount_range' => [200, 800], 'description' => 'Contract work', 'weight' => 2],
-        ['category' => 'Investments', 'party' => 'Investment Portfolio', 'amount_range' => [50, 300], 'description' => 'Dividend payment', 'weight' => 1],
-        ['category' => 'Gifts', 'party' => 'Family', 'amount_range' => [20, 200], 'description' => 'Gift received', 'weight' => 1],
         ['category' => 'Refunds', 'party' => 'Amazon', 'amount_range' => [10, 100], 'description' => 'Refund', 'weight' => 1],
     ];
 
@@ -103,8 +103,10 @@ class TransactionSeeder extends Seeder
             // Monthly bills (rent, subscriptions, insurance - once per month)
             $monthlyBills = ['Rent', 'Netflix', 'Spotify', 'Insurance'];
             foreach ($this->expenseTemplates as $template) {
-                if (in_array($template['category'], $monthlyBills) ||
-                    in_array($template['party'], ['City Properties', 'Netflix', 'Spotify', 'State Insurance'])) {
+                if (
+                    in_array($template['category'], $monthlyBills) ||
+                    in_array($template['party'], ['City Properties', 'Netflix', 'Spotify', 'State Insurance'])
+                ) {
                     if ($categories->has($template['category']) && $parties->has($template['party'])) {
                         // Skip some months randomly for non-essential subscriptions
                         if ($template['party'] !== 'City Properties' && rand(1, 10) <= 2) {
@@ -143,6 +145,8 @@ class TransactionSeeder extends Seeder
             }
         }
 
+        $this->createIntentTransactions($user, $categories, $parties, $wallets);
+
         // Shuffle all transactions to mix income and expenses
         shuffle($allTransactions);
 
@@ -162,7 +166,6 @@ class TransactionSeeder extends Seeder
                 $txnData['date']
             );
         }
-
     }
 
     private function createRecentTransactions(array &$allTransactions, $categories, $parties): void
@@ -252,7 +255,7 @@ class TransactionSeeder extends Seeder
         };
     }
 
-    private function createTransaction($user, $category, $party, $wallet, $type, $amountRange, $description, $date): void
+    private function createTransaction($user, $category, $party, $wallet, $type, $amountRange, $description, $date, string $intent = 'regular'): void
     {
         $amount = rand($amountRange[0] * 100, $amountRange[1] * 100) / 100;
 
@@ -262,10 +265,49 @@ class TransactionSeeder extends Seeder
             'wallet_id' => $wallet->id,
             'amount' => $amount,
             'type' => $type,
+            'intent' => $intent,
             'description' => $description,
             'datetime' => $date,
         ]);
 
-        $transaction->categories()->attach($category->id);
+        if ($category !== null) {
+            $transaction->categories()->attach($category->id);
+        }
+    }
+
+    /**
+     * Seed intent-tagged loan, debt, investment and gift transactions. Relies on
+     * the default seeded parties and categories being present.
+     */
+    private function createIntentTransactions(User $user, $categories, $parties, $wallets): void
+    {
+        $family = $parties->get('Family');
+        $portfolio = $parties->get('Investment Portfolio');
+
+        if ($family === null || $portfolio === null) {
+            return;
+        }
+
+        $bankWallet = $wallets->firstWhere('name', 'Main Checking') ?? $wallets->first();
+        $savings = $wallets->firstWhere('name', 'Savings Account') ?? $bankWallet;
+        $cashWallet = $wallets->firstWhere('name', 'Main Wallet') ?? $bankWallet;
+
+        $investmentsCat = $categories->get('Investments');
+        $giftsCat = $categories->get('Gifts');
+
+        $this->createTransaction($user, null, $family, $bankWallet, 'income', [4000, 7000], 'Personal loan received', Carbon::now()->subMonths(2)->addDays(3), 'loan_received');
+
+        for ($month = 1; $month >= 0; $month--) {
+            $this->createTransaction($user, null, $family, $bankWallet, 'expense', [400, 600], 'Loan repayment', Carbon::now()->subMonths($month)->addDays(10), 'loan_repayment');
+        }
+
+        $this->createTransaction($user, null, $family, $bankWallet, 'income', [200, 500], 'Repaid by a friend', Carbon::now()->subMonths(1)->addDays(15), 'debt_owed');
+        $this->createTransaction($user, null, $family, $bankWallet, 'expense', [100, 300], 'Settled what I owed', Carbon::now()->subDays(20), 'debt_settled');
+
+        $this->createTransaction($user, $investmentsCat, $portfolio, $savings, 'expense', [800, 2000], 'Investment purchase', Carbon::now()->subMonths(2)->addDays(8), 'investment_buy');
+        $this->createTransaction($user, $investmentsCat, $portfolio, $savings, 'expense', [500, 1500], 'Investment purchase', Carbon::now()->subMonths(1)->addDays(5), 'investment_buy');
+        $this->createTransaction($user, $investmentsCat, $portfolio, $bankWallet, 'income', [80, 400], 'Investment return', Carbon::now()->subDays(12), 'investment_return');
+
+        $this->createTransaction($user, $giftsCat, $family, $cashWallet, 'income', [50, 250], 'Gift received', Carbon::now()->subDays(6), 'gift');
     }
 }

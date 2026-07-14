@@ -38,7 +38,9 @@ return [
             'driver' => 'database',
             'table' => 'jobs',
             'queue' => 'default',
-            'retry_after' => 90,
+            // Must exceed the longest job timeout (ProcessChatMessageJob is 120s)
+            // so a slow agent run isn't released and double-processed mid-flight.
+            'retry_after' => (int) env('QUEUE_RETRY_AFTER', 180),
             'after_commit' => false,
             'memory' => 128,
         ],

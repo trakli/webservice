@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TransactionIntent;
+use App\Enums\TransactionType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -202,6 +204,44 @@ class AdvancedImportTest extends TestCase
         $response->assertStatus(404);
     }
 
+    public function test_delete_session_removes_the_owners_session(): void
+    {
+        $session = $this->user->importSessions()->create([
+            'file_name' => 'test.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'failed',
+            'suggestions' => [],
+        ]);
+
+        $this->actingAs($this->user)
+            ->deleteJson("/api/v1/import/sessions/{$session->id}")
+            ->assertStatus(200);
+
+        $this->assertDatabaseMissing('import_sessions', ['id' => $session->id]);
+    }
+
+    public function test_delete_session_returns_404_for_other_users_session(): void
+    {
+        $otherUser = User::factory()->create();
+
+        $session = $otherUser->importSessions()->create([
+            'file_name' => 'secret.csv',
+            'file_type' => 'csv',
+            'document_type' => null,
+            'processor' => 'CsvProcessor',
+            'status' => 'ready',
+            'suggestions' => [],
+        ]);
+
+        $this->actingAs($this->user)
+            ->deleteJson("/api/v1/import/sessions/{$session->id}")
+            ->assertStatus(404);
+
+        $this->assertDatabaseHas('import_sessions', ['id' => $session->id]);
+    }
+
     public function test_sessions_are_scoped_to_authenticated_user(): void
     {
         $otherUser = User::factory()->create();
@@ -264,6 +304,61 @@ class AdvancedImportTest extends TestCase
         $this->assertEquals('confirmed', $session->status);
 
         $this->assertEquals(2, $this->user->transactions()->count());
+    }
+
+    public function test_confirm_creates_a_charges_expense_for_a_fee(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'MoMo', 'currency' => 'XAF']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['amount' => 2000.00, 'type' => 'expense', 'currency' => 'XAF', 'fee' => 8.00]),
+        ]);
+
+        $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [['index' => 0, 'wallet_id' => $wallet->id]],
+        ])->assertStatus(200);
+
+        // The transaction plus a separate fee expense.
+        $this->assertEquals(2, $this->user->transactions()->count());
+
+        $fee = $this->user->transactions()->where('intent', TransactionIntent::FEE->value)->first();
+        $this->assertNotNull($fee);
+        $this->assertEquals(8.00, (float) $fee->amount);
+        $this->assertEquals(TransactionType::EXPENSE->value, $fee->type);
+        $this->assertEquals($wallet->id, $fee->wallet_id);
+
+        $charges = $this->user->parties()->where('name', 'Charges')->first();
+        $this->assertNotNull($charges);
+        $this->assertEquals($charges->id, $fee->party_id);
+
+        // Unlinked by default.
+        $this->assertNull($fee->metadata);
+    }
+
+    public function test_confirm_links_the_fee_to_its_transaction_on_request(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'MoMo', 'currency' => 'XAF']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['amount' => 2000.00, 'type' => 'expense', 'currency' => 'XAF', 'fee' => 8.00]),
+        ]);
+
+        $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [['index' => 0, 'wallet_id' => $wallet->id]],
+            'link_fees' => true,
+        ])->assertStatus(200);
+
+        $main = $this->user->transactions()
+            ->where('intent', '!=', TransactionIntent::FEE->value)
+            ->where('amount', 2000.00)
+            ->first();
+        $fee = $this->user->transactions()->where('intent', TransactionIntent::FEE->value)->first();
+
+        $this->assertNotNull($main);
+        $this->assertNotNull($fee);
+        $this->assertEquals($main->id, $fee->metadata['fee_of_transaction_id']);
     }
 
     public function test_confirm_accepts_party_id_and_category_id(): void

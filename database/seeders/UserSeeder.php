@@ -8,6 +8,7 @@ use App\Models\Party;
 use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Database\Seeder;
+use Whilesmart\Roles\Models\Role;
 
 class UserSeeder extends Seeder
 {
@@ -81,11 +82,28 @@ class UserSeeder extends Seeder
                 'username' => "user{$index}",
             ]);
 
-            $this->createCategoriesForUser($user);
-            $this->createPartiesForUser($user);
-            $this->createWalletsForUser($user);
-            $this->createGroupsForUser($user);
+            $this->seedUserData($user);
         }
+
+        $admin = User::factory()->create([
+            'email' => 'admin@trakli.app',
+            'username' => 'admin',
+        ]);
+        $this->seedUserData($admin);
+
+        Role::firstOrCreate(
+            ['slug' => 'admin'],
+            ['name' => 'Admin', 'description' => 'System administrator']
+        );
+        $admin->assignRole('admin');
+    }
+
+    private function seedUserData(User $user): void
+    {
+        $this->createCategoriesForUser($user);
+        $this->createPartiesForUser($user);
+        $this->createWalletsForUser($user);
+        $this->createGroupsForUser($user);
     }
 
     private function createCategoriesForUser(User $user): void

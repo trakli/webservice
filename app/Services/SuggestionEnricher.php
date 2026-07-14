@@ -10,13 +10,20 @@ use Prism\Prism\Facades\Prism;
 class SuggestionEnricher
 {
     /**
-     * Enrich raw transaction suggestions by mapping them to the user's
-     * existing wallets, categories, and parties using an LLM.
+     * Enrich raw transaction suggestions by mapping them to the user's existing
+     * wallets, categories, and parties. When the source document context is
+     * supplied, it also validates the parsed amount, currency, and date against
+     * that document so a mis-extracted value (e.g. an account number picked up
+     * as an amount) gets corrected. Uses an LLM; when it is unavailable the raw
+     * suggestions are returned unchanged.
      *
      * @param  TransactionSuggestion[]  $suggestions
+     * @param  string|null  $documentContext  Raw extracted text/tables from the
+     *                                        source document, used as ground
+     *                                        truth for value correction.
      * @return TransactionSuggestion[]
      */
-    public function enrich(array $suggestions, User $user): array
+    public function enrich(array $suggestions, User $user, ?string $documentContext = null): array
     {
         if (empty($suggestions)) {
             return [];
@@ -26,8 +33,8 @@ class SuggestionEnricher
         $categories = $user->categories()->select('name', 'type')->get()->toArray();
         $parties = $user->parties()->select('name')->get()->toArray();
 
-        // If user has no existing entities, skip LLM call — nothing to match against
-        // but still try to classify type and clean descriptions
+        // With no existing entities there is nothing to match against; the LLM
+        // still classifies type and cleans descriptions.
         $suggestionsData = array_map(fn (TransactionSuggestion $suggestion) => [
             'amount' => $suggestion->amount,
             'currency' => $suggestion->currency,
@@ -39,7 +46,7 @@ class SuggestionEnricher
             'date' => $suggestion->date,
         ], $suggestions);
 
-        $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties);
+        $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties, $documentContext);
 
         try {
             $response = Prism::text()
@@ -72,7 +79,7 @@ class SuggestionEnricher
     private function systemPrompt(): string
     {
         return <<<'PROMPT'
-You are a financial transaction classifier.
+You are a financial transaction classifier and validator.
 
 CRITICAL RULES:
 - wallet: MUST match by currency. A EUR transaction can ONLY go to a EUR wallet.
@@ -83,16 +90,41 @@ CRITICAL RULES:
 - type: "income" for money received, "expense" for money spent.
 - description: Clean up raw text (e.g. "AMZN MKTP US*ABC123" → "Amazon Marketplace").
 
+VALUE VALIDATION (amount, currency, date):
+- A SOURCE DOCUMENT section may be provided below. When it is, use it as ground
+  truth to correct values that were mis-extracted.
+- amount: a positive number, the transaction's monetary value. If the provided
+  amount is actually an account number, phone number, reference or balance (NOT
+  the transaction value), replace it with the correct amount from the SOURCE
+  DOCUMENT. Never return a negative amount; direction is carried by "type".
+- currency: a 3-letter code; correct it only if the SOURCE DOCUMENT clearly shows
+  a different currency.
+- date: YYYY-MM-DD; correct it only if the SOURCE DOCUMENT clearly shows a
+  different date.
+- If NO SOURCE DOCUMENT section is present, echo amount, currency and date back
+  EXACTLY as given; do not guess.
+
 OUTPUT FORMAT:
 - Respond with ONLY a valid JSON array. No other text, no markdown code fences.
-- Each element must have exactly these keys: wallet, category, party, type, description.
-- Use null (not empty string) when no match is found.
+- Each element must have exactly these keys: wallet, category, party, type,
+  description, amount, currency, date.
+- Use null (not empty string) when no match is found for wallet, category or party.
 PROMPT;
     }
 
-    private function buildPrompt(array $suggestions, array $wallets, array $categories, array $parties): string
-    {
+    private function buildPrompt(
+        array $suggestions,
+        array $wallets,
+        array $categories,
+        array $parties,
+        ?string $documentContext = null,
+    ): string {
         $parts = [];
+
+        if (! empty($documentContext)) {
+            $parts[] = '=== SOURCE DOCUMENT (ground truth for amount, currency, date) ===';
+            $parts[] = mb_substr($documentContext, 0, 8000);
+        }
 
         $parts[] = '=== AVAILABLE WALLETS (use ONLY these, matched by currency) ===';
         if (! empty($wallets)) {
@@ -100,7 +132,7 @@ PROMPT;
                 $parts[] = "- \"{$wallet['name']}\" (currency: {$wallet['currency']})";
             }
         } else {
-            $parts[] = 'None — set wallet to null for all transactions.';
+            $parts[] = 'None available; set wallet to null for all transactions.';
         }
 
         $parts[] = "\n=== AVAILABLE CATEGORIES ===";
@@ -109,7 +141,7 @@ PROMPT;
                 $parts[] = "- \"{$category['name']}\" (type: {$category['type']})";
             }
         } else {
-            $parts[] = 'None — set category to null.';
+            $parts[] = 'None available; set category to null.';
         }
 
         $parts[] = "\n=== AVAILABLE PARTIES ===";
@@ -118,7 +150,7 @@ PROMPT;
                 $parts[] = "- \"{$party['name']}\"";
             }
         } else {
-            $parts[] = 'None — set party to null.';
+            $parts[] = 'None available; set party to null.';
         }
 
         $count = count($suggestions);
@@ -173,7 +205,12 @@ PROMPT;
             $enrichment = $enrichments[$i] ?? [];
             $assignedWallet = $enrichment['wallet'] ?? $suggestion->wallet;
 
-            $currency = $suggestion->currency;
+            // Value corrections are grounded in the source document; fall back to
+            // the originally parsed value whenever the correction is unusable.
+            $amount = $this->correctedAmount($enrichment['amount'] ?? null, $suggestion->amount);
+            $date = $this->correctedDate($enrichment['date'] ?? null, $suggestion->date);
+
+            $currency = $this->correctedCurrency($enrichment['currency'] ?? null, $suggestion->currency);
             if ($assignedWallet) {
                 $slug = $slugByName[$assignedWallet] ?? null;
                 if ($slug && isset($walletsBySlug[$slug])) {
@@ -182,19 +219,53 @@ PROMPT;
             }
 
             $result[] = new TransactionSuggestion(
-                amount: $suggestion->amount,
+                amount: $amount,
                 currency: $currency,
                 type: $enrichment['type'] ?? $suggestion->type,
                 party: $enrichment['party'] ?? $suggestion->party,
                 wallet: $assignedWallet,
                 category: $enrichment['category'] ?? $suggestion->category,
                 description: $enrichment['description'] ?? $suggestion->description,
-                date: $suggestion->date,
+                date: $date,
                 confidence: $suggestion->confidence,
                 documentType: $suggestion->documentType,
             );
         }
 
         return $result;
+    }
+
+    /**
+     * Accept a corrected amount only when it is a usable positive number;
+     * otherwise keep the originally parsed value.
+     */
+    private function correctedAmount(mixed $corrected, ?float $original): ?float
+    {
+        if (is_numeric($corrected)) {
+            $value = abs((float) $corrected);
+            if ($value > 0) {
+                return $value;
+            }
+        }
+
+        return $original;
+    }
+
+    private function correctedDate(mixed $corrected, ?string $original): ?string
+    {
+        if (is_string($corrected) && preg_match('/^\d{4}-\d{2}-\d{2}$/', trim($corrected))) {
+            return trim($corrected);
+        }
+
+        return $original;
+    }
+
+    private function correctedCurrency(mixed $corrected, ?string $original): ?string
+    {
+        if (is_string($corrected) && preg_match('/^[A-Za-z]{3}$/', trim($corrected))) {
+            return strtoupper(trim($corrected));
+        }
+
+        return $original;
     }
 }

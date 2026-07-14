@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
+use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
@@ -18,10 +20,12 @@ class User extends Authenticatable implements HasLocalePreference
 {
     use Configurable;
     use HasApiTokens;
+    use HasTokenUsage;
     use HasDevices;
     use HasFactory;
     use HasRoles;
     use Notifiable;
+    use SendsOutreach;
 
     /**
      * The attributes that are mass assignable.
@@ -45,6 +49,7 @@ class User extends Authenticatable implements HasLocalePreference
      */
     protected $appends = [
         'avatar_url',
+        'is_admin',
     ];
 
     /**
@@ -87,6 +92,11 @@ class User extends Authenticatable implements HasLocalePreference
         return $this->hasMany(Wallet::class);
     }
 
+    public function holdings(): HasMany
+    {
+        return $this->hasMany(Holding::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
@@ -125,6 +135,11 @@ class User extends Authenticatable implements HasLocalePreference
     public function getAvatarUrlAttribute(): ?string
     {
         return $this->getConfigValue('avatar');
+    }
+
+    public function getIsAdminAttribute(): bool
+    {
+        return $this->hasRole('admin');
     }
 
     public function preferredLocale(): ?string

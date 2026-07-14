@@ -2,11 +2,14 @@
 
 namespace App\Providers;
 
+use App\Contracts\Entitlements;
 use App\Contracts\OwnerResolver;
 use App\Services\DocumentProcessorManager;
 use App\Services\DocumentProcessors\CsvProcessor;
 use App\Services\DocumentProcessors\RemoteDocumentProcessor;
+use App\Services\IntegrationRegistry;
 use App\Services\SchemaConformance\SchemaConformanceService;
+use App\Support\AllowAllEntitlements;
 use App\Support\UserOwnerResolver;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Carbon;
@@ -24,8 +27,22 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->register(PluginServiceProvider::class);
+        $this->app->register(\App\Mcp\McpServiceProvider::class);
 
         $this->app->singleton(OwnerResolver::class, UserOwnerResolver::class);
+
+        $this->app->bind(
+            \Whilesmart\OwnerAccess\Contracts\OwnerAuthorizer::class,
+            \App\Holdings\UserOwnerAuthorizer::class
+        );
+        $this->app->bind(
+            \Whilesmart\Holdings\Contracts\HoldingPriceProvider::class,
+            \App\Holdings\CoingeckoPriceProvider::class
+        );
+
+        $this->app->singleton(Entitlements::class, AllowAllEntitlements::class);
+
+        $this->app->singleton(IntegrationRegistry::class);
 
         $this->app->singleton(DocumentProcessorManager::class, function ($app) {
             $manager = new DocumentProcessorManager();

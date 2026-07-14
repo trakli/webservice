@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\TransactionIntent;
 use App\Enums\TransactionType;
 use App\Events\ImportComplete;
 use App\Events\ImportFailed;
@@ -278,8 +279,9 @@ class FileImportService
         bool $autoCreateWallets = false,
         bool $autoCreateParties = false,
         bool $autoCreateCategories = false,
+        bool $linkFee = false,
     ): void {
-        DB::transaction(function () use ($merged, $transactionType, $user, $autoCreateWallets, $autoCreateParties, $autoCreateCategories) {
+        DB::transaction(function () use ($merged, $transactionType, $user, $autoCreateWallets, $autoCreateParties, $autoCreateCategories, $linkFee) {
             $wallet = $this->resolveWalletForConfirm(
                 $user,
                 $merged['wallet_id'] ?? null,
@@ -313,7 +315,57 @@ class FileImportService
             if (! is_null($category)) {
                 $transaction->categories()->sync([$category->id]);
             }
+
+            $fee = (float) ($merged['fee'] ?? 0);
+            if ($fee > 0) {
+                $this->createFeeTransaction(
+                    $user,
+                    $wallet,
+                    $fee,
+                    $merged['date'] ?? null,
+                    $linkFee ? $transaction->id : null,
+                );
+            }
         });
+    }
+
+    /**
+     * A statement fee is real spending that went to the provider, so it becomes
+     * its own expense attributed to a "Charges" party and tagged with the fee
+     * intent. It is linked back to the transaction it came from only on request.
+     */
+    private function createFeeTransaction(
+        User $user,
+        \App\Models\Wallet $wallet,
+        float $fee,
+        ?string $date,
+        ?int $linkedTransactionId,
+    ): void {
+        $charges = $this->resolveChargesParty($user);
+
+        $user->transactions()->create([
+            'amount' => $fee,
+            'description' => __('Transaction fee'),
+            'datetime' => $date,
+            'type' => TransactionType::EXPENSE->value,
+            'intent' => TransactionIntent::FEE->value,
+            'wallet_id' => $wallet->id,
+            'party_id' => $charges->id,
+            'metadata' => $linkedTransactionId ? ['fee_of_transaction_id' => $linkedTransactionId] : null,
+        ]);
+    }
+
+    private function resolveChargesParty(User $user): \App\Models\Party
+    {
+        $existing = $user->parties()->where('name', 'Charges')->first();
+        if (! is_null($existing)) {
+            return $existing;
+        }
+
+        return $user->parties()->create([
+            'name' => 'Charges',
+            'type' => 'service',
+        ]);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use OpenApi\Attributes as OA;
 
 #[OA\Schema(
@@ -56,12 +57,14 @@ class ChatMessage extends Model
         'format_hint',
         'language',
         'result',
+        'progress',
         'error',
         'completed_at',
     ];
 
     protected $casts = [
         'result' => 'array',
+        'progress' => 'array',
         'completed_at' => 'datetime',
     ];
 
@@ -73,6 +76,11 @@ class ChatMessage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function files(): MorphMany
+    {
+        return $this->morphMany(File::class, 'fileable');
     }
 
     public function isFinished(): bool

@@ -62,6 +62,16 @@ class StatsController extends ApiController
                     description: 'Preset date range (overrides start_date/end_date)'
                 )
             ),
+            new OA\Parameter(
+                name: 'section',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(
+                    type: 'string',
+                    enum: ['overview', 'activity', 'comparisons', 'categories', 'parties', 'cashflow', 'position'],
+                    description: 'Compute only one section of the response for progressive loading. Omit for the full payload.'
+                )
+            ),
         ],
         responses: [
             new OA\Response(
@@ -105,12 +115,21 @@ class StatsController extends ApiController
         $defaultCurrency = $user->getConfigValue('default-currency') ?? 'USD';
         $period = $request->input('period', 'month');
 
+        $section = $request->input('section');
+        if ($section !== null && ! in_array($section, StatsService::SECTIONS, true)) {
+            return $this->failure(__('Invalid stats section.'), 422, [
+                'invalid_section' => $section,
+                'valid_sections' => StatsService::SECTIONS,
+            ]);
+        }
+
         $cacheKey = StatsService::generateCacheKey(
             $user->id,
             $startDate,
             $endDate,
             $walletIds,
-            $period
+            $period,
+            $section
         );
 
         $data = Cache::remember(
@@ -122,11 +141,12 @@ class StatsController extends ApiController
                 $endDate,
                 $walletIds,
                 $period,
-                $defaultCurrency
+                $defaultCurrency,
+                $section
             )
         );
 
-        return response()->json(['data' => $data]);
+        return $this->success($data);
     }
 
     private function resolveDateRange(Request $request): array
@@ -174,10 +194,9 @@ class StatsController extends ApiController
 
         $invalidWalletIds = array_diff($walletIds, $validWalletIds);
         if (! empty($invalidWalletIds)) {
-            return response()->json([
-                'message' => __('One or more wallet IDs are invalid or do not belong to the user.'),
+            return $this->failure(__('One or more wallet IDs are invalid or do not belong to the user.'), 422, [
                 'invalid_wallet_ids' => array_values($invalidWalletIds),
-            ], 422);
+            ]);
         }
 
         return $walletIds;

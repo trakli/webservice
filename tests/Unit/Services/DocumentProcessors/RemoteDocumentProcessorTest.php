@@ -29,6 +29,26 @@ class RemoteDocumentProcessorTest extends TestCase
         $this->user = User::factory()->create();
     }
 
+    /**
+     * In text_block mode the header-aware structurer runs first; fake it to
+     * return nothing so these tests exercise the positional fallback path.
+     */
+    private function fakeStructurerReturnsNothing(): void
+    {
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: '[]',
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(0, 0),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+    }
+
     public function test_supports_returns_false_when_no_url_configured(): void
     {
         config(['services.document_processor.url' => null]);
@@ -129,6 +149,8 @@ class RemoteDocumentProcessorTest extends TestCase
 
     public function test_parse_response_in_text_block_mode(): void
     {
+        $this->fakeStructurerReturnsNothing();
+
         config([
             'services.document_processor.url' => 'https://example.com/parse',
             'services.document_processor.auth_type' => 'none',
@@ -289,6 +311,8 @@ class RemoteDocumentProcessorTest extends TestCase
 
     public function test_skipped_status_transactions_excluded_in_text_block_mode(): void
     {
+        $this->fakeStructurerReturnsNothing();
+
         config([
             'services.document_processor.url' => 'https://example.com/parse',
             'services.document_processor.auth_type' => 'none',
@@ -325,6 +349,140 @@ class RemoteDocumentProcessorTest extends TestCase
 
         $this->assertCount(1, $result);
         $this->assertEquals(100.00, $result[0]->amount);
+    }
+
+    public function test_leading_zero_account_number_is_not_treated_as_amount(): void
+    {
+        $this->fakeStructurerReturnsNothing();
+
+        config([
+            'services.document_processor.url' => 'https://example.com/parse',
+            'services.document_processor.auth_type' => 'none',
+            'services.document_processor.response_mapping' => [
+                'mode' => 'text_block',
+                'transactions_path' => 'elements',
+                'content_field' => 'content',
+                'line_mapping' => [
+                    'date' => 0,
+                    'description' => 1,
+                    'amount' => 2,
+                    'currency' => 3,
+                ],
+            ],
+        ]);
+
+        // First block's "amount" line is really an account/phone number
+        // (leading zero, long digit run); the second is a genuine amount.
+        Http::fake([
+            'https://example.com/parse' => Http::response([
+                'elements' => [
+                    ['content' => "2025-03-15\nMoMo transfer\n0244123456\nGHS"],
+                    ['content' => "2025-03-16\nAirtime purchase\n25.00\nGHS"],
+                ],
+            ], 200),
+        ]);
+
+        $file = UploadedFile::fake()->create('momo.pdf', 100, 'application/pdf');
+
+        $result = $this->processor->process($file, $this->user);
+
+        $this->assertCount(1, $result);
+        $this->assertEquals(25.00, $result[0]->amount);
+        $this->assertEquals('Airtime purchase', $result[0]->description);
+    }
+
+    public function test_last_extraction_context_is_populated_from_response(): void
+    {
+        config([
+            'services.document_processor.url' => 'https://example.com/parse',
+            'services.document_processor.auth_type' => 'none',
+            'services.document_processor.response_mapping' => [
+                'mode' => 'fields',
+                'transactions_path' => 'transactions',
+            ],
+        ]);
+
+        Http::fake([
+            'https://example.com/parse' => Http::response([
+                'transactions' => [],
+                'elements' => [
+                    ['content' => 'MoMo transfer to 0244123456 amount GHS 25.00'],
+                ],
+            ], 200),
+        ]);
+
+        $file = UploadedFile::fake()->create('momo.pdf', 100, 'application/pdf');
+
+        $this->processor->process($file, $this->user);
+
+        $context = $this->processor->lastExtractionContext();
+        $this->assertNotNull($context);
+        $this->assertStringContainsString('GHS 25.00', $context);
+    }
+
+    public function test_text_block_mode_uses_header_aware_structurer(): void
+    {
+        config([
+            'services.document_processor.url' => 'https://example.com/parse',
+            'services.document_processor.auth_type' => 'none',
+            'services.document_processor.response_mapping' => [
+                'mode' => 'text_block',
+                'transactions_path' => 'elements',
+                'content_field' => 'content',
+            ],
+        ]);
+
+        // A real mashed MoMo row: columns run together, phone code and ids share
+        // the line with the amount and fee.
+        Http::fake([
+            'https://example.com/parse' => Http::response([
+                'elements' => [
+                    ['content' => "Date & Time Payment Type To/From Account Name Amount Transaction ID Fees Tax Balance Reference\n15 Jun 2026 20:12 MOMO USER +237 68 09 11 37 4 NAOMI KAYLANI FON AKE -2000 17544382009 8.00 XAF 0.00 XAF 5,200 XAF Charges"],
+                ],
+            ], 200),
+        ]);
+
+        // The header-aware structurer resolves the columns.
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: json_encode([[
+                    'date' => '2026-06-15',
+                    'description' => 'MoMo transfer to NAOMI KAYLANI FON AKE',
+                    'payment_type' => 'MOMO USER',
+                    'counterparty_name' => 'NAOMI KAYLANI FON AKE',
+                    'account' => '+237 68 09 11 37 4',
+                    'amount' => 2000,
+                    'direction' => 'expense',
+                    'fee' => 8.00,
+                    'tax' => 0,
+                    'balance' => 5200,
+                    'reference' => 'Charges',
+                    'currency' => 'XAF',
+                ]]),
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(0, 0),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+
+        $file = UploadedFile::fake()->create('momo.pdf', 100, 'application/pdf');
+
+        $result = $this->processor->process($file, $this->user);
+
+        $this->assertCount(1, $result);
+        $suggestion = $result[0];
+        $this->assertEquals(2000.0, $suggestion->amount);
+        $this->assertEquals('expense', $suggestion->type);
+        $this->assertEquals('NAOMI KAYLANI FON AKE', $suggestion->party);
+        $this->assertEquals('+237 68 09 11 37 4', $suggestion->account);
+        $this->assertEquals(8.00, $suggestion->fee);
+        $this->assertEquals('XAF', $suggestion->currency);
+        $this->assertEquals('2026-06-15', $suggestion->date);
+        $this->assertEquals('statement', $suggestion->documentType);
     }
 
     public function test_llm_fallback_when_mapping_returns_empty(): void

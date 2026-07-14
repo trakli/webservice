@@ -34,6 +34,135 @@ class TransactionsTest extends TestCase
         $this->assertDatabaseHas('transactions', ['id' => $income['id']]);
     }
 
+    public function test_transaction_intent_defaults_to_regular()
+    {
+        $income = $this->createTransaction('income');
+
+        $this->assertEquals('regular', $income['intent']);
+        $this->assertDatabaseHas('transactions', ['id' => $income['id'], 'intent' => 'regular']);
+    }
+
+    public function test_api_user_can_create_transaction_with_intent()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'amount' => 5000,
+            'wallet_id' => $this->wallet->id,
+            'intent' => 'loan_received',
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals('loan_received', $response->json('data.intent'));
+        $this->assertDatabaseHas('transactions', [
+            'id' => $response->json('data.id'),
+            'intent' => 'loan_received',
+        ]);
+    }
+
+    public function test_api_user_can_update_transaction_intent()
+    {
+        $income = $this->createTransaction('income');
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/' . $income['id'], [
+            'intent' => 'investment_return',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('transactions', [
+            'id' => $income['id'],
+            'intent' => 'investment_return',
+        ]);
+    }
+
+    public function test_index_filters_by_intent()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income', 'amount' => 5000, 'wallet_id' => $this->wallet->id,
+            'intent' => 'investment_return', 'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense', 'amount' => 2000, 'wallet_id' => $this->wallet->id,
+            'intent' => 'investment_buy', 'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense', 'amount' => 30, 'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/transactions?intent=investment_buy,investment_return');
+
+        $response->assertStatus(200);
+        $intents = collect($response->json('data.data'))->pluck('intent')->all();
+        $this->assertEqualsCanonicalizing(['investment_return', 'investment_buy'], $intents);
+    }
+
+    public function test_index_can_exclude_transfers()
+    {
+        $regular = $this->createTransaction('income');
+        $transfer = \App\Models\Transfer::factory()->create([
+            'user_id' => $this->user->id,
+            'from_wallet_id' => $this->wallet->id,
+            'to_wallet_id' => $this->wallet->id,
+        ]);
+        $transferLeg = $this->user->transactions()->create([
+            'type' => 'income',
+            'amount' => 999,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => now(),
+            'transfer_id' => $transfer->id,
+        ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/transactions?intent=regular&type=income&exclude_transfers=1');
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertContains($regular['id'], $ids);
+        $this->assertNotContains($transferLeg->id, $ids);
+    }
+
+    public function test_index_filters_by_comma_separated_wallet_ids()
+    {
+        $secondWallet = $this->user->wallets()->create(['name' => 'Second', 'balance' => 0]);
+        $thirdWallet = $this->user->wallets()->create(['name' => 'Third', 'balance' => 0]);
+
+        $inFirst = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income', 'amount' => 10, 'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ])->json('data.id');
+        $inSecond = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income', 'amount' => 20, 'wallet_id' => $secondWallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ])->json('data.id');
+        $inThird = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income', 'amount' => 30, 'wallet_id' => $thirdWallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ])->json('data.id');
+
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/transactions?wallet_ids={$this->wallet->id},{$secondWallet->id}");
+
+        $response->assertStatus(200);
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertEqualsCanonicalizing([$inFirst, $inSecond], $ids);
+        $this->assertNotContains($inThird, $ids);
+    }
+
+    public function test_invalid_intent_is_rejected()
+    {
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'intent' => 'not_a_real_intent',
+            'datetime' => '2025-04-30T15:17:54.120Z',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
     private function createTransaction(string $type, array $recurrentData = []): array
     {
         $data = [

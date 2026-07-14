@@ -1,6 +1,6 @@
 {
     "name": "trakli/webservice",
-    "version": "1.1.2",
+    "version": "2.0.0-beta.1",
     "type": "project",
     "description": "Trakli Webservice",
     "keywords": [
@@ -14,16 +14,26 @@
         "cviebrock/eloquent-sluggable": "^11.0",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "^11.45.1",
+        "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "laravel/mcp": "^0.8",
         "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
+        "whilesmart/eloquent-activities": "^1.0",
+        "whilesmart/eloquent-agent-actions": "dev-dev",
+        "whilesmart/eloquent-agent-metrics": "^1.0",
+        "whilesmart/eloquent-agents": "dev-main",
+        "whilesmart/eloquent-engagement": "dev-dev",
+        "whilesmart/eloquent-holdings": "^1.1",
         "whilesmart/eloquent-model-configuration": "^1.0.9",
+        "whilesmart/eloquent-outreach": "dev-dev",
         "whilesmart/eloquent-roles": "dev-dev",
         "whilesmart/laravel-plugin-engine": "^1.0.0",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
+        "wikimedia/composer-merge-plugin": "^2.1",
         "zircote/swagger-php": "^5.0"
     },
     "require-dev": {
@@ -75,10 +85,11 @@
             "vendor/bin/pint --preset psr12 --test"
         ],
         "openapi": [
-            "./vendor/bin/openapi app --debug --output public/docs/api.json"
+            "./vendor/bin/openapi app --debug --output public/docs/api.json",
+            "php scripts/stamp-openapi-version.php public/docs/api.json"
         ],
         "openapi:test": [
-            "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
+            "trap 'rm -f public/docs/check-api.json' EXIT; ./vendor/bin/openapi --output public/docs/check-api.json ./app && php scripts/stamp-openapi-version.php public/docs/check-api.json && diff -q public/docs/check-api.json public/docs/api.json || (echo 'OpenAPI specs don’t match. Run `composer openapi` to regenerate.' && exit 1)"
         ],
         "phpmd": [
             "vendor/bin/phpmd app text phpmd.xml"
@@ -90,6 +101,11 @@
     "extra": {
         "laravel": {
             "dont-discover": []
+        },
+        "merge-plugin": {
+            "include": [
+                "plugins/*/composer.json"
+            ]
         }
     },
     "config": {
@@ -98,9 +114,18 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "wikimedia/composer-merge-plugin": true
+        },
+        "audit": {
+            "block-insecure": false
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [{
+        "name": "eloquent-agents",
+        "type": "vcs",
+        "url": "https://github.com/whilesmartphp/eloquent-agents"
+    }]
 }

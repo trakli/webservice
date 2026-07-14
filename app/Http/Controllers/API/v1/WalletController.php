@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
@@ -157,6 +158,11 @@ class WalletController extends ApiController
             $existingWallet->refresh();
 
             return $this->success($existingWallet, __('Wallet already exists'), 200);
+        }
+
+        $walletLimit = app(Entitlements::class)->limit($user, 'max_wallets');
+        if ($walletLimit !== null && Wallet::where('user_id', $user->id)->count() >= $walletLimit) {
+            return $this->failure(__('You have reached the maximum number of wallets allowed.'), 403);
         }
 
         try {

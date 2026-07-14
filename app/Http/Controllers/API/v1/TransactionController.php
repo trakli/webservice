@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Enums\TransactionIntent;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
 use App\Services\FileService;
 use App\Services\RecurringTransactionService;
+use App\Services\TransactionWriter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +27,8 @@ class TransactionController extends ApiController
     use ApiQueryable;
 
     public function __construct(
-        private RecurringTransactionService $recurringTransactionService
+        private RecurringTransactionService $recurringTransactionService,
+        private TransactionWriter $transactionWriter
     ) {
     }
 
@@ -75,6 +79,13 @@ class TransactionController extends ApiController
                 required: false,
                 schema: new OA\Schema(type: 'string')
             ),
+            new OA\Parameter(
+                name: 'intent',
+                description: 'Filter by one or more transaction intents (comma-separated)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', example: 'investment_buy,investment_return')
+            ),
             new OA\Parameter(ref: '#/components/parameters/limitParam'),
             new OA\Parameter(ref: '#/components/parameters/syncedSinceParam'),
             new OA\Parameter(ref: '#/components/parameters/noClientIdParam'),
@@ -110,7 +121,7 @@ class TransactionController extends ApiController
             return $this->failure(__('Invalid transaction type'), 400);
         }
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = auth()->user();
         $query = $user->transactions()->orderBy('datetime', 'desc')->orderBy('created_at', 'desc');
         if (! empty($type)) {
@@ -228,6 +239,15 @@ class TransactionController extends ApiController
                         ),
                         new OA\Property(property: 'amount', type: 'number', format: 'float'),
                         new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
+                        new OA\Property(
+                            property: 'intent',
+                            type: 'string',
+                            enum: [
+                                'regular', 'loan_received', 'loan_repayment', 'debt_owed',
+                                'debt_settled', 'investment_buy', 'investment_return', 'gift',
+                            ],
+                            default: 'regular'
+                        ),
                         new OA\Property(property: 'description', type: 'string'),
                         new OA\Property(property: 'datetime', type: 'string', format: 'date-time'),
                         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
@@ -297,6 +317,7 @@ class TransactionController extends ApiController
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
+            'intent' => 'nullable|string|in:' . implode(',', TransactionIntent::values()),
             'description' => 'nullable|string',
             'datetime' => ['nullable', new Iso8601DateTime()],
             'created_at' => ['nullable', new Iso8601DateTime()],
@@ -370,25 +391,10 @@ class TransactionController extends ApiController
 
         try {
             // Validate ownership of all resources before creating the transaction
-            $this->validateResourceOwnership($data, $categories);
+            $this->transactionWriter->validateOwnership($user, $data, $categories);
 
             $transaction = DB::transaction(function () use ($request, $data, $categories, $recurringTransactionData, $user) {
-                /** @var Transaction $transaction */
-                $transaction = $user->transactions()->create($data);
-
-                if (isset($data['client_id'])) {
-                    $transaction->setClientGeneratedId($data['client_id'], $user);
-                }
-
-                $transaction->markAsSynced();
-
-                if (! empty($categories)) {
-                    $transaction->categories()->sync($categories);
-                }
-
-                if (isset($data['group_id'])) {
-                    $transaction->groups()->sync($data['group_id']);
-                }
+                $transaction = $this->transactionWriter->createCore($user, $data, $categories);
 
                 FileService::uploadFiles($transaction, $request, 'files', 'transactions');
 
@@ -541,6 +547,15 @@ class TransactionController extends ApiController
                     ),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
+                    new OA\Property(
+                        property: 'intent',
+                        type: 'string',
+                        enum: [
+                            'regular', 'loan_received', 'loan_repayment', 'debt_owed',
+                            'debt_settled', 'investment_buy', 'investment_return', 'gift',
+                        ],
+                        default: 'regular'
+                    ),
                     new OA\Property(property: 'date', type: 'string', format: 'date'),
                     new OA\Property(property: 'party_id', type: 'integer'),
                     new OA\Property(property: 'group_id', type: 'integer'),
@@ -617,6 +632,7 @@ class TransactionController extends ApiController
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'nullable|numeric|min:0.01',
             'type' => 'nullable|string|in:income,expense',
+            'intent' => 'nullable|string|in:' . implode(',', TransactionIntent::values()),
             'datetime' => ['nullable', new Iso8601DateTime()],
             'description' => 'nullable|string',
             'party_id' => 'nullable|integer|exists:parties,id',
@@ -689,7 +705,7 @@ class TransactionController extends ApiController
 
         try {
             // Validate ownership of all resources before updating the transaction
-            $this->validateResourceOwnership($validatedData, $categories);
+            $this->transactionWriter->validateOwnership($request->user(), $validatedData, $categories);
             $this->checkUpdatedAt($transaction, $validatedData);
 
             $transaction = DB::transaction(function () use (
@@ -826,7 +842,6 @@ class TransactionController extends ApiController
         return $this->success(['message' => __('Transaction deleted successfully')]);
     }
 
-
     /**
      * Apply optional filtering query parameters (date range, wallets,
      * categories, search) to the given transaction query.
@@ -841,23 +856,58 @@ class TransactionController extends ApiController
             $query->whereDate('datetime', '<=', $request->query('date_to'));
         }
 
-        $walletIds = $request->query('wallet_ids');
+        $walletIds = $this->listParam($request, 'wallet_ids');
         if (! empty($walletIds)) {
-            $walletIds = is_array($walletIds) ? $walletIds : [$walletIds];
             $query->whereIn('wallet_id', $walletIds);
         }
 
-        $categoryIds = $request->query('category_ids');
+        $categoryIds = $this->listParam($request, 'category_ids');
         if (! empty($categoryIds)) {
-            $categoryIds = is_array($categoryIds) ? $categoryIds : [$categoryIds];
             $query->whereHas('categories', function ($q) use ($categoryIds) {
                 $q->whereIn('categories.id', $categoryIds);
             });
         }
 
+        $this->applyIntentFilters($query, $request);
+
         if ($request->filled('search')) {
             $this->applySearchFilter($query, (string) $request->query('search'));
         }
+    }
+
+    private function applyIntentFilters($query, Request $request): void
+    {
+        $intents = array_values(array_intersect(
+            $this->listParam($request, 'intent'),
+            TransactionIntent::values()
+        ));
+        if (! empty($intents)) {
+            $query->whereIn('intent', $intents);
+        }
+
+        if ($request->boolean('exclude_transfers')) {
+            $query->nonTransfer();
+        }
+    }
+
+    /**
+     * Parse a list query parameter that may arrive either as an array
+     * (key[]=a&key[]=b) or a comma-separated string (key=a,b), returning a
+     * trimmed list with empty entries removed.
+     */
+    private function listParam(Request $request, string $key): array
+    {
+        $value = $request->query($key);
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        $items = is_array($value) ? $value : explode(',', (string) $value);
+
+        return array_values(array_filter(
+            array_map('trim', $items),
+            fn ($item) => $item !== ''
+        ));
     }
 
     /**
@@ -874,46 +924,5 @@ class TransactionController extends ApiController
                 $q->orWhere('amount', $numeric);
             }
         });
-    }
-
-    /**
-     * Validate that the authenticated user owns the specified resources.
-     *
-     * @param  array  $data  The validated data containing resource IDs
-     * @param  array  $categories  The category IDs array
-     *
-     * @throws HttpException If any resource does not belong to the user
-     */
-    private function validateResourceOwnership(array $data, array $categories = []): void
-    {
-        $user = auth()->user();
-
-        // Check wallet ownership
-        if (! empty($data['wallet_id']) && ! $user->wallets()->where('id', $data['wallet_id'])->exists()) {
-            throw new HttpException(403, 'The selected wallet does not belong to user');
-        }
-
-        // Check group ownership
-        if (! empty($data['group_id']) && ! $user->groups()->where('id', $data['group_id'])->exists()) {
-            throw new HttpException(403, 'The selected group does not belong to user');
-        }
-
-        // Check party ownership
-        if (! empty($data['party_id']) && ! $user->parties()->where('id', $data['party_id'])->exists()) {
-            throw new HttpException(403, 'The selected party does not belong to user');
-        }
-
-        // Check categories ownership
-        if (! empty($categories)) {
-            $user_category_ids = $user->categories()->pluck('id')->toArray();
-            $invalid_categories = array_diff($categories, $user_category_ids);
-            if (! empty($invalid_categories)) {
-                throw new HttpException(
-                    403,
-                    'Some of the selected categories do not belong to user. Invalid category IDs: ' .
-                    implode(',', $invalid_categories)
-                );
-            }
-        }
     }
 }

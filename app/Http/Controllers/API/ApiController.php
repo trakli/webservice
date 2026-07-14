@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
         ['bearerAuth' => []],
     ]
 )]
-#[OA\Info(version: '1.0.0', title: 'Trakli API')]
+#[OA\Info(version: '1.1.2', title: 'Trakli API')]
 #[OA\Server(url: 'http://localhost:8000/api/v1', description: 'Local server')]
 #[OA\Server(url: 'https://api.dev.trakli.app/api/v1', description: 'Development server')]
 #[OA\Server(

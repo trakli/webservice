@@ -13,7 +13,7 @@ llm:
   provider: ${LLM_PROVIDER}
   gemini:
     model: ${LLM_MODEL}
-    api_key: ${LLM_API_KEY}
+    api_key: ${GEMINI_API_KEY}
   temperature: ${LLM_TEMPERATURE}
   retries: ${LLM_RETRIES}
 
@@ -33,6 +33,9 @@ semantic_layer:
         type:
           type: string
           description: "Transaction type: 'income' or 'expense'"
+        intent:
+          type: string
+          description: "What the money movement is: regular, loan_received, loan_repayment, debt_owed, debt_settled, investment_buy, investment_return, gift"
         datetime:
           type: datetime
           description: "When the transaction occurred"
@@ -122,6 +125,39 @@ semantic_layer:
           type: string
           description: "Always 'App\\Models\\Transaction'"
 
+    holdings:
+      table: holdings
+      description: "Owned assets (crypto, stocks, property) tracked by quantity and unit price; value = quantity * unit_price"
+      aliases: [assets, investments, crypto, stocks, portfolio, net worth]
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: "Asset name (e.g. Bitcoin, Apple, Rental flat)"
+        symbol:
+          type: string
+          description: "Ticker or short symbol"
+        quantity:
+          type: decimal
+          description: "Units held"
+        currency:
+          type: string
+          description: "Currency the unit price is denominated in"
+        unit_price:
+          type: decimal
+          description: "Current price per unit"
+        price_source:
+          type: string
+          description: "'manual' or 'auto' (live-priced)"
+        owner_type:
+          type: string
+          description: "Always 'App\\Models\\User'"
+        owner_id:
+          type: integer
+          description: "Owner of the holding"
+
   relationships:
     - name: transaction_wallet
       from: transactions
@@ -177,6 +213,13 @@ security:
   mode: read_only
   max_rows: 100
   max_join_depth: 4
+  permission_key: role
+  allowed_tables: [transactions, wallets, categories, parties, categorizables]
+  required_filters:
+    transactions: { column: user_id, bypass_roles: [admin] }
+    wallets: { column: user_id, bypass_roles: [admin] }
+    categories: { column: user_id, bypass_roles: [admin] }
+    parties: { column: user_id, bypass_roles: [admin] }
   blocked_columns:
     - users.password
     - users.remember_token

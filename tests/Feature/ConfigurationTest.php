@@ -28,6 +28,39 @@ class ConfigurationTest extends TestCase
         ]);
     }
 
+    public function test_landing_experience_can_be_saved_and_updated()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => 'landing-experience',
+            'type' => 'string',
+            'value' => 'dashboard',
+        ])->assertStatus(201);
+
+        $this->assertEquals(
+            'dashboard',
+            $this->user->fresh()->getConfigValue(\App\Support\ConfigurationKeys::LANDING_EXPERIENCE)
+        );
+
+        $this->actingAs($this->user)->putJson('/api/v1/configurations/landing-experience', [
+            'type' => 'string',
+            'value' => 'chat',
+        ])->assertStatus(200);
+
+        $this->assertEquals(
+            'chat',
+            $this->user->fresh()->getConfigValue(\App\Support\ConfigurationKeys::LANDING_EXPERIENCE)
+        );
+    }
+
+    public function test_landing_experience_rejects_invalid_value()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => 'landing-experience',
+            'type' => 'string',
+            'value' => 'not-a-mode',
+        ])->assertStatus(422);
+    }
+
     public function test_api_user_can_not_create_config_with_unallowed_key()
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/configurations', [

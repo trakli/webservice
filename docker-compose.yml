@@ -13,6 +13,35 @@ services:
         depends_on:
             - mysql
 
+    worker:
+        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        # queue:listen (not queue:work) reboots the framework per job so code
+        # edits are picked up without restarting the worker.
+        command: php artisan queue:listen --tries=3 --timeout=120
+        tty: true
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - trakli
+        depends_on:
+            - mysql
+
+    reverb:
+        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        # The websocket server for real-time chat streaming. The browser
+        # connects on the published port; the app publishes to it over the
+        # trakli network as host "reverb".
+        command: php artisan reverb:start --host=0.0.0.0 --port=8080
+        ports:
+            - '${REVERB_HOST_PORT:-6001}:8080'
+        tty: true
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - trakli
+        depends_on:
+            - mysql
+
     mysql:
         image: 'mysql:8.0'
         ports:
@@ -83,7 +112,7 @@ services:
             DB_PASSWORD: '${DB_PASSWORD}'
             LLM_PROVIDER: '${LLM_PROVIDER:-gemini}'
             LLM_MODEL: '${LLM_MODEL:-gemini-2.0-flash}'
-            LLM_API_KEY: '${LLM_API_KEY:?LLM_API_KEY must be set for SmartQL}'
+            GEMINI_API_KEY: '${GEMINI_API_KEY:?GEMINI_API_KEY must be set for SmartQL}'
             LLM_TEMPERATURE: '${LLM_TEMPERATURE:-0.1}'
             LLM_RETRIES: '${LLM_RETRIES:-3}'
         volumes:

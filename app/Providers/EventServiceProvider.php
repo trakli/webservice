@@ -12,11 +12,17 @@ use App\Listeners\PasswordResetCompleteListener;
 use App\Listeners\QueueBudgetRecompute;
 use App\Listeners\SendAccountDeletedNotifications;
 use App\Listeners\UserRegistered;
+use App\Models\ChatMessage;
+use App\Models\ChatSession;
 use App\Models\Transaction;
+use App\Observers\ChatMessageObserver;
+use App\Observers\ChatSessionObserver;
+use App\Observers\HoldingObserver;
 use App\Observers\TransactionObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Whilesmart\Holdings\Models\Holding;
 use Whilesmart\UserAuthentication\Events\PasswordResetCodeGeneratedEvent;
 use Whilesmart\UserAuthentication\Events\PasswordResetCompleteEvent;
 use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
@@ -61,6 +67,9 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Transaction::observe(TransactionObserver::class);
+        ChatMessage::observe(ChatMessageObserver::class);
+        ChatSession::observe(ChatSessionObserver::class);
+        Holding::observe(HoldingObserver::class);
     }
 
     /**

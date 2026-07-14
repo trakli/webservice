@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Trakli API",
-        "version": "1.0.0"
+        "version": "2.0.0-beta.1"
     },
     "servers": [
         {
@@ -115,6 +115,117 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/metrics": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "App-wide engagement and usage metrics",
+                "operationId": "9cd3dc0d567f44e6d7bf1813051db075",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "granularity",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Metrics report"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/preview": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Render the outreach email as it will appear to a recipient",
+                "operationId": "e7c58174b57bc6fd9c0b758d865107ba",
+                "responses": {
+                    "200": {
+                        "description": "Rendered HTML"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/media": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Upload an image to embed in an outreach email",
+                "operationId": "a4dd526d9845410ca492dc870d5b301a",
+                "responses": {
+                    "200": {
+                        "description": "Public URL of the stored image"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/outreach/send": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Send a personalized outreach email to an audience",
+                "operationId": "fa92d4bb5682b3068db9c1c9b2f1ea7e",
+                "responses": {
+                    "200": {
+                        "description": "Sent"
+                    },
+                    "403": {
+                        "description": "Not an admin"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/admin/outreach": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "List past outreaches",
+                "operationId": "62f95253a8fd23fd9288e42f2e27dd17",
+                "responses": {
+                    "200": {
+                        "description": "Outreach history"
                     }
                 }
             }
@@ -416,6 +527,246 @@
                 "responses": {
                     "200": {
                         "description": "Service status"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/{action}/confirm": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Confirm and execute an agent-proposed action",
+                "operationId": "430ade075fc0429a3498cdc64a88fa4e",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Action executed"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Action no longer confirmable"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/{action}/reject": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Reject an agent-proposed action",
+                "operationId": "cb9779ac3c35041c3391960e949740c6",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "action",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Action dismissed"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Action already executed"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/messages/{message}/files": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Attach files to a chat message (for receipts, statements, etc.)",
+                "operationId": "480403526f7f229bd7d4f5cbf9dfa019",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Files attached"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/messages/{message}/export": {
+            "get": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Export a message canvas document in a given format",
+                "operationId": "11d029d3a0175da1e4ddfec1a57b7b9b",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "message",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "md"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The exported document as a file download"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Unsupported format"
+                    }
+                }
+            }
+        },
+        "/asset-prices/search": {
+            "get": {
+                "tags": [
+                    "Holdings"
+                ],
+                "summary": "Search CoinGecko for a coin id",
+                "operationId": "c77e77d29462543ff689cd7a7cf53fed",
+                "responses": {
+                    "200": {
+                        "description": "Matching coins"
+                    }
+                }
+            }
+        },
+        "/asset-prices": {
+            "get": {
+                "tags": [
+                    "Holdings"
+                ],
+                "summary": "Get current prices for assets",
+                "description": "Returns current CoinGecko prices for the given coin ids in the requested fiat currency, so clients value holdings against the same feed the server uses.",
+                "operationId": "f2fdfd5f7e91557937161fe3e6d2658e",
+                "parameters": [
+                    {
+                        "name": "ids",
+                        "in": "query",
+                        "description": "Comma-separated CoinGecko coin ids.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "bitcoin,ethereum"
+                        }
+                    },
+                    {
+                        "name": "vs_currency",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "usd",
+                            "example": "usd"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prices retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "vs_currency": {
+                                                    "type": "string",
+                                                    "example": "usd"
+                                                },
+                                                "prices": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "bitcoin": 65000,
+                                                        "ethereum": 3200
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -1283,6 +1634,92 @@
                 }
             }
         },
+        "/exchange-rates": {
+            "get": {
+                "tags": [
+                    "Currency"
+                ],
+                "summary": "Get current exchange rates from a base currency",
+                "description": "Returns rates from the base currency to each requested target, honoring the authenticated user's manual exchange rates. Targets with no available rate are listed under \"unavailable\" rather than returned as a rate.",
+                "operationId": "9721eaa414c337abf0fd466303a275e2",
+                "parameters": [
+                    {
+                        "name": "base",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "USD"
+                        }
+                    },
+                    {
+                        "name": "targets",
+                        "in": "query",
+                        "description": "Comma-separated target currency codes. Use this or \"target\".",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "EUR,GBP,JPY"
+                        }
+                    },
+                    {
+                        "name": "target",
+                        "in": "query",
+                        "description": "A single target currency code. Use this or \"targets\".",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "EUR"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rates retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "base": {
+                                                    "type": "string",
+                                                    "example": "USD"
+                                                },
+                                                "rates": {
+                                                    "type": "object",
+                                                    "example": {
+                                                        "EUR": 0.92,
+                                                        "GBP": 0.79
+                                                    }
+                                                },
+                                                "unavailable": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    },
+                                                    "example": [
+                                                        "JPY"
+                                                    ]
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
         "/files/{id}": {
             "get": {
                 "tags": [
@@ -1947,6 +2384,97 @@
                     },
                     "404": {
                         "description": "Not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Import"
+                ],
+                "summary": "Delete an import session",
+                "operationId": "67321428e9c3903dbda68d858ab2448b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/integrations": {
+            "get": {
+                "tags": [
+                    "Integration"
+                ],
+                "summary": "List installed integrations",
+                "operationId": "9e3b3dbcc15c25ecbe63d2597b47d9e1",
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "key": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "category": {
+                                                        "type": "string"
+                                                    },
+                                                    "icon": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "feature_key": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "configured": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "entitled": {
+                                                        "type": "boolean"
+                                                    },
+                                                    "ui": {
+                                                        "description": "Where and how this integration surfaces in the client. Null when the integration declares no UI.",
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     }
                 }
             }
@@ -2971,6 +3499,24 @@
                                 "last_3_months"
                             ]
                         }
+                    },
+                    {
+                        "name": "section",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "description": "Compute only one section of the response for progressive loading. Omit for the full payload.",
+                            "type": "string",
+                            "enum": [
+                                "overview",
+                                "activity",
+                                "comparisons",
+                                "categories",
+                                "parties",
+                                "cashflow",
+                                "position"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -3110,6 +3656,16 @@
                         }
                     },
                     {
+                        "name": "intent",
+                        "in": "query",
+                        "description": "Filter by one or more transaction intents (comma-separated)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "investment_buy,investment_return"
+                        }
+                    },
+                    {
                         "$ref": "#/components/parameters/limitParam"
                     },
                     {
@@ -3178,6 +3734,20 @@
                                         "enum": [
                                             "income",
                                             "expense"
+                                        ]
+                                    },
+                                    "intent": {
+                                        "type": "string",
+                                        "default": "regular",
+                                        "enum": [
+                                            "regular",
+                                            "loan_received",
+                                            "loan_repayment",
+                                            "debt_owed",
+                                            "debt_settled",
+                                            "investment_buy",
+                                            "investment_return",
+                                            "gift"
                                         ]
                                     },
                                     "description": {
@@ -3449,6 +4019,20 @@
                                         "enum": [
                                             "income",
                                             "expense"
+                                        ]
+                                    },
+                                    "intent": {
+                                        "type": "string",
+                                        "default": "regular",
+                                        "enum": [
+                                            "regular",
+                                            "loan_received",
+                                            "loan_repayment",
+                                            "debt_owed",
+                                            "debt_settled",
+                                            "investment_buy",
+                                            "investment_return",
+                                            "gift"
                                         ]
                                     },
                                     "date": {
@@ -4307,6 +4891,7 @@
                                             "default-currency",
                                             "default-group",
                                             "default-lang",
+                                            "country",
                                             "onboarding-complete",
                                             "theme",
                                             "timezone",
@@ -4321,7 +4906,10 @@
                                             "inactivity-reminders-enabled",
                                             "inactivity-reminder-count",
                                             "last-inactivity-reminder-sent",
-                                            "wallets-allow-negative-balance"
+                                            "wallets-allow-negative-balance",
+                                            "transaction-intents-enabled",
+                                            "asset-tracking-enabled",
+                                            "landing-experience"
                                         ],
                                         "example": "theme"
                                     },
@@ -4389,6 +4977,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
@@ -4403,7 +4992,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -4444,6 +5036,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
@@ -4458,7 +5051,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -4537,6 +5133,7 @@
                                 "default-currency",
                                 "default-group",
                                 "default-lang",
+                                "country",
                                 "onboarding-complete",
                                 "theme",
                                 "timezone",
@@ -4551,7 +5148,10 @@
                                 "inactivity-reminders-enabled",
                                 "inactivity-reminder-count",
                                 "last-inactivity-reminder-sent",
-                                "wallets-allow-negative-balance"
+                                "wallets-allow-negative-balance",
+                                "transaction-intents-enabled",
+                                "asset-tracking-enabled",
+                                "landing-experience"
                             ]
                         }
                     }
@@ -5762,6 +6362,10 @@
                         "description": "ID of the user who created the transaction",
                         "type": "integer"
                     },
+                    "amount_in_budget_currency": {
+                        "description": "Transaction amount converted to the currency of the budget",
+                        "type": "string"
+                    },
                     "transfer_id": {
                         "description": "ID of the associated transfer, if any",
                         "type": "integer"
@@ -5951,8 +6555,16 @@
             "description": "Endpoints for managing transaction categories"
         },
         {
+            "name": "Currency",
+            "description": "Exchange rates and asset prices"
+        },
+        {
             "name": "Files",
             "description": "Endpoints for accessing files"
+        },
+        {
+            "name": "Integration",
+            "description": "Installed integrations"
         },
         {
             "name": "Notifications",
@@ -5993,6 +6605,10 @@
         {
             "name": "Admin",
             "description": "Admin"
+        },
+        {
+            "name": "Holdings",
+            "description": "Holdings"
         },
         {
             "name": "Groups",

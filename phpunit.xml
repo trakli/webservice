@@ -24,6 +24,8 @@
         <env name="LOG_LEVEL" value="error"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
+        <env name="BROADCAST_DRIVER" value="null"/>
+        <env name="MCP_ENABLED" value="true"/>
         <env name="DB_DATABASE" value="trakli_test"/>
         <env name="DB_HOST" value="mysql-test"/>
         <env name="MAIL_MAILER" value="array"/>

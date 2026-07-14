@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\BudgetThresholdBreached;
 use App\Events\TransactionRecorded;
 use App\Jobs\RecomputeBudgetProgressJob;
+use App\Listeners\CreateBudgetAlertReminder;
 use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Reminder;
@@ -14,8 +15,10 @@ use App\Models\Wallet;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
+use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
 class BudgetTest extends TestCase
 {
@@ -112,7 +115,7 @@ class BudgetTest extends TestCase
         ]);
         $budget->categories()->attach($category);
 
-        $listener = app(\App\Listeners\CreateBudgetAlertReminder::class);
+        $listener = app(CreateBudgetAlertReminder::class);
         $event = new BudgetThresholdBreached(
             budgetId: $budget->id,
             periodStart: CarbonImmutable::now()->startOfMonth()->toDateString(),
@@ -218,5 +221,63 @@ class BudgetTest extends TestCase
             ->pivot
             ->id;
         $this->assertSame($keepPivotIdBefore, $keepPivotIdAfter);
+    }
+
+    public function test_progress_excludes_unconvertible_spend_and_flags_partial(): void
+    {
+        // No manual rate and no API rate available, so the foreign expense
+        // cannot convert into the budget's currency.
+        Http::fake(['*' => Http::response([], 200)]);
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'currency' => 'USD',
+        ]);
+
+        $eurWallet = Wallet::factory()->create(['user_id' => $this->user->id, 'currency' => 'EUR']);
+        Transaction::factory()->create([
+            'user_id' => $this->user->id,
+            'wallet_id' => $eurWallet->id,
+            'type' => 'expense',
+            'amount' => 100,
+            'datetime' => now(),
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/budgets/{$budget->id}/progress");
+
+        $response->assertOk();
+        // The spend is excluded rather than collapsing to 0 silently.
+        $this->assertEqualsWithDelta(0, $response->json('data.gross_spent'), 0.001);
+        $this->assertTrue($response->json('data.partial'));
+        $this->assertContains('EUR', $response->json('data.unconverted_currencies'));
+    }
+
+    public function test_progress_applies_user_manual_exchange_rate(): void
+    {
+        $this->user->setConfigValue('manual-exchange-rates', ['EUR-USD' => 1.1], ConfigValueType::Json);
+
+        $budget = Budget::factory()->create([
+            'owner_type' => User::class,
+            'owner_id' => $this->user->id,
+            'currency' => 'USD',
+        ]);
+
+        $eurWallet = Wallet::factory()->create(['user_id' => $this->user->id, 'currency' => 'EUR']);
+        Transaction::factory()->create([
+            'user_id' => $this->user->id,
+            'wallet_id' => $eurWallet->id,
+            'type' => 'expense',
+            'amount' => 100,
+            'datetime' => now(),
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/budgets/{$budget->id}/progress");
+
+        $response->assertOk();
+        // 100 EUR * 1.1 = 110 USD.
+        $this->assertEqualsWithDelta(110, $response->json('data.gross_spent'), 0.001);
+        $this->assertEqualsWithDelta(110, $response->json('data.net_spent'), 0.001);
+        $this->assertArrayNotHasKey('partial', $response->json('data'));
     }
 }

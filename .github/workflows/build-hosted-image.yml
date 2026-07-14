@@ -1,0 +1,137 @@
+name: Build Hosted Image
+
+on:
+  workflow_call:
+    inputs:
+      plugins:
+        description: 'JSON array of plugins to bundle, e.g. [{"repo":"<org>/<plugin>","ref":"main"}]'
+        type: string
+        required: true
+      base_image:
+        description: 'Public base image to stack on'
+        type: string
+        default: 'ghcr.io/trakli/webservice:latest'
+      image_name:
+        description: 'Target hosted image'
+        type: string
+        default: 'ghcr.io/trakli/webservice-hosted'
+      tag:
+        description: 'Tag for the hosted image'
+        type: string
+        default: 'latest'
+    secrets:
+      PLUGINS_TOKEN:
+        description: 'Token with read access to the private plugin repositories'
+        required: true
+  workflow_dispatch:
+    inputs:
+      plugins:
+        description: 'JSON array of plugins to bundle'
+        type: string
+        required: true
+      base_image:
+        type: string
+        default: 'ghcr.io/trakli/webservice:latest'
+      image_name:
+        type: string
+        default: 'ghcr.io/trakli/webservice-hosted'
+      tag:
+        type: string
+        default: 'latest'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout webservice
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Clone private plugins
+        env:
+          PLUGINS_TOKEN: ${{ secrets.PLUGINS_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p plugins
+          while read -r plugin; do
+            repo=$(echo "$plugin" | jq -r '.repo')
+            ref=$(echo "$plugin" | jq -r '.ref // "main"')
+            tmp=$(mktemp -d ./plugins/.clone.XXXXXX)
+            git clone --depth 1 --branch "$ref" \
+              "https://x-access-token:${PLUGINS_TOKEN}@github.com/${repo}.git" "$tmp"
+            rm -rf "$tmp/.git"
+            if [ ! -f "$tmp/plugin.json" ]; then
+              echo "::error::${repo} has no plugin.json; it is not a plugin-engine plugin" >&2
+              exit 1
+            fi
+            id=$(jq -r '.id // empty' "$tmp/plugin.json")
+            if [ -z "$id" ]; then
+              echo "::error::${repo} plugin.json is missing an 'id'" >&2
+              exit 1
+            fi
+            rm -rf "plugins/${id}"
+            mv "$tmp" "plugins/${id}"
+          done < <(echo '${{ inputs.plugins }}' | jq -c '.[]')
+
+      - name: Install core dependencies
+        run: |
+          composer install --no-dev --no-interaction --no-scripts --ignore-platform-reqs --prefer-dist --optimize-autoloader
+
+      - name: Verify bundled plugins carry no unbundled dependencies
+        run: |
+          set -euo pipefail
+          for d in plugins/*/; do
+            cj="${d}composer.json"
+            [ -f "$cj" ] || continue
+            extra=$(jq -r '.require // {} | keys[]' "$cj" | grep -ivE '^(php|laravel/framework)$' || true)
+            if [ -n "$extra" ]; then
+              echo "::error::Plugin '${d}' declares dependencies the bundler does not install:" >&2
+              echo "$extra" >&2
+              echo "::error::Extend this workflow to install plugin dependencies before bundling it." >&2
+              exit 1
+            fi
+          done
+
+      - name: Prepare application environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Enable and cache bundled plugins
+        run: |
+          set -euo pipefail
+          for d in plugins/*/; do
+            [ -f "${d}plugin.json" ] || continue
+            php artisan plugin:enable "$(jq -r '.id' "${d}plugin.json")"
+          done
+          php artisan plugin:cache
+
+      - name: Keep prepared vendor and plugin cache in the build context
+        run: |
+          sed -i '/^vendor$/d; /^bootstrap\/cache/d' .dockerignore
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push hosted image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/hosted/Dockerfile
+          push: true
+          build-args: |
+            BASE_IMAGE=${{ inputs.base_image }}
+          tags: ${{ inputs.image_name }}:${{ inputs.tag }}

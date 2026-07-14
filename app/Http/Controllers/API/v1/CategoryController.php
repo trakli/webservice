@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
+use App\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
@@ -274,6 +275,11 @@ class CategoryController extends ApiController
         $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
         if ($category_exists) {
             return $this->failure(__('Category already exists'), 400);
+        }
+
+        $categoryLimit = app(Entitlements::class)->limit($user, 'max_categories');
+        if ($categoryLimit !== null && $user->categories()->count() >= $categoryLimit) {
+            return $this->failure(__('You have reached the maximum number of categories allowed.'), 403);
         }
 
         try {

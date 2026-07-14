@@ -51,6 +51,11 @@ use Whilesmart\UserDevices\Models\Device;
             description: 'ID of the user who created the transaction',
             type: 'integer'
         ),
+        new OA\Property(
+            property: 'amount_in_budget_currency',
+            description: 'Transaction amount converted to the currency of the budget',
+            type: 'string'
+        ),
         new OA\Property(property: 'transfer_id', description: 'ID of the associated transfer, if any', type: 'integer'),
         new OA\Property(
             property: 'wallet_client_generated_id',
@@ -107,10 +112,12 @@ class Transaction extends Model
         'datetime',
         'description',
         'type',
+        'intent',
         'party_id',
         'wallet_id',
         'user_id',
         'transfer_id',
+        'metadata',
         'updated_at',
         'created_at',
     ];
@@ -123,9 +130,14 @@ class Transaction extends Model
     protected $casts = [
         'datetime' => 'datetime',
         'amount' => 'decimal:2',
+        'metadata' => 'array',
     ];
 
-    protected $hidden = ['transfer'];
+    protected $attributes = [
+        'intent' => 'regular',
+    ];
+
+    protected $hidden = ['transfer', 'groups', 'recurringTransactionRule', 'refund'];
 
     protected $appends = [
         'wallet',
@@ -164,7 +176,7 @@ class Transaction extends Model
 
     public function getCategoriesAttribute()
     {
-        return $this->categories()->get();
+        return $this->getRelationValue('categories');
     }
 
     public function categories(): MorphToMany
@@ -174,7 +186,7 @@ class Transaction extends Model
 
     public function getWalletAttribute()
     {
-        return $this->wallet()->first();
+        return $this->getRelationValue('wallet');
     }
 
     public function transfer()
@@ -189,7 +201,7 @@ class Transaction extends Model
 
     public function getPartyAttribute()
     {
-        return $this->party()->first();
+        return $this->getRelationValue('party');
     }
 
     public function party()
@@ -204,7 +216,7 @@ class Transaction extends Model
 
     public function getFilesAttribute()
     {
-        return $this->files()->get();
+        return $this->getRelationValue('files');
     }
 
     /**
@@ -217,7 +229,7 @@ class Transaction extends Model
 
     public function getRecurringRulesAttribute()
     {
-        return $this->recurringTransactionRule()->first();
+        return $this->getRelationValue('recurringTransactionRule');
     }
 
     public function recurringTransactionRule(): HasOne
@@ -227,7 +239,7 @@ class Transaction extends Model
 
     public function getIsRefundAttribute(): bool
     {
-        return $this->refund()->exists();
+        return $this->getRelationValue('refund') !== null;
     }
 
     public function getRefundOfTransactionIdAttribute(): ?int

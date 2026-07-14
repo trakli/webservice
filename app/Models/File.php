@@ -28,12 +28,13 @@ class File extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['path', 'type', 'fileable_type', 'fileable_id'];
+    protected $fillable = ['path', 'type', 'metadata', 'fileable_type', 'fileable_id'];
 
     protected $appends = ['link'];
 
     protected $casts = [
         'model_id' => 'integer',
+        'metadata' => 'array',
     ];
 
     public function getLinkAttribute(): ?string
