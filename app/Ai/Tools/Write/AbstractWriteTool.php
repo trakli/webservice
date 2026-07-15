@@ -42,6 +42,19 @@ abstract class AbstractWriteTool extends AbstractTool
     abstract protected function buildPayload(array $arguments, ToolContext $context): array;
 
     /**
+     * Every payload one call proposes. A tool acting on many records at once
+     * overrides this to return one payload per record; they are then proposed as
+     * a single batch the user confirms in one go, rather than a card each.
+     *
+     * @param  array<string, mixed>  $arguments
+     * @return array<int, array<string, mixed>>
+     */
+    protected function buildPayloads(array $arguments, ToolContext $context): array
+    {
+        return [$this->buildPayload($arguments, $context)];
+    }
+
+    /**
      * A one-line, human-facing description of what will happen on confirm.
      *
      * @param  array<string, mixed>  $payload
@@ -67,16 +80,16 @@ abstract class AbstractWriteTool extends AbstractTool
         }
 
         try {
-            $payload = $this->buildPayload($arguments, $context);
+            $payloads = $this->buildPayloads($arguments, $context);
         } catch (InvalidArgumentException $e) {
             return ['error' => $e->getMessage()];
         }
 
-        $proposal = AgentProposedAction::create([
-            'owner_type' => $user->getMorphClass(),
-            'owner_id' => $user->getAuthIdentifier(),
-            'source_type' => (new ChatSession())->getMorphClass(),
-            'source_id' => $sessionId,
+        if ($payloads === []) {
+            return ['error' => 'Nothing to propose.'];
+        }
+
+        $attributes = array_map(fn (array $payload): array => [
             'action_type' => $this->actionType(),
             'payload' => $payload,
             'summary' => $this->summarize($payload, $context),
@@ -88,23 +101,83 @@ abstract class AbstractWriteTool extends AbstractTool
                 'chat_message_id' => $context->get('chat_message_id'),
                 'tool_name' => $this->name(),
             ],
-        ]);
+        ], $payloads);
+
+        $shared = [
+            'source_type' => (new ChatSession())->getMorphClass(),
+            'source_id' => $sessionId,
+        ];
+
+        // One record stays a plain proposal: a batch of one would give the user
+        // a "confirm all" over a single row for no reason.
+        if (count($attributes) === 1) {
+            $proposal = $user->agentActions()->create($attributes[0] + $shared);
+
+            app(BlockCollector::class)->add(
+                app(BlockBuilder::class)->proposedAction(
+                    $this->blockFor($proposal, $payloads[0], $context, $sessionId)
+                )
+            );
+
+            return "Proposed {$proposal->action_type}, awaiting the user's confirmation: {$proposal->summary}";
+        }
+
+        $proposals = $user->proposeActionBatch($attributes, $shared);
+        $batch = $proposals->first()->batch;
 
         app(BlockCollector::class)->add(
-            app(BlockBuilder::class)->proposedAction([
-                'id' => $proposal->id,
-                'action_type' => $proposal->action_type,
-                'summary' => $proposal->summary,
-                'risk' => $proposal->risk->value,
-                'status' => $proposal->status->value,
-                'payload' => $proposal->payload,
-                'fields' => $this->reviewFields($payload, $context),
-                'confirm_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/confirm",
-                'reject_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/reject",
+            app(BlockBuilder::class)->proposedActionBatch([
+                'batch' => $batch,
+                'action_type' => $this->actionType(),
+                'summary' => $this->summarizeBatch($payloads, $context),
+                'risk' => $this->risk()->value,
+                'status' => ActionStatus::Proposed->value,
+                'actions' => $proposals
+                    ->map(fn ($proposal, $index) => $this->blockFor($proposal, $payloads[$index], $context, $sessionId))
+                    ->all(),
+                'confirm_url' => "/api/v1/ai/chats/{$sessionId}/actions/batches/{$batch}/confirm",
+                'reject_url' => "/api/v1/ai/chats/{$sessionId}/actions/batches/{$batch}/reject",
             ])
         );
 
-        return "Proposed {$proposal->action_type}, awaiting the user's confirmation: {$proposal->summary}";
+        $count = $proposals->count();
+
+        return "Proposed {$count} {$this->actionType()} actions as one batch, awaiting the user's confirmation. "
+            . 'Tell them what you have proposed and that they can confirm or dismiss them together.';
+    }
+
+    /**
+     * The client-facing shape of one proposal.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function blockFor(AgentProposedAction $proposal, array $payload, ToolContext $context, int|string $sessionId): array
+    {
+        return [
+            'id' => $proposal->id,
+            'action_type' => $proposal->action_type,
+            'summary' => $proposal->summary,
+            'risk' => $proposal->risk->value,
+            'status' => $proposal->status->value,
+            'payload' => $proposal->payload,
+            'fields' => $this->reviewFields($payload, $context),
+            'confirm_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/confirm",
+            'reject_url' => "/api/v1/ai/chats/{$sessionId}/actions/{$proposal->id}/reject",
+        ];
+    }
+
+    /**
+     * One line describing what a whole batch will do. Override for wording that
+     * reads better than a count.
+     *
+     * @param  array<int, array<string, mixed>>  $payloads
+     *
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
+    protected function summarizeBatch(array $payloads, ToolContext $context): string
+    {
+        return count($payloads) . ' changes';
     }
 
     /**

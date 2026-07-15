@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f8628a919636e715388549d7466ebfb0",
+    "content-hash": "c82fbdfce5507513762c2c5118bfa068",
     "packages": [
         {
             "name": "beste/clock",
@@ -9836,16 +9836,16 @@
         },
         {
             "name": "whilesmart/eloquent-agent-actions",
-            "version": "dev-dev",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-agent-actions.git",
-                "reference": "b787b5fba6982aceb46abad40b11d93e51bcf06e"
+                "reference": "3cbffe23bf6fea3ff6f5fd6231fa5c3f4ee8c153"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agent-actions/zipball/b787b5fba6982aceb46abad40b11d93e51bcf06e",
-                "reference": "b787b5fba6982aceb46abad40b11d93e51bcf06e",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agent-actions/zipball/3cbffe23bf6fea3ff6f5fd6231fa5c3f4ee8c153",
+                "reference": "3cbffe23bf6fea3ff6f5fd6231fa5c3f4ee8c153",
                 "shasum": ""
             },
             "require": {
@@ -9859,7 +9859,6 @@
                 "laravel/pint": "^1.22",
                 "orchestra/testbench": "^9.0|^10.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -9886,9 +9885,9 @@
             "description": "DB-tracked agent action ledger with a handler registry and scheduler for Laravel applications.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-agent-actions/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-agent-actions/tree/dev"
+                "source": "https://github.com/whilesmartphp/eloquent-agent-actions/tree/v1.0.0"
             },
-            "time": "2026-07-13T16:50:13+00:00"
+            "time": "2026-07-15T17:58:58+00:00"
         },
         {
             "name": "whilesmart/eloquent-agent-metrics",
@@ -9946,16 +9945,16 @@
         },
         {
             "name": "whilesmart/eloquent-agents",
-            "version": "dev-main",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-agents.git",
-                "reference": "8b22831d73002d995a7c65d670084c87d21862fe"
+                "reference": "362554274ceada0acf48f75c8cc4e64d2e8cb862"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agents/zipball/8b22831d73002d995a7c65d670084c87d21862fe",
-                "reference": "8b22831d73002d995a7c65d670084c87d21862fe",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agents/zipball/362554274ceada0acf48f75c8cc4e64d2e8cb862",
+                "reference": "362554274ceada0acf48f75c8cc4e64d2e8cb862",
                 "shasum": ""
             },
             "require": {
@@ -9969,7 +9968,6 @@
                 "nunomaduro/collision": "^8.0",
                 "orchestra/testbench": "^9.0|^10.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -10012,10 +10010,10 @@
             ],
             "description": "AI tool-calling foundation for Laravel: ready-made tools, an agent harness, and an extension API on top of Prism",
             "support": {
-                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/main",
+                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/v1.0.0",
                 "issues": "https://github.com/whilesmartphp/eloquent-agents/issues"
             },
-            "time": "2026-07-09T14:18:27+00:00"
+            "time": "2026-07-15T18:00:29+00:00"
         },
         {
             "name": "whilesmart/eloquent-engagement",
@@ -13967,8 +13965,6 @@
     "stability-flags": {
         "phpmd/phpmd": 0,
         "smartpings/php-sdk": 20,
-        "whilesmart/eloquent-agent-actions": 20,
-        "whilesmart/eloquent-agents": 20,
         "whilesmart/eloquent-engagement": 20,
         "whilesmart/eloquent-outreach": 20,
         "whilesmart/eloquent-roles": 20

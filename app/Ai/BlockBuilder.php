@@ -109,6 +109,19 @@ class BlockBuilder
     }
 
     /**
+     * Several actions proposed together and confirmed as one unit, so a request
+     * touching many records costs the user one decision instead of one per row.
+     * Members keep their own confirm/reject urls for the odd one out.
+     *
+     * @param  array<string, mixed>  $batch
+     * @return array<string, mixed>
+     */
+    public function proposedActionBatch(array $batch): array
+    {
+        return array_merge(['type' => 'proposed_action_batch'], $batch);
+    }
+
+    /**
      * A canvas artifact: a titled document whose body is an ordered list of
      * blocks (markdown sections interleaved with charts/kpis/tables) composed by
      * the agent. Rendered in the side canvas, not as a plain chat bubble. The
