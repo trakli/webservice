@@ -36,8 +36,8 @@ class GetExchangeRateTool extends AbstractTool
     public function parameters(): array
     {
         return [
-            ParameterSpec::string('base', 'Base currency code, e.g. "USD".'),
-            ParameterSpec::arrayOf('targets', 'Target currency codes to convert into, e.g. ["EUR", "GBP"].', ParameterType::STRING),
+            ParameterSpec::string('base', 'Base currency code (ISO 4217, 3 letters).'),
+            ParameterSpec::arrayOf('targets', 'Target currency codes to convert into (ISO 4217, 3 letters).', ParameterType::STRING),
         ];
     }
 

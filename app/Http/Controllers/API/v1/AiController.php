@@ -11,9 +11,11 @@ use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\User;
 use App\Services\AiService;
+use App\Services\ChatActionBlocks;
 use App\Services\FileService;
 use App\Services\ProposedActionExecutor;
 use App\Services\TransactionWriter;
+use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
 use Whilesmart\Activities\Models\Activity;
@@ -34,7 +36,8 @@ use Whilesmart\Agents\ValueObjects\ToolContext;
 class AiController extends ApiController
 {
     public function __construct(
-        protected AiService $aiService
+        protected AiService $aiService,
+        protected ChatActionBlocks $blocks
     ) {
     }
 
@@ -278,7 +281,7 @@ class AiController extends ApiController
         ]);
 
         $this->recordActivity($user, $chat, $action, $resource);
-        $this->markActionBlockStatus($action, ActionStatus::Executed, $described);
+        $this->blocks->markStatus($action, ActionStatus::Executed, $described);
         $this->continueChainAfterCreate($chat, $action);
 
         return $this->success(['action' => $action->fresh(), 'resource' => $resource], __('Action completed.'));
@@ -346,9 +349,141 @@ class AiController extends ApiController
         }
 
         $action->update(['status' => ActionStatus::Rejected]);
-        $this->markActionBlockStatus($action, ActionStatus::Rejected);
+        $this->blocks->markStatus($action, ActionStatus::Rejected);
 
         return $this->success(['action' => $action->fresh()], __('Action dismissed.'));
+    }
+
+    #[OA\Post(
+        path: '/ai/chats/{chat}/actions/batches/{batch}/confirm',
+        summary: 'Confirm every action proposed together as one batch',
+        tags: ['AI'],
+        parameters: [
+            new OA\Parameter(name: 'chat', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'batch', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Batch processed'),
+            new OA\Response(response: 404, description: 'Batch not found'),
+        ]
+    )]
+    public function confirmActionBatch(
+        Request $request,
+        ChatSession $chat,
+        string $batch,
+        ProposedActionExecutor $executor
+    ): JsonResponse {
+        $user = $request->user();
+        $this->authorizeOwnership($user, $chat);
+
+        $actions = $this->batchMembers($user, $chat, $batch);
+
+        if ($actions->isEmpty()) {
+            return $this->failure(__('Batch not found.'), Response::HTTP_NOT_FOUND);
+        }
+
+        $executed = 0;
+        $failed = [];
+
+        foreach ($actions as $action) {
+            // Already-executed members are skipped rather than re-run, so a
+            // retried confirm is safe, and one failure never stops the rest.
+            if ($action->status === ActionStatus::Executed) {
+                $executed++;
+
+                continue;
+            }
+
+            if (! in_array($action->status, [ActionStatus::Proposed, ActionStatus::Confirmed], true)) {
+                continue;
+            }
+
+            try {
+                $resource = $executor->execute($action);
+            } catch (Throwable $e) {
+                $action->update(['status' => ActionStatus::Failed, 'error' => $e->getMessage()]);
+                $failed[] = $action->id;
+
+                continue;
+            }
+
+            $action->update([
+                'status' => ActionStatus::Executed,
+                'confirmed_at' => now(),
+                'executed_at' => now(),
+                'executed_resource_type' => $resource->getMorphClass(),
+                'executed_resource_id' => $resource->getKey(),
+            ]);
+            $this->recordActivity($user, $chat, $action, $resource);
+            $executed++;
+        }
+
+        $this->blocks->syncBatch($batch);
+
+        return $this->success(
+            ['batch' => $batch, 'executed' => $executed, 'failed' => $failed],
+            $failed === []
+                ? trans_choice('{1}Action completed.|[2,*]:count actions completed.', $executed, ['count' => $executed])
+                : __(':done done, :failed could not be completed.', ['done' => $executed, 'failed' => count($failed)])
+        );
+    }
+
+    #[OA\Post(
+        path: '/ai/chats/{chat}/actions/batches/{batch}/reject',
+        summary: 'Dismiss every action proposed together as one batch',
+        tags: ['AI'],
+        parameters: [
+            new OA\Parameter(name: 'chat', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'batch', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Batch dismissed'),
+            new OA\Response(response: 404, description: 'Batch not found'),
+        ]
+    )]
+    public function rejectActionBatch(Request $request, ChatSession $chat, string $batch): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeOwnership($user, $chat);
+
+        $actions = $this->batchMembers($user, $chat, $batch);
+
+        if ($actions->isEmpty()) {
+            return $this->failure(__('Batch not found.'), Response::HTTP_NOT_FOUND);
+        }
+
+        $dismissed = 0;
+        foreach ($actions as $action) {
+            // An executed member stays executed: dismissing the rest of a batch
+            // is not a licence to undo what the user already ran.
+            if ($action->status === ActionStatus::Executed) {
+                continue;
+            }
+
+            $action->update(['status' => ActionStatus::Rejected]);
+            $dismissed++;
+        }
+
+        $this->blocks->syncBatch($batch);
+
+        return $this->success(['batch' => $batch, 'dismissed' => $dismissed], __('Actions dismissed.'));
+    }
+
+    /**
+     * The owned members of a batch within this chat.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, AgentProposedAction>
+     */
+    private function batchMembers(User $user, ChatSession $chat, string $batch): Collection
+    {
+        return AgentProposedAction::query()
+            ->forBatch($batch)
+            ->where('owner_type', $user->getMorphClass())
+            ->where('owner_id', $user->getAuthIdentifier())
+            ->where('source_type', (new ChatSession())->getMorphClass())
+            ->where('source_id', $chat->id)
+            ->orderBy('id')
+            ->get();
     }
 
     #[OA\Post(
@@ -616,49 +751,6 @@ class AiController extends ApiController
             Log::warning('Failed to regenerate proposal description', ['message' => $e->getMessage()]);
 
             return null;
-        }
-    }
-
-    /**
-     * @param  array{summary?: string, fields?: array}|null  $described  Regenerated
-     *   summary/fields to reflect confirmed edits on the rendered block.
-     */
-    private function markActionBlockStatus(AgentProposedAction $action, ActionStatus $status, ?array $described = null): void
-    {
-        $message = ChatMessage::find($action->metadata['chat_message_id'] ?? null);
-
-        if ($message === null) {
-            return;
-        }
-
-        $result = $message->result ?? [];
-        $blocks = $result['blocks'] ?? [];
-
-        if (! is_array($blocks)) {
-            return;
-        }
-
-        $changed = false;
-        foreach ($blocks as &$block) {
-            if (
-                is_array($block)
-                && ($block['type'] ?? null) === 'proposed_action'
-                && (int) ($block['id'] ?? 0) === (int) $action->id
-            ) {
-                $block['status'] = $status->value;
-                if ($described !== null) {
-                    $block['summary'] = $described['summary'];
-                    $block['fields'] = $described['fields'];
-                    $block['payload'] = $action->payload;
-                }
-                $changed = true;
-            }
-        }
-        unset($block);
-
-        if ($changed) {
-            $result['blocks'] = $blocks;
-            $message->update(['result' => $result]);
         }
     }
 }

@@ -90,6 +90,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('ai/chats/{chat}/messages', [AiController::class, 'storeMessage']);
     Route::post('ai/chats/{chat}/messages/{message}/files', [AiController::class, 'uploadFiles']);
     Route::get('ai/chats/{chat}/messages/{message}/export', [AiController::class, 'exportCanvas']);
+    // Batch routes come first so "batches" is not captured as an {action} id.
+    Route::post('ai/chats/{chat}/actions/batches/{batch}/confirm', [AiController::class, 'confirmActionBatch']);
+    Route::post('ai/chats/{chat}/actions/batches/{batch}/reject', [AiController::class, 'rejectActionBatch']);
     Route::post('ai/chats/{chat}/actions/{action}/confirm', [AiController::class, 'confirmAction']);
     Route::post('ai/chats/{chat}/actions/{action}/reject', [AiController::class, 'rejectAction']);
     Route::get('ai/health', [AiController::class, 'health']);

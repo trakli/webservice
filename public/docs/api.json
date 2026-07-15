@@ -607,6 +607,78 @@
                 }
             }
         },
+        "/ai/chats/{chat}/actions/batches/{batch}/confirm": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Confirm every action proposed together as one batch",
+                "operationId": "d128ebef97eb4df88716c5a6e61480f4",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "batch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch processed"
+                    },
+                    "404": {
+                        "description": "Batch not found"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/batches/{batch}/reject": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Dismiss every action proposed together as one batch",
+                "operationId": "02c43f82323f9a0a6ad21f1deb423415",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "batch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch dismissed"
+                    },
+                    "404": {
+                        "description": "Batch not found"
+                    }
+                }
+            }
+        },
         "/ai/chats/{chat}/messages/{message}/files": {
             "post": {
                 "tags": [
