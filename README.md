@@ -7,11 +7,30 @@
 [![Tests](https://github.com/trakli/webservice/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/tests.yml)
 [![Lint & Sniffs](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml)
 
-## Overview
+Money apps want your bank login, and then they want your money to be in one country, in one currency, in
+an account they can read. Get paid from abroad, keep cash, hold two currencies at once, or move money over
+mobile money, and most of your money is invisible to them. So it ends up in a spreadsheet, which holds
+anything and tells you nothing.
 
-Trakli is a personal income tracking application built using Laravel. The application allows users to manage and categorize their income and expenses under various groups and categories.
+Trakli tracks money the way it actually moves. Cash, mobile money, bank and card sit beside each other as
+wallets, in any of forty-eight currencies, converting at the rate you say applies and not one scraped from a
+market you cannot get. Your phone keeps working with no signal and settles up when it reconnects. And it
+is yours: your server, your database, no one else holding the ledger of what you earn.
+
+This is the Laravel API behind it, and what the web and mobile apps talk to.
 
 ## Features
+
+What you will not find elsewhere:
+
+- **Wallets that match reality:** cash, mobile money, bank and card, side by side.
+- **Any currency, at your rate:** forty-eight of them, held at once; transfers convert at the rate you set.
+- **Offline-first:** the phone works with no signal, and changes settle cleanly when it reconnects.
+- **An assistant that can act:** ask it in plain words, and it proposes every change for you to confirm
+  before anything is written.
+- **Yours to run:** your server, your database, no bank login handed to anyone.
+
+The rest, done properly:
 
 - **Transactions:** Income and expenses across multiple wallets, with attachments and recurring rules.
 - **Transfers:** Move money between wallets, including cross-currency at user-set rates.
@@ -19,8 +38,7 @@ Trakli is a personal income tracking application built using Laravel. The applic
 - **Refunds:** Mark an income as refunding an earlier expense; matching budgets adjust automatically.
 - **Reminders:** Bills, budget alerts, and custom events with pause, resume, and snooze.
 - **Imports:** Pull transactions from CSVs, PDFs, and photos of receipts.
-- **Insights & AI:** Dashboard stats, digest emails, and a chat assistant for your finances.
-- **Offline-first:** Changes made on mobile sync cleanly when the device reconnects.
+- **Insights:** Dashboard stats and digest emails.
 
 ## Setup instructions
 
