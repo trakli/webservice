@@ -34,7 +34,7 @@
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
         "wikimedia/composer-merge-plugin": "^2.1",
-        "zircote/swagger-php": "^5.0"
+        "zircote/swagger-php": "^6.4"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
