@@ -69,6 +69,24 @@ class HoldingsIntegrationTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_creating_an_auto_holding_prices_it_from_coingecko_immediately()
+    {
+        Http::fake([
+            'api.coingecko.com/api/v3/simple/price*' => Http::response(['bitcoin' => ['usd' => 70000]], 200),
+        ]);
+
+        $payload = $this->ownerPayload([
+            'price_source' => 'auto', 'provider' => 'coingecko', 'external_ref' => 'bitcoin',
+        ]);
+        unset($payload['unit_price']);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/holdings', $payload);
+
+        $response->assertStatus(201);
+        $this->assertEquals(70000, $response->json('data.unit_price'));
+        $this->assertNotNull($response->json('data.last_priced_at'));
+    }
+
     public function test_reprice_updates_auto_holdings_via_coingecko()
     {
         Http::fake([

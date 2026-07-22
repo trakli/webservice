@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c82fbdfce5507513762c2c5118bfa068",
+    "content-hash": "d1dc07527b91bc2fc41288ed8c31bd47",
     "packages": [
         {
             "name": "beste/clock",
@@ -10074,16 +10074,16 @@
         },
         {
             "name": "whilesmart/eloquent-holdings",
-            "version": "1.1.0",
+            "version": "1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-holdings.git",
-                "reference": "9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2"
+                "reference": "c921cf5d696bde6d71784f17a8b9d3e1fdd606d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-holdings/zipball/9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2",
-                "reference": "9aa77fe5deb6da0d08d7c2234ffa1b03a888afd2",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-holdings/zipball/c921cf5d696bde6d71784f17a8b9d3e1fdd606d5",
+                "reference": "c921cf5d696bde6d71784f17a8b9d3e1fdd606d5",
                 "shasum": ""
             },
             "require": {
@@ -10122,9 +10122,9 @@
             "description": "Polymorphic holdings register (crypto, stocks, property, any asset) for Laravel: track quantity and value, with pluggable live pricing.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-holdings/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-holdings/tree/v1.1.0"
+                "source": "https://github.com/whilesmartphp/eloquent-holdings/tree/v1.2.0"
             },
-            "time": "2026-07-04T21:10:17+00:00"
+            "time": "2026-07-22T12:38:29+00:00"
         },
         {
             "name": "whilesmart/eloquent-model-configuration",
