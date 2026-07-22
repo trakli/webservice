@@ -936,6 +936,47 @@ class TransactionsTest extends TestCase
         $this->assertEquals("$deviceToken:$clientId", $response->json('data.client_generated_id'));
     }
 
+    public function test_api_user_can_attach_a_client_id_with_a_client_id_only_update()
+    {
+        $expense = $this->createTransaction('expense');
+        $clientId = '245cb3df-df3a-428b-a908-e5f74b8d58a5';
+        $deviceToken = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+
+        $response = $this->actingAs($this->user)->putJson('/api/v1/transactions/' . $expense['id'], [
+            'client_id' => "$deviceToken:$clientId",
+        ]);
+
+        $response->assertStatus(200);
+
+        $transaction = Transaction::find($expense['id']);
+        $this->assertEquals($clientId, $transaction->syncState->client_generated_id);
+        $this->assertEquals(100, $transaction->amount);
+    }
+
+    public function test_api_updating_with_a_new_client_id_does_not_overwrite_the_existing_one()
+    {
+        $deviceToken = '245cb3df-df3a-428b-a908-e5f74b8d58a4';
+        $originalClientId = '245cb3df-df3a-428b-a908-e5f74b8d58a5';
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'party_id' => $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'client_id' => "$deviceToken:$originalClientId",
+        ]);
+        $response->assertStatus(201);
+        $transactionId = $response->json('data.id');
+
+        $this->actingAs($this->user)->putJson('/api/v1/transactions/' . $transactionId, [
+            'client_id' => "$deviceToken:245cb3df-df3a-428b-a908-e5f74b8d58a6",
+        ])->assertStatus(200);
+
+        $transaction = Transaction::find($transactionId);
+        $this->assertEquals($originalClientId, $transaction->syncState->client_generated_id);
+    }
+
     public function test_api_user_cannot_create_transaction_with_invalid_client_id_format()
     {
         // Test with client_id that has no colon
