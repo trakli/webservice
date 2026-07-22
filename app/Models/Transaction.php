@@ -129,7 +129,9 @@ class Transaction extends Model
      */
     protected $casts = [
         'datetime' => 'datetime',
-        'amount' => 'decimal:2',
+        // Matches the column scale; 2 would round sub-cent amounts
+        // (crypto transfer legs) in every response.
+        'amount' => 'decimal:4',
         'metadata' => 'array',
     ];
 

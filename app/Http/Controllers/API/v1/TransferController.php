@@ -223,7 +223,13 @@ class TransferController extends ApiController
             $exchangeRate = $data['exchange_rate'];
         }
 
-        $amountToReceive = bcmul($data['amount'], $exchangeRate);
+        // bcmul's default scale is 0, which would truncate the received amount
+        // to a whole number; 4 matches the amount and balance column scales.
+        $amountToReceive = bcmul(sprintf('%.8F', $data['amount']), sprintf('%.8F', $exchangeRate), 4);
+
+        if (bccomp($amountToReceive, '0', 4) <= 0) {
+            return $this->failure(__('The amount received rounds to zero at this exchange rate'), 422);
+        }
 
         $datetime = isset($data['datetime']) ? format_iso8601_to_sql($data['datetime']) : null;
 
