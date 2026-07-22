@@ -727,7 +727,7 @@ class TransactionController extends ApiController
                 }
 
                 $user = $request->user();
-                if (isset($request['client_id']) && ! $transaction->client_id) {
+                if (isset($request['client_id']) && ! $transaction->client_generated_id) {
                     $transaction->setClientGeneratedId($request['client_id'], $user);
                 }
 
