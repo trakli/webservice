@@ -824,6 +824,27 @@ class AdvancedImportTest extends TestCase
     // Helpers
     // ---------------------------------------------------------------------
 
+    public function test_confirm_rejects_a_zero_amount_suggestion(): void
+    {
+        $wallet = $this->user->wallets()->create(['name' => 'Checking', 'currency' => 'USD']);
+
+        $session = $this->makeReadySession([
+            $this->sampleSuggestion(['amount' => 0, 'type' => 'expense']),
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/v1/import/confirm', [
+            'session_id' => $session->id,
+            'accepted' => [['index' => 0, 'wallet_id' => $wallet->id]],
+        ]);
+
+        $response->assertStatus(206);
+
+        $data = $response->json('data');
+        $this->assertEquals(0, $data['created_count']);
+        $this->assertNotEmpty($data['errors']);
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
     private function makeReadySession(array $suggestions): \App\Models\ImportSession
     {
         return $this->user->importSessions()->create([
