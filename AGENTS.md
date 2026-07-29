@@ -33,53 +33,98 @@ without tools leaves a feature the AI is blind to. When you add an Eloquent
 model / table that holds user data (or a meaningful new field on one), in the
 same change also do the following.
 
-### 1. Read tool
+### 1. Declare the resource on the model
 
-Add a read tool under `app/Ai/Tools/Read/` so the assistant can see the data,
-scoped to the authenticated user (`$context->user`). Mirror
-`app/Ai/Tools/Read/ListWalletsTool.php` (or `ListHoldingsTool.php`): extend
-`Whilesmart\Agents\Tools\AbstractTool`, `permission()` returns
-`ToolPermission::READ`, return a plain array.
+Implement `Whilesmart\Agents\Contracts\HasAgentResource` and return an
+`AgentResource` describing the model once: its name and aliases, the column that
+reads as a row's label, how rows are tied to an owner, the fields an agent may
+read, and the fields it may write. `app/Models/Transfer.php` and
+`app/Models/Budget.php` are the worked examples.
 
-### 2. Write tool (when users create/change it conversationally)
+Mark internal plumbing (`user_id`, `owner_type`) with `ResourceField::internal()`
+so it never reaches an answer, and give foreign keys a `references` so a raw id
+can be resolved to a name.
 
-If users would naturally say "add a ...", add a write tool under
-`app/Ai/Tools/Write/` extending `AbstractWriteTool`. Write tools only *propose*
-an action the user confirms; execution goes through `ProposedActionExecutor`
-(add the new `*.create` action type there). Mirror
-`app/Ai/Tools/Write/RecordTransactionTool.php`.
+Ownership is what keeps one user out of another's data, and every form fails
+closed:
 
-### 3. Register the tool
+| Declaration | Use for |
+|---|---|
+| `ownerKey: 'user_id'` | The ordinary case |
+| `ownerConstants: ['owner_type' => User::class]` | Polymorphic owners, where the id alone is ambiguous (budgets, holdings) |
+| `scopeThrough: new ThroughScope(...)` | No owner column; a parent record owns it (refunds, recurring rules) |
+| `global: true` | Reference data belonging to nobody (exchange rates) |
 
-Add the class to the `tools` array in `config/agents.php`. A tool that isn't
-listed there is never offered to the assistant.
+Add the model to `resources.models` in `config/agents.php`. A model that is not
+listed there is invisible to the assistant no matter what it declares.
 
-### 4. smartql.yml (if the table should be queryable)
+That alone gives it a `list_<resource>` read tool, scoped to the acting user and
+returning only the non-internal fields. Do **not** hand-write a read tool as
+well. A model that already has one (transactions, wallets, categories, parties)
+declares `readTool: false`: it is listed for the schema and for scoping its
+children, not for a duplicate tool.
 
-If the assistant should be able to query the table ad hoc (totals, filters,
-joins), add it to `smartql.yml` under `semantic_layer.entities`: the real table
-name, a description, `aliases` the user might say, and the columns with types and
-descriptions. Add new *columns* on existing tables too (e.g. a new enum field),
-and any `relationships`. The SmartQL tool can only reach declared tables/columns.
+### 2. Write tool (when users create it conversationally)
 
-### 5. Analytics (when relevant)
+If users would naturally say "add a ...", set `writeEnabled: true` and list the
+fields under `writable` with their validation rules. `CreateResourceTool` builds
+the tool from that declaration, so most models need no write-tool class at all
+(groups and reminders work this way).
+
+Write a bespoke tool extending `AbstractWriteTool` only when creating the record
+means more than setting columns: linking two records, or syncing a pivot. See
+`CreateBudgetTool` (targets), `RecordRefundTool` and `CreateRecurringRuleTool`,
+and register those in the `tools` array of `config/agents.php`.
+
+Either way, a write tool only *proposes* an action the user confirms. Execution
+goes through `ProposedActionExecutor`, so add the new `*.create` action type
+there, and add its editable fields to `AiController::allowedOverrideKeys()`. Keep
+the field that proves ownership out of that list: an overridable
+`transaction_id` would let a confirmed action point at someone else's record.
+
+### 3. smartql.yml
+
+Regenerate the semantic layer rather than editing it by hand:
+
+```
+php artisan agents:export-schema --output=storage/app/exported.yml
+```
+
+The entities, relationships, `allowed_tables` and `required_filters` come from
+the resource declarations. Merge the result into `smartql.yml`, which also holds
+the parts with no model behind them: connection and LLM settings, business
+rules, prompt examples, and the `holdings` and `categorizables` entities.
+
+`SmartqlSchemaTest` fails if the file drifts from the models, if a readable table
+has no tenant filter, or if a polymorphic owner is missing its type pin.
+
+### 4. Analytics (when relevant)
 
 If the model feeds a headline number, expose it through a `GetStatsTool` section
 (`app/Ai/Tools/Read/GetStatsTool.php` + `StatsService`) rather than expecting the
 assistant to compute it.
 
+### 5. Tell the assistant it exists
+
+A tool the system prompt never mentions goes unused. Add a short section to
+`TrakliHarness::systemPrompt()` saying what the model is for and which tool
+reaches it, in the style of the existing Transfers and Budgets sections.
+
 ## Reference: holdings
 
-`whilesmart/eloquent-holdings` is the worked example: `ListHoldingsTool`
-(read), the `holdings` entity in `smartql.yml`, the `position` section in
+`whilesmart/eloquent-holdings` is the one model that cannot declare a resource,
+because it lives in a package: `ListHoldingsTool` (read), a hand-written
+`holdings` entity in `smartql.yml`, and the `position` section in
 `GetStatsTool`/`StatsService` for net worth. A record/write tool for holdings is
-the outstanding piece and should follow the same pattern.
+the outstanding piece.
 
 ## Checklist for a new model
 
-- [ ] Read tool in `app/Ai/Tools/Read/`, user-scoped
-- [ ] Write tool in `app/Ai/Tools/Write/` (+ `ProposedActionExecutor` action) if user-created
-- [ ] Registered in `config/agents.php`
-- [ ] `smartql.yml` entity / new columns / relationships
+- [ ] `agentResource()` on the model, with ownership and internal fields declared
+- [ ] Listed in `resources.models` in `config/agents.php`
+- [ ] `writeEnabled` + `writable` fields if user-created, or a bespoke write tool
+      (+ `ProposedActionExecutor` action and `allowedOverrideKeys` entry)
+- [ ] `smartql.yml` regenerated and merged
 - [ ] Stats section if it drives a headline figure
+- [ ] A section in the harness system prompt
 - [ ] Tests covering the tool through the user boundary

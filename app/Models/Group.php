@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 
 #[OA\Schema(
     schema: 'Group',
@@ -35,7 +38,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Group extends Model
+class Group extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -72,5 +75,31 @@ class Group extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'groups',
+            model: self::class,
+            table: 'groups',
+            description: 'Groupings the user files transactions and budgets under, such as a household or a project.',
+            aliases: ['group', 'projects', 'households'],
+            labelColumn: 'name',
+            ownerKey: 'user_id',
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Group name'),
+                ResourceField::string('slug', 'URL-safe form of the name'),
+                ResourceField::text('description', 'What the group covers'),
+                ResourceField::internal('user_id'),
+                ResourceField::datetime('created_at'),
+            ],
+            writable: [
+                ResourceField::string('name', 'Group name', required: true, rules: 'required|string|max:255'),
+                ResourceField::text('description', 'What the group covers', rules: 'nullable|string'),
+            ],
+            writeEnabled: true,
+        );
     }
 }

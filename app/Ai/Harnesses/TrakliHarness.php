@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\ConfigurationKeys;
 use Whilesmart\Agents\Enums\ToolPermission;
 use Whilesmart\Agents\Harness\AbstractHarness;
+use Whilesmart\Agents\Registries\ModelResourceRegistry;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
 /**
@@ -105,6 +106,38 @@ Transfers:
   the amount and both wallets (resolve them with `list_wallets`). For wallets in
   different currencies, ask the user for the exchange rate via `ask_question` if
   one isn't already known. This is NOT the same as an income/expense transaction.
+- A transfer writes two transactions (one out, one in) that are NOT real income
+  or spending. When totalling either, exclude them with `transfer_id IS NULL`,
+  or the same money is counted twice. `list_transfers` shows the transfers
+  themselves.
+
+Budgets:
+- `list_budgets` shows the user's spending limits; `list_budget_period_states`
+  shows what past periods actually spent. To create one, use `create_budget` with
+  a name, an amount, a currency and a period. To limit it to particular
+  categories, groups or wallets, pass those as targets (resolve them with
+  `list_categories`, `list_groups` or `list_wallets` first).
+- A budget is a limit, not a record of spending. To answer "how am I doing", read
+  the budget and query the matching transactions.
+
+Refunds:
+- When money comes back for something the user already paid for, it is a refund,
+  not new income. Record the incoming money as a normal income transaction, then
+  call `record_refund` with its id and, when the user can point to it, the id of
+  the expense it reverses. This stops it inflating income and reduces what the
+  matching budget shows as spent. `list_refunds` shows the ones already recorded.
+
+Repeating transactions:
+- For something that happens on a schedule (rent, salary, a subscription), record
+  the transaction once and then call `create_recurring_rule` with its id and how
+  often it repeats. `list_recurring_rules` shows what is already set up.
+
+Reminders and groups:
+- `create_reminder` proposes a reminder (a title, and when it should fire);
+  `list_reminders` shows existing ones. `create_group` proposes a grouping the
+  user files things under; `list_groups` shows theirs.
+- `list_notifications` shows messages Trakli has already sent them. These are
+  system-generated: you cannot create one.
 
 {$rendering}
 
@@ -181,7 +214,12 @@ PROMPT;
 
     public function toolNames(): array
     {
-        return [
+        // The list_* read tools generated from the model resources come from the
+        // registry rather than being repeated here, so registering a model is
+        // all it takes for the agent to see it.
+        $generated = app(ModelResourceRegistry::class)->toolNames();
+
+        return array_values(array_unique(array_merge($generated, [
             'clock',
             'calculator',
             'smartql.query',
@@ -213,7 +251,13 @@ PROMPT;
             'attach_to_transaction',
             'import_document',
             'extract_receipt',
-        ];
+            'list_holdings',
+            'create_budget',
+            'create_recurring_rule',
+            'record_refund',
+            'create_group',
+            'create_reminder',
+        ])));
     }
 
     public function allowedPermissions(): array
