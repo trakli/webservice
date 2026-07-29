@@ -126,16 +126,23 @@ class AgentRunner
             return __('Putting your report together');
         }
 
+        // Every generated list_* read tool looks the same to the user, so one
+        // label covers them and new resources need no change here.
+        if (str_starts_with($tool, 'list_')) {
+            return __('Checking your accounts');
+        }
+
+        if (str_starts_with($tool, 'create_') || str_starts_with($tool, 'record_')) {
+            return __('Preparing your changes');
+        }
+
         return match ($tool) {
             'smartql.query' => __('Looking through your records'),
             'get_stats' => __('Crunching the numbers'),
-            'list_wallets', 'list_categories', 'list_parties' => __('Checking your accounts'),
             'get_exchange_rate', 'get_asset_price', 'convert_currency' => __('Fetching current rates'),
             'get_user_defaults' => __('Checking your settings'),
             'calculator' => __('Working out the figures'),
-            'record_transaction', 'record_transfer', 'create_wallet',
-            'create_category', 'create_party', 'categorize_transactions',
-            'assign_transaction_categories',
+            'categorize_transactions', 'assign_transaction_categories',
             'attach_to_transaction' => __('Preparing your changes'),
             'import_document', 'extract_receipt' => __('Reading your document'),
             default => null,

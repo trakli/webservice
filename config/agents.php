@@ -87,8 +87,43 @@ return [
         App\Ai\Tools\Write\CategorizeTransactionsTool::class,
         App\Ai\Tools\Write\AssignTransactionCategoriesTool::class,
         App\Ai\Tools\Write\AttachToTransactionTool::class,
+        App\Ai\Tools\Write\CreateBudgetTool::class,
+        App\Ai\Tools\Write\CreateRecurringRuleTool::class,
+        App\Ai\Tools\Write\RecordRefundTool::class,
         App\Ai\Tools\Documents\ImportDocumentTool::class,
         App\Ai\Tools\Documents\ExtractReceiptTool::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model resources
+    |--------------------------------------------------------------------------
+    |
+    | Models that describe themselves to the agent via agentResource(). Each one
+    | gains an owner-scoped list_<resource> tool and a place in the semantic
+    | layer written by `php artisan agents:export-schema`. Models whose reads are
+    | already served by a hand-written tool declare readTool: false: they are
+    | listed here for the schema and for scoping their children, not for a
+    | duplicate tool.
+    |
+    */
+    'resources' => [
+        'models' => [
+            App\Models\Transaction::class,
+            App\Models\Wallet::class,
+            App\Models\Category::class,
+            App\Models\Party::class,
+            App\Models\Transfer::class,
+            App\Models\Budget::class,
+            App\Models\BudgetPeriodState::class,
+            App\Models\RecurringTransactionRule::class,
+            App\Models\Refund::class,
+            App\Models\Reminder::class,
+            App\Models\Notification::class,
+            App\Models\Group::class,
+            App\Models\ExchangeRate::class,
+        ],
+        'max_rows' => (int) env('AGENTS_RESOURCE_MAX_ROWS', 50),
     ],
 
     /*

@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
+use Whilesmart\Agents\Resources\ResourceRelationship;
+use Whilesmart\Agents\Resources\ThroughScope;
 
 /**
  * A Refund row marks an income transaction as refunding money received
@@ -28,7 +33,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Refund extends Model
+class Refund extends Model implements HasAgentResource
 {
     use HasFactory;
     use Syncable;
@@ -51,5 +56,34 @@ class Refund extends Model
     public function originalTransaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class, 'original_transaction_id');
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'refunds',
+            model: self::class,
+            table: 'refunds',
+            description: 'Money returned for an earlier expense, linking the incoming transaction to the one it reverses.',
+            aliases: ['returns', 'reimbursements', 'money back'],
+            ownerKey: null,
+            scopeThrough: new ThroughScope(
+                relation: 'refundTransaction',
+                resource: 'transactions',
+                column: 'refund_transaction_id',
+                references: 'transactions.id',
+            ),
+            readable: [
+                ResourceField::key(),
+                ResourceField::reference('refund_transaction_id', 'transactions.id', 'The income transaction carrying the refunded money'),
+                ResourceField::reference('original_transaction_id', 'transactions.id', 'The expense being refunded'),
+                ResourceField::datetime('created_at', 'When the refund was recorded'),
+            ],
+            relationships: [
+                ResourceRelationship::belongsTo('refund_transaction', 'transactions', 'refund_transaction_id'),
+                ResourceRelationship::belongsTo('refunded_transaction', 'transactions', 'original_transaction_id'),
+            ],
+            writeEnabled: true,
+        );
     }
 }

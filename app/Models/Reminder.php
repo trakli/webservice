@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
 use RRule\RRule;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 
 #[OA\Schema(
     schema: 'Reminder',
@@ -51,7 +54,7 @@ use RRule\RRule;
     ],
     type: 'object'
 )]
-class Reminder extends Model
+class Reminder extends Model implements HasAgentResource
 {
     use HasFactory;
     use SoftDeletes;
@@ -202,5 +205,40 @@ class Reminder extends Model
         return $query->active()
             ->whereNotNull('next_trigger_at')
             ->where('next_trigger_at', '<=', now());
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'reminders',
+            model: self::class,
+            table: 'reminders',
+            description: 'Things the user asked to be reminded about, such as a bill due date.',
+            aliases: ['alerts', 'nudges', 'to-dos'],
+            labelColumn: 'title',
+            ownerKey: 'user_id',
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('title', 'What the reminder is about'),
+                ResourceField::text('description', 'Longer note attached to the reminder'),
+                ResourceField::string('type', 'What kind of reminder it is'),
+                ResourceField::string('status', 'Whether the reminder is active, done or dismissed'),
+                ResourceField::datetime('trigger_at', 'When the reminder first fires'),
+                ResourceField::datetime('due_at', 'When the thing being remembered is due'),
+                ResourceField::datetime('next_trigger_at', 'When it fires next'),
+                ResourceField::integer('priority', 'How important it is, higher is more urgent'),
+                ResourceField::internal('user_id'),
+                ResourceField::datetime('created_at'),
+            ],
+            writable: [
+                ResourceField::string('title', 'What the reminder is about', required: true, rules: 'required|string|max:255'),
+                ResourceField::text('description', 'Longer note', rules: 'nullable|string'),
+                ResourceField::datetime('trigger_at', 'When it should fire, ISO 8601', rules: 'nullable|date'),
+                ResourceField::datetime('due_at', 'When the thing being remembered is due, ISO 8601', rules: 'nullable|date'),
+                ResourceField::integer('priority', 'How important it is, 0 is normal', rules: 'nullable|integer|min:0|max:255'),
+            ],
+            writeEnabled: true,
+            orderColumn: 'created_at',
+        );
     }
 }

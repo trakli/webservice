@@ -11,6 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
+use Whilesmart\Agents\Resources\ResourceRelationship;
 
 #[OA\Schema(
     schema: 'Transfer',
@@ -31,7 +35,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Transfer extends Model
+class Transfer extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -123,5 +127,33 @@ class Transfer extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'transfers',
+            model: self::class,
+            table: 'transfers',
+            description: "Money moved between two of the user's own wallets. Not income or expense.",
+            aliases: ['moves', 'wallet transfers'],
+            ownerKey: 'user_id',
+            ownerRelation: 'transfers',
+            readable: [
+                ResourceField::key(),
+                ResourceField::decimal('amount', 'Amount taken from the source wallet'),
+                ResourceField::decimal('exchange_rate', 'Destination currency units per source unit'),
+                ResourceField::reference('from_wallet_id', 'wallets.id', 'Wallet the money left'),
+                ResourceField::reference('to_wallet_id', 'wallets.id', 'Wallet the money arrived in'),
+                ResourceField::datetime('datetime', 'When the transfer happened'),
+                ResourceField::internal('user_id'),
+                ResourceField::datetime('created_at', 'When the transfer was recorded'),
+            ],
+            relationships: [
+                ResourceRelationship::belongsTo('transfer_source_wallet', 'wallets', 'from_wallet_id', 'Wallet the money left'),
+                ResourceRelationship::belongsTo('transfer_destination_wallet', 'wallets', 'to_wallet_id', 'Wallet the money arrived in'),
+            ],
+            orderColumn: 'datetime',
+        );
     }
 }

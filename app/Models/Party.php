@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 
 #[OA\Schema(
     schema: 'Party',
@@ -25,7 +28,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Party extends Model
+class Party extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -46,4 +49,26 @@ class Party extends Model
     ];
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'parties',
+            model: self::class,
+            table: 'parties',
+            description: 'The people and businesses on the other side of a transaction.',
+            aliases: ['vendors', 'merchants', 'payees', 'payers', 'contacts'],
+            labelColumn: 'name',
+            ownerKey: 'user_id',
+            ownerBypassRoles: ['admin'],
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Party name'),
+                ResourceField::string('type', 'How the party is classified'),
+                ResourceField::text('description', 'Notes about the party'),
+                ResourceField::internal('user_id'),
+            ],
+            readTool: false,
+        );
+    }
 }

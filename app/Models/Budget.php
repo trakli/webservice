@@ -16,6 +16,10 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
+use Whilesmart\Agents\Resources\ResourceRelationship;
 
 #[OA\Schema(
     schema: 'Budget',
@@ -72,7 +76,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Budget extends Model
+class Budget extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -236,5 +240,48 @@ class Budget extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'budgets',
+            model: self::class,
+            table: 'budgets',
+            description: 'Spending limits the user sets for a period, optionally targeting categories, groups or wallets.',
+            aliases: ['budget', 'spending limits', 'caps'],
+            labelColumn: 'name',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Budget name'),
+                ResourceField::text('description', 'What the budget covers'),
+                ResourceField::decimal('amount', 'The spending limit for one period'),
+                ResourceField::string('currency', 'Currency of the limit'),
+                ResourceField::enum('period_type', self::PERIODS, 'How often the budget resets'),
+                ResourceField::date('start_date', 'First day the budget applies'),
+                ResourceField::date('end_date', 'Last day the budget applies, if it ends'),
+                ResourceField::boolean('rollover_enabled', 'Whether unspent money carries into the next period'),
+                ResourceField::integer('threshold_percent', 'Percentage used at which the user is warned'),
+                ResourceField::boolean('is_active', 'Whether the budget is currently in force'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
+                ResourceField::datetime('created_at'),
+            ],
+            relationships: [
+                ResourceRelationship::hasMany('budget_period_states', 'budget_period_states', 'budget_id', 'Closed periods of a budget'),
+                ResourceRelationship::belongsToMany(
+                    'budget_targets',
+                    'categories',
+                    'budgetables',
+                    'budget_id',
+                    'budgetable_id',
+                    'Categories, groups or wallets a budget applies to',
+                ),
+            ],
+            writeEnabled: true,
+        );
     }
 }

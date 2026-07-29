@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use InvalidArgumentException;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
+use Whilesmart\Agents\Resources\ResourceRelationship;
 use Whilesmart\UserDevices\Models\Device;
 
 #[OA\Schema(
@@ -82,7 +86,7 @@ use Whilesmart\UserDevices\Models\Device;
     ],
     type: 'object'
 )]
-class Transaction extends Model
+class Transaction extends Model implements HasAgentResource
 {
     use Groupable;
     use HasClientCreatedAt;
@@ -284,5 +288,46 @@ class Transaction extends Model
         $this->recurringTransactionRule()->delete();
 
         return parent::delete();
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'transactions',
+            model: self::class,
+            table: 'transactions',
+            description: 'Money in and out. An income or expense against one wallet.',
+            aliases: ['spending', 'expenses', 'income', 'payments', 'purchases'],
+            labelColumn: 'description',
+            ownerKey: 'user_id',
+            ownerBypassRoles: ['admin'],
+            readable: [
+                ResourceField::key(),
+                ResourceField::decimal('amount', "Amount in the wallet's currency"),
+                ResourceField::enum('type', ['income', 'expense'], 'Whether money came in or went out'),
+                ResourceField::string(
+                    'intent',
+                    'What the movement is: regular, loan_received, loan_repayment, debt_owed, '
+                        . 'debt_settled, investment_buy, investment_return, gift',
+                ),
+                ResourceField::datetime('datetime', 'When the transaction happened'),
+                ResourceField::text('description', 'What it was for'),
+                ResourceField::reference('wallet_id', 'wallets.id', 'Wallet the money moved through'),
+                ResourceField::reference('party_id', 'parties.id', 'Who it was with'),
+                ResourceField::reference(
+                    'transfer_id',
+                    'transfers.id',
+                    'Set when this row is one leg of a wallet-to-wallet transfer rather than real income or spending',
+                ),
+                ResourceField::internal('user_id'),
+            ],
+            relationships: [
+                ResourceRelationship::belongsTo('transaction_wallet', 'wallets', 'wallet_id', 'Each transaction belongs to a wallet'),
+                ResourceRelationship::belongsTo('transaction_party', 'parties', 'party_id', 'Each transaction may have a counterparty'),
+                ResourceRelationship::belongsTo('transaction_transfer', 'transfers', 'transfer_id', 'A transfer leg points at its transfer'),
+            ],
+            orderColumn: 'datetime',
+            readTool: false,
+        );
     }
 }
