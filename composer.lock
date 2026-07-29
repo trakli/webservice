@@ -9945,16 +9945,16 @@
         },
         {
             "name": "whilesmart/eloquent-agents",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-agents.git",
-                "reference": "362554274ceada0acf48f75c8cc4e64d2e8cb862"
+                "reference": "90786e825e70c15b242e44b22950e9149ef9e585"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agents/zipball/362554274ceada0acf48f75c8cc4e64d2e8cb862",
-                "reference": "362554274ceada0acf48f75c8cc4e64d2e8cb862",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-agents/zipball/90786e825e70c15b242e44b22950e9149ef9e585",
+                "reference": "90786e825e70c15b242e44b22950e9149ef9e585",
                 "shasum": ""
             },
             "require": {
@@ -10010,10 +10010,10 @@
             ],
             "description": "AI tool-calling foundation for Laravel: ready-made tools, an agent harness, and an extension API on top of Prism",
             "support": {
-                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/v1.0.0",
+                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/v1.1.0",
                 "issues": "https://github.com/whilesmartphp/eloquent-agents/issues"
             },
-            "time": "2026-07-15T18:00:29+00:00"
+            "time": "2026-07-29T22:00:43+00:00"
         },
         {
             "name": "whilesmart/eloquent-engagement",
