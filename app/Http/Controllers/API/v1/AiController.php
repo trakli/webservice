@@ -14,7 +14,7 @@ use App\Services\AiService;
 use App\Services\ChatActionBlocks;
 use App\Services\FileService;
 use App\Services\ProposedActionExecutor;
-use App\Services\TransactionWriter;
+use App\Services\ProposedActionOverrides;
 use Illuminate\Database\Eloquent\Collection;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
@@ -241,11 +241,11 @@ class AiController extends ApiController
         }
         $described = null;
         if (is_array($overrides) && $overrides !== []) {
-            $allowed = array_flip($this->allowedOverrideKeys($action->action_type));
-            $merged = array_merge($action->payload, array_intersect_key($overrides, $allowed));
+            $policy = app(ProposedActionOverrides::class);
+            $merged = $policy->merge($action->action_type, $action->payload, $overrides);
 
             try {
-                $this->revalidateOverride($user, $action->action_type, $merged);
+                $policy->revalidate($user, $action->action_type, $merged);
             } catch (HttpException $e) {
                 return $this->failure($e->getMessage(), $e->getStatusCode());
             }
@@ -595,74 +595,6 @@ class AiController extends ApiController
 
         if (! $action->source?->is($chat) || ! $action->owner?->is($user)) {
             abort(Response::HTTP_NOT_FOUND, 'Action not found.');
-        }
-    }
-
-    /**
-     * Re-validate an edited (overridden) payload before executing. Ownership is
-     * the security-critical check; field rules mirror the tool's own validation.
-     *
-     * @param  array<string, mixed>  $payload
-     *
-     * @throws HttpException
-     */
-    /**
-     * Keys a user is allowed to override on confirm, per action type. Anything
-     * else (notably user_id) is dropped before merging.
-     *
-     * @return array<int, string>
-     */
-    private function allowedOverrideKeys(string $actionType): array
-    {
-        return match ($actionType) {
-            'transaction.create' => ['amount', 'type', 'wallet_id', 'party_id', 'description', 'datetime', 'categories'],
-            'transaction.categorize' => ['categories'],
-            'transfer.create' => ['amount', 'from_wallet_id', 'to_wallet_id', 'exchange_rate', 'datetime'],
-            'wallet.create' => ['name', 'type', 'currency', 'description'],
-            'category.create' => ['name', 'type', 'description'],
-            'party.create' => ['name', 'type', 'description'],
-            default => [],
-        };
-    }
-
-    private function revalidateOverride(User $user, string $actionType, array $payload): void
-    {
-        if (in_array($actionType, ['transaction.create', 'transaction.categorize'], true)) {
-            $this->revalidateTransactionOverride($user, $payload);
-        }
-
-        if ($actionType === 'transfer.create') {
-            $this->revalidateTransferOverride($user, $payload);
-        }
-    }
-
-    private function revalidateTransactionOverride(User $user, array $payload): void
-    {
-        app(TransactionWriter::class)->validateOwnership($user, $payload, $payload['categories'] ?? []);
-
-        if (isset($payload['amount']) && (float) $payload['amount'] <= 0) {
-            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Amount must be greater than zero.');
-        }
-        if (isset($payload['type']) && ! in_array($payload['type'], ['income', 'expense'], true)) {
-            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Type must be income or expense.');
-        }
-    }
-
-    private function revalidateTransferOverride(User $user, array $payload): void
-    {
-        foreach (['from_wallet_id', 'to_wallet_id'] as $key) {
-            if (! empty($payload[$key]) && ! $user->wallets()->whereKey($payload[$key])->exists()) {
-                throw new HttpException(Response::HTTP_FORBIDDEN, 'The selected wallet does not belong to you.');
-            }
-        }
-        if (! empty($payload['from_wallet_id']) && $payload['from_wallet_id'] === ($payload['to_wallet_id'] ?? null)) {
-            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'The source and destination wallets must be different.');
-        }
-        if (isset($payload['amount']) && (float) $payload['amount'] <= 0) {
-            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Amount must be greater than zero.');
-        }
-        if (isset($payload['exchange_rate']) && (float) $payload['exchange_rate'] <= 0) {
-            throw new HttpException(Response::HTTP_UNPROCESSABLE_ENTITY, 'Exchange rate must be greater than zero.');
         }
     }
 
