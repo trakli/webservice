@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Jobs\ProcessChatMessageJob;
 use App\Models\ChatMessage;
 use App\Models\ChatSession;

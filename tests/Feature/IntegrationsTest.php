@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Contracts\Integration;
 use App\Contracts\IntegrationUi;
 use App\Models\User;

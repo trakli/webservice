@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Contracts\Integration;
 use App\Contracts\IntegrationUi;
 use App\Http\Controllers\API\ApiController;

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d1dc07527b91bc2fc41288ed8c31bd47",
+    "content-hash": "41fe754d80469450cfb18548eaeb9c55",
     "packages": [
         {
             "name": "beste/clock",
@@ -10071,6 +10071,60 @@
                 "source": "https://github.com/whilesmartphp/eloquent-engagement/tree/dev"
             },
             "time": "2026-06-27T15:47:35+00:00"
+        },
+        {
+            "name": "whilesmart/eloquent-entitlements",
+            "version": "2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-entitlements.git",
+                "reference": "66be36b3f07a09861bb7ee41acc409496d5e6bed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-entitlements/zipball/66be36b3f07a09861bb7ee41acc409496d5e6bed",
+                "reference": "66be36b3f07a09861bb7ee41acc409496d5e6bed",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2",
+                "whilesmart/eloquent-owner-access": "^1.0"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Entitlements\\EntitlementsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Entitlements\\": "src/",
+                    "Whilesmart\\Entitlements\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Provider-neutral feature gating, plan limits and metered usage for Laravel, scoped per polymorphic owner. Ships an allow-all default so self-hosting stays free; hosts rebind to enforce.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-entitlements/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-entitlements/tree/v2.0.0"
+            },
+            "time": "2026-07-19T12:33:11+00:00"
         },
         {
             "name": "whilesmart/eloquent-holdings",
