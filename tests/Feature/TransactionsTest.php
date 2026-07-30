@@ -748,6 +748,58 @@ class TransactionsTest extends TestCase
         $this->assertNotNull($transaction['recurring_rules']['recurrence_ends_at']);
     }
 
+    public function test_api_user_can_create_a_recurring_transaction_from_a_form_request()
+    {
+        $response = $this->actingAs($this->user)->post('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => '100',
+            'wallet_id' => (string) $this->wallet->id,
+            'party_id' => (string) $this->party->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => 'true',
+            'recurrence_period' => 'monthly',
+            'recurrence_interval' => '2',
+            'files' => [UploadedFile::fake()->image('receipt.png')],
+        ]);
+
+        $response->assertStatus(201);
+
+        $transaction = $response->json('data');
+        $this->assertEquals('monthly', $transaction['recurring_rules']['recurrence_period']);
+        $this->assertEquals(2, $transaction['recurring_rules']['recurrence_interval']);
+        $this->assertCount(1, $transaction['files']);
+    }
+
+    public function test_api_form_request_can_turn_a_recurring_transaction_off()
+    {
+        $response = $this->actingAs($this->user)->post('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => '100',
+            'wallet_id' => (string) $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => 'false',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNull($response->json('data.recurring_rules'));
+    }
+
+    public function test_api_rejects_an_is_recurring_flag_it_cannot_read()
+    {
+        $response = $this->actingAs($this->user)->post('/api/v1/transactions', [
+            'type' => 'expense',
+            'amount' => '100',
+            'wallet_id' => (string) $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => 'sometimes',
+            'recurrence_period' => 'monthly',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('is_recurring');
+        $this->assertDatabaseCount('transactions', 0);
+    }
+
     public function test_api_validates_recurring_transaction_parameters()
     {
         // Test missing recurrence_period when is_recurring is true

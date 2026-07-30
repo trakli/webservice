@@ -66,7 +66,7 @@ class ApiController extends BaseController
      */
     protected function validateRequest(Request $request, array $rules): array
     {
-        $validator = Validator::make($request->all(), $rules);
+        $validator = Validator::make($this->castBooleanInput($request->all(), $rules), $rules);
 
         if ($validator->fails()) {
             $errors = $validator->errors();
@@ -89,6 +89,51 @@ class ApiController extends BaseController
         }
 
         return ['isValidated' => true, 'data' => $validator->validated()];
+    }
+
+    /**
+     * Cast textual booleans for attributes the rules declare as boolean.
+     *
+     * Unrecognised values are left untouched so the boolean rule still rejects them
+     * instead of silently reading as false.
+     */
+    private function castBooleanInput(array $data, array $rules): array
+    {
+        foreach ($rules as $attribute => $rule) {
+            if (! array_key_exists($attribute, $data) || ! is_string($data[$attribute])) {
+                continue;
+            }
+
+            if (! $this->expectsBoolean($rule)) {
+                continue;
+            }
+
+            $casted = filter_var($data[$attribute], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            if (! is_null($casted)) {
+                $data[$attribute] = $casted;
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Determine whether a rule set holds the boolean rule.
+     *
+     * @param  mixed  $rule
+     */
+    private function expectsBoolean($rule): bool
+    {
+        $rules = is_array($rule) ? $rule : explode('|', (string) $rule);
+
+        foreach ($rules as $singleRule) {
+            if (is_string($singleRule) && strtolower(explode(':', $singleRule)[0]) === 'boolean') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

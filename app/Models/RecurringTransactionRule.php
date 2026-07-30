@@ -59,6 +59,7 @@ class RecurringTransactionRule extends Model implements HasAgentResource
     protected $casts = [
         'next_scheduled_at' => 'datetime',
         'recurrence_ends_at' => 'datetime',
+        'recurrence_interval' => 'integer',
     ];
 
     public function transaction(): BelongsTo
