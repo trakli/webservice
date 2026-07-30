@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
