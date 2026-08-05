@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1;
 use App\Enums\TransactionIntent;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
+use App\Http\Traits\FiltersTransactions;
 use App\Jobs\RecurrentTransactionJob;
 use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
@@ -25,6 +26,7 @@ use Throwable;
 class TransactionController extends ApiController
 {
     use ApiQueryable;
+    use FiltersTransactions;
 
     public function __construct(
         private RecurringTransactionService $recurringTransactionService,
@@ -840,89 +842,5 @@ class TransactionController extends ApiController
         $transaction->delete();
 
         return $this->success(['message' => __('Transaction deleted successfully')]);
-    }
-
-    /**
-     * Apply optional filtering query parameters (date range, wallets,
-     * categories, search) to the given transaction query.
-     */
-    private function applyTransactionFilters($query, Request $request): void
-    {
-        if ($request->filled('date_from')) {
-            $query->whereDate('datetime', '>=', $request->query('date_from'));
-        }
-
-        if ($request->filled('date_to')) {
-            $query->whereDate('datetime', '<=', $request->query('date_to'));
-        }
-
-        $walletIds = $this->listParam($request, 'wallet_ids');
-        if (! empty($walletIds)) {
-            $query->whereIn('wallet_id', $walletIds);
-        }
-
-        $categoryIds = $this->listParam($request, 'category_ids');
-        if (! empty($categoryIds)) {
-            $query->whereHas('categories', function ($q) use ($categoryIds) {
-                $q->whereIn('categories.id', $categoryIds);
-            });
-        }
-
-        $this->applyIntentFilters($query, $request);
-
-        if ($request->filled('search')) {
-            $this->applySearchFilter($query, (string) $request->query('search'));
-        }
-    }
-
-    private function applyIntentFilters($query, Request $request): void
-    {
-        $intents = array_values(array_intersect(
-            $this->listParam($request, 'intent'),
-            TransactionIntent::values()
-        ));
-        if (! empty($intents)) {
-            $query->whereIn('intent', $intents);
-        }
-
-        if ($request->boolean('exclude_transfers')) {
-            $query->nonTransfer();
-        }
-    }
-
-    /**
-     * Parse a list query parameter that may arrive either as an array
-     * (key[]=a&key[]=b) or a comma-separated string (key=a,b), returning a
-     * trimmed list with empty entries removed.
-     */
-    private function listParam(Request $request, string $key): array
-    {
-        $value = $request->query($key);
-        if ($value === null || $value === '') {
-            return [];
-        }
-
-        $items = is_array($value) ? $value : explode(',', (string) $value);
-
-        return array_values(array_filter(
-            array_map('trim', $items),
-            fn ($item) => $item !== ''
-        ));
-    }
-
-    /**
-     * Apply a free-text search filter that matches against the description
-     * and, when the query contains a number, also the exact amount.
-     */
-    private function applySearchFilter($query, string $search): void
-    {
-        $query->where(function ($q) use ($search) {
-            $q->where('description', 'LIKE', '%' . $search . '%');
-
-            $numeric = preg_replace('/[^0-9.]/', '', $search);
-            if ($numeric !== '' && is_numeric($numeric)) {
-                $q->orWhere('amount', $numeric);
-            }
-        });
     }
 }
