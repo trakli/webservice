@@ -19,6 +19,11 @@ class CsvExporter implements Exporter
         return 'csv';
     }
 
+    public function maxRows(): int
+    {
+        return 20000;
+    }
+
     public function export(ExportDocument $document): string
     {
         $handle = fopen('php://temp', 'r+');

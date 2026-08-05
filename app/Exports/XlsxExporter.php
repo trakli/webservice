@@ -24,6 +24,11 @@ class XlsxExporter implements Exporter
         return 'xlsx';
     }
 
+    public function maxRows(): int
+    {
+        return 5000;
+    }
+
     public function export(ExportDocument $document): string
     {
         $spreadsheet = new Spreadsheet();
