@@ -41,5 +41,8 @@ jobs:
       - name: Run database migrations
         run: flatrun deployment exec trakli-staging app -- php artisan migrate
 
+      - name: Verify schema conformance
+        run: flatrun deployment exec trakli-staging app -- php artisan schema:verify
+
       - name: Optimize application caches
         run: flatrun deployment exec trakli-staging app -- php artisan optimize
