@@ -15,12 +15,6 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 class TransactionExportBuilder
 {
     /**
-     * Beyond this the export stops being something a person reads and starts
-     * being a database dump; refusing is clearer than timing out mid-download.
-     */
-    public const MAX_ROWS = 20000;
-
-    /**
      * @param  array<string, scalar|null>  $meta
      */
     public function build(Builder|Relation $query, string $title, array $meta = []): ExportDocument

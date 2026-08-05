@@ -21,6 +21,11 @@ class PdfExporter implements Exporter
         return 'pdf';
     }
 
+    public function maxRows(): int
+    {
+        return 100;
+    }
+
     public function export(ExportDocument $document): string
     {
         $sections = array_map(

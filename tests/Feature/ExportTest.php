@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Exports\ExporterManager;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -138,6 +140,36 @@ class ExportTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonPath('success', false);
         $this->assertContains('csv', $response->json('errors.supported_formats'));
+    }
+
+    /**
+     * dompdf lays the whole document out in memory, so it holds far less than
+     * the other formats. The limit has to be enforced per format, or a large
+     * selection exhausts the worker instead of returning an error.
+     */
+    public function test_the_row_limit_is_enforced_per_format(): void
+    {
+        $pdfLimit = app(ExporterManager::class)->for('pdf')->maxRows();
+
+        // Bulk setup only; the export itself still goes over HTTP.
+        Transaction::factory()->count($pdfLimit + 1)->create([
+            'user_id' => $this->user->id,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => now(),
+        ]);
+
+        $pdf = $this->actingAs($this->user)->getJson('/api/v1/transactions/export?format=pdf');
+        $pdf->assertStatus(422);
+        $pdf->assertJsonPath('errors.format', 'pdf');
+        $pdf->assertJsonPath('errors.max_rows', $pdfLimit);
+        $this->assertGreaterThan(
+            $pdfLimit,
+            $pdf->json('errors.format_limits.csv'),
+            'the error should point at a format that holds more'
+        );
+
+        $csv = $this->actingAs($this->user)->get('/api/v1/transactions/export?format=csv');
+        $csv->assertStatus(200);
     }
 
     public function test_report_export_renders_a_statement(): void

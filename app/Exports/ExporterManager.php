@@ -42,4 +42,12 @@ class ExporterManager
     {
         return array_keys($this->exporters);
     }
+
+    /**
+     * @return array<string, int>
+     */
+    public function rowLimits(): array
+    {
+        return array_map(fn (Exporter $exporter) => $exporter->maxRows(), $this->exporters);
+    }
 }

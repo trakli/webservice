@@ -105,14 +105,27 @@ class ExportController extends ApiController
 
         $this->applyTransactionFilters($query, $request);
 
+        $exporter = $this->exporters->for($format);
+
         $count = $this->transactionBuilder->countRows($query);
-        if ($count > TransactionExportBuilder::MAX_ROWS) {
+        if ($count > $exporter->maxRows()) {
             return $this->failure(
-                __('This export covers :count transactions, which is over the limit of :max. Narrow the date range or wallets and try again.', [
+                __(
+                    'This export covers :count transactions, over the limit of :max for :format files. '
+                        . 'Narrow the date range or wallets, or pick a format that holds more.',
+                    [
+                        'count' => $count,
+                        'max' => $exporter->maxRows(),
+                        'format' => strtoupper($format),
+                    ]
+                ),
+                422,
+                [
                     'count' => $count,
-                    'max' => TransactionExportBuilder::MAX_ROWS,
-                ]),
-                422
+                    'max_rows' => $exporter->maxRows(),
+                    'format' => $format,
+                    'format_limits' => $this->exporters->rowLimits(),
+                ]
             );
         }
 
