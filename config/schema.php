@@ -18,6 +18,11 @@
  *   timestamp, json, enum (with `values`)
  *
  * Index specs: ['columns' => [...], 'name' => 'optional', 'unique' => bool]
+ *
+ * Any migration that ALTERS an existing table must also declare what it adds
+ * here. A create migration either ran or the table is absent (which `verify`
+ * reports on its own), but an ALTER that never reached an environment leaves a
+ * table that looks fine and fails on write. SchemaConformanceTest enforces this.
  */
 
 return [
@@ -29,6 +34,29 @@ return [
     'enforce' => env('SCHEMA_CONFORMANCE_ENFORCE', true),
 
     'tables' => [
+        'transactions' => [
+            'columns' => [
+                'intent' => ['type' => 'string', 'default' => 'regular'],
+                'metadata' => ['type' => 'json', 'nullable' => true],
+            ],
+            'indexes' => [
+                ['columns' => ['intent']],
+                ['columns' => ['datetime']],
+            ],
+        ],
+
+        'files' => [
+            'columns' => [
+                'metadata' => ['type' => 'json', 'nullable' => true],
+            ],
+        ],
+
+        'chat_messages' => [
+            'columns' => [
+                'progress' => ['type' => 'json', 'nullable' => true],
+            ],
+        ],
+
         'reminders' => [
             'columns' => [
                 'source' => ['type' => 'string', 'nullable' => true],
