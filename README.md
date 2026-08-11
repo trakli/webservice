@@ -56,7 +56,7 @@ A full finance app, not a spreadsheet:
 - Make
 
 ### Quick installation guide
-- `git clone git@github.com:whilesmart/trakli-webservice.git`
+- `git clone git@github.com:trakli/trakli-webservice.git`
 - `cd trakli-webservice`
 - `cp .env.example .env`
 - `make setup`

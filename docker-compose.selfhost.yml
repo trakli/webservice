@@ -1,0 +1,178 @@
+# Trakli self-contained stack — for self-hosting only.
+#
+# This file ships the full stack (app, worker, web UI, database, cache) and
+# comes up with a single command and no file editing beyond copying the
+# example env file.
+#
+# docker-compose.prod.yml remains the BYO-database / hosted pipeline path
+# and is NOT modified by this file.
+#
+# Quick start:
+#   cp .env.selfhost.example .env
+#   # edit .env — at minimum set APP_KEY, APP_URL, CORS_ALLOWED_ORIGINS,
+#   #            and NUXT_PUBLIC_API_BASE_URL to match your public URL
+#   docker compose -f docker-compose.selfhost.yml up -d
+#
+# Optional profiles:
+#   docker compose -f docker-compose.selfhost.yml --profile ai up -d
+#   docker compose -f docker-compose.selfhost.yml --profile realtime up -d
+#
+# HTTPS is REQUIRED in production — the web UI auth cookie (auth.token) is
+# set with the Secure flag and will silently fail over plain HTTP.
+
+name: trakli
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: trakli-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-trakli}
+      MYSQL_USER: ${DB_USERNAME:-trakli}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - trakli
+
+  redis:
+    image: redis:alpine
+    container_name: trakli-redis
+    restart: unless-stopped
+    command: redis-server --requirepass "${REDIS_PASSWORD}"
+    environment:
+      - REDIS_PASSWORD
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - trakli
+
+  migrate:
+    image: ghcr.io/trakli/webservice:${IMAGE_TAG}
+    container_name: trakli-migrate
+    restart: "no"
+    command: php artisan migrate --force
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - trakli
+
+  app:
+    image: ghcr.io/trakli/webservice:${IMAGE_TAG}
+    container_name: trakli-app
+    restart: unless-stopped
+    volumes:
+      - ./storage:/var/www/html/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    env_file: .env
+    # CORS_ALLOWED_ORIGINS (in .env) must exactly match the webui's public
+    # origin — protocol + host, no trailing slash. A mismatch causes the
+    # browser to silently reject API responses.
+    networks:
+      - trakli
+
+  worker:
+    image: ghcr.io/trakli/webservice:${IMAGE_TAG}
+    container_name: trakli-worker
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=300 --sleep=3
+    volumes:
+      - ./storage:/var/www/html/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - trakli
+
+  webui:
+    image: ghcr.io/trakli/webui:${WEBUI_IMAGE_TAG}
+    container_name: trakli-webui
+    restart: unless-stopped
+    ports:
+      - "${WEBUI_PORT:-3000}:3000"
+    environment:
+      # Must be the public URL the browser uses to reach the API — not the
+      # internal Docker DNS name. E.g. https://api.example.com/api/v1
+      - NUXT_PUBLIC_API_BASE_URL
+    env_file: .env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - trakli
+
+  smartql:
+    image: ghcr.io/trakli/webservice:${IMAGE_TAG}
+    container_name: trakli-smartql
+    restart: unless-stopped
+    command: php artisan smartql:serve
+    profiles:
+      - ai
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - trakli
+
+  reverb:
+    image: ghcr.io/trakli/webservice:${IMAGE_TAG}
+    container_name: trakli-reverb
+    restart: unless-stopped
+    command: php artisan reverb:start
+    ports:
+      - "${REVERB_PORT:-6001}:6001"
+    profiles:
+      - realtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    env_file: .env
+    networks:
+      - trakli
+
+networks:
+  trakli:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
