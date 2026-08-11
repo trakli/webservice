@@ -14,7 +14,7 @@ services:
             - mysql
 
     worker:
-        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        image: ghcr.io/whilesmartphp/laravel-dev:8.4
         # queue:listen (not queue:work) reboots the framework per job so code
         # edits are picked up without restarting the worker.
         command: php artisan queue:listen --tries=3 --timeout=120
@@ -27,7 +27,7 @@ services:
             - mysql
 
     reverb:
-        image: ghcr.io/whilesmartphp/laravel-dev:8.2
+        image: ghcr.io/whilesmartphp/laravel-dev:8.4
         # The websocket server for real-time chat streaming. The browser
         # connects on the published port; the app publishes to it over the
         # trakli network as host "reverb".

@@ -10,7 +10,7 @@ COPY composer.lock composer.lock
 RUN composer install --ignore-platform-reqs --no-interaction --no-plugins --no-scripts --prefer-dist
 
 # Stage 2: Application
-FROM ghcr.io/whilesmartphp/frankenphp:8.2
+FROM ghcr.io/whilesmartphp/frankenphp:8.4
 
 LABEL org.opencontainers.image.source=https://github.com/trakli/webservice
 LABEL org.opencontainers.image.description="Trakli API webservice"
