@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-beta.2] - 2026-08-12
+
+Codename: Ailanthus, second beta.
+
+### Added
+
+- Transactions and period statements download as CSV, XLSX or PDF; a transaction
+  download carries the same filters as the listing, and a statement carries the
+  same figures as the analytics screen
+- The assistant reaches budgets, refunds, reminders, groups and transfers: it can
+  say how a budget is doing and record money coming back as a refund rather than
+  fresh income
+- The assistant proposes a change across many transactions at once, confirmed as
+  one sweep instead of a card per row
+- Reminder columns that existed only in the conformance spec now have a migration
+  behind them
+
+### Changed
+
+- The assistant answers in the user's own currency, converting at the same rates
+  the rest of the app uses, and asks when the currency cannot be known
+- Confirmation cards name the record being changed rather than its internal id
+- A transaction takes a single category; one saved earlier keeps its first
+  category and drops the rest when saved again
+- Feature gating moved to the shared entitlements package; behaviour is unchanged,
+  with every feature allowed and nothing metered
+- An export larger than a format can render is refused up front, naming the limit
+  that applied and what the other formats allow
+
+### Fixed
+
+- A database that falls behind its migrations answers with a clear error naming
+  what is missing, instead of accepting writes it cannot complete
+- Every table the assistant can read is scoped to the person asking, and transfer
+  rows no longer inflate the income and spending it reports
+- Boolean flags sent as text by form and multipart requests are accepted, so
+  recurring transactions can be created from the mobile app
+- Transfers keep their decimal precision, so cents no longer vanish and small
+  conversion rates no longer produce zero amounts
+- A second device can no longer overwrite the client id created by the first
+- Imported rows without a usable amount fail with a reason instead of importing as
+  zero, and transfer rows import as transfers again
+- Deleted records report as changed, so clients apply the deletion
+- A holding created with automatic pricing is priced at creation instead of
+  reporting zero until the next repricing run
+
 ## [2.0.0-beta.1] - 2026-07-11
 
 Codename: Ailanthus, first of the tree-name series.
