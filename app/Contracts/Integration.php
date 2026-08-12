@@ -21,7 +21,7 @@ interface Integration
     public function icon(): ?string;
 
     /**
-     * Entitlement feature key this integration is gated by, or null when free.
+     * Entitlement feature key this integration is gated by, or null when ungated.
      */
     public function featureKey(): ?string;
 

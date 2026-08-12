@@ -106,9 +106,9 @@ Beyond routes and migrations, the core exposes contracts a plugin can hook into.
 
 ### Feature gating (Entitlements)
 
-`App\Contracts\Entitlements` decides whether an owner may use a feature, what limits apply, and how much of a metered allowance remains. It is keyed on the resource owner (a user today, a shared owner later), not the user directly. The core binds a permissive default that allows everything; a billing plugin may rebind it to enforce a plan.
+`App\Contracts\Entitlements` decides whether an owner may use a feature, what limits apply, and how much of a metered allowance remains. It is keyed on the resource owner (a user today, a shared owner later), not the user directly. The core binds a permissive default that allows everything; a plugin may rebind it to enforce its own policy.
 
-Gate a paid route or action:
+Gate a route or action:
 
 ```php
 if (! app(\App\Contracts\Entitlements::class)->allows($owner, 'your-feature')) {
@@ -116,7 +116,7 @@ if (! app(\App\Contracts\Entitlements::class)->allows($owner, 'your-feature')) {
 }
 ```
 
-Feature keys are plain strings; the billing plugin maps them to plans. With no override, the default allows everything, so the open core stays free and self-hostable.
+Feature keys are plain strings; whatever rebinds the contract decides what they mean. With no override, the default allows everything.
 
 ### Integration registry
 
@@ -138,9 +138,9 @@ app(\App\Services\DocumentProcessorManager::class)->register($yourProcessor, pri
 
 The highest-priority processor whose `supports($mimeType, $extension)` returns true wins; equal priority keeps registration order.
 
-## Paid and Private Plugins
+## Closed-Source Plugins
 
-Private, paid plugins live in their own repositories and never ship in the open image. A reusable workflow stacks them onto the public base image to produce a private hosted image with the plugins enabled and cached. Gate their features through `Entitlements` so the same code path stays inert on the open core.
+A plugin can live in its own repository and never ship in the open image. A build in the repository that owns it stacks it onto the public base image, using `docker/hosted/Dockerfile` here, to produce a hosted image with the plugin enabled and cached, and rebuilds whenever this repository publishes a new base. Gate its features through `Entitlements` so the same code path stays inert on the open core.
 
 ## Best Practices
 
