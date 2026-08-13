@@ -72,6 +72,34 @@ class ImportTest extends TestCase
         return $data;
     }
 
+    public function test_api_csv_rows_with_non_positive_amounts_fail_instead_of_importing()
+    {
+        $content = "amount,currency,type,party,wallet,category,description,date\n".
+            "0,USD,expense,John Doe,Wallet1,Food,Zero row,2023-01-01\n".
+            'abc,USD,expense,John Doe,Wallet1,Food,Junk row,2023-01-01';
+        $this->uploadCsv($content);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/imports');
+        $response->assertStatus(200);
+        $this->assertEquals(2, $response->json('data')[0]['failed_imports_count']);
+        $this->assertEquals(0, $this->user->transactions()->count());
+    }
+
+    public function test_api_csv_transfer_rows_import_as_a_transfer()
+    {
+        $content = "amount,currency,type,party,wallet,category,description,date\n".
+            "100,USD,+Transfer,,Wallet1,,Transfer out,2023-01-01\n".
+            '100,USD,-Transfer,,Wallet2,,Transfer in,2023-01-01';
+        $this->uploadCsv($content);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/imports');
+        $response->assertStatus(200);
+        $this->assertEquals(0, $response->json('data')[0]['failed_imports_count']);
+
+        $this->assertEquals(1, $this->user->transfers()->count());
+        $this->assertEquals(2, $this->user->transactions()->count());
+    }
+
     public function test_api_user_can_get_scheduled_imports()
     {
         $import = $this->uploadCsv();

@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 
 #[OA\Schema(
     schema: 'Wallet',
@@ -41,7 +44,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Wallet extends Model
+class Wallet extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -98,5 +101,29 @@ class Wallet extends Model
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'wallets',
+            model: self::class,
+            table: 'wallets',
+            description: "The user's accounts: bank accounts, cash, credit cards, mobile money.",
+            aliases: ['accounts', 'bank accounts', 'cards'],
+            labelColumn: 'name',
+            ownerKey: 'user_id',
+            ownerBypassRoles: ['admin'],
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Wallet name'),
+                ResourceField::decimal('balance', 'Current balance'),
+                ResourceField::string('currency', 'Currency code (USD, EUR, XAF, ...)'),
+                ResourceField::enum('type', ['bank', 'cash', 'credit_card', 'mobile'], 'What kind of account it is'),
+                ResourceField::text('description', 'Notes about the wallet'),
+                ResourceField::internal('user_id'),
+            ],
+            readTool: false,
+        );
     }
 }

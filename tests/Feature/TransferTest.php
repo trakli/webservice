@@ -185,6 +185,63 @@ class TransferTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_transfer_preserves_decimals_in_the_received_amount()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0]);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 100.75,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+        ])->assertStatus(201);
+
+        $toWallet->refresh();
+        $this->assertEquals(100.75, $toWallet->balance);
+
+        $incomeTransaction = Transaction::where('wallet_id', $toWallet->id)->first();
+        $this->assertEquals(100.75, $incomeTransaction->amount);
+    }
+
+    public function test_cross_currency_transfer_keeps_a_fractional_received_amount()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000, 'currency' => 'USD']);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0, 'currency' => 'BTC']);
+
+        $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 50,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'exchange_rate' => 0.0005,
+        ])->assertStatus(201);
+
+        $toWallet->refresh();
+        $this->assertEquals(0.025, $toWallet->balance);
+
+        $incomeTransaction = Transaction::where('wallet_id', $toWallet->id)->first();
+        $this->assertEquals(0.025, $incomeTransaction->amount);
+    }
+
+    public function test_transfer_fails_when_the_received_amount_rounds_to_zero()
+    {
+        $user = User::factory()->create();
+        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000, 'currency' => 'USD']);
+        $toWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 0, 'currency' => 'BTC']);
+
+        $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
+            'amount' => 0.01,
+            'from_wallet_id' => $fromWallet->id,
+            'to_wallet_id' => $toWallet->id,
+            'exchange_rate' => 0.001,
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertEquals(0, Transfer::count());
+        $this->assertEquals(1000, $fromWallet->refresh()->balance);
+    }
+
     public function test_transfer_with_client_id_stores_sync_state()
     {
         $user = User::factory()->create();

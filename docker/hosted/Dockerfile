@@ -1,9 +1,10 @@
-# Trakli hosted image: the public base plus bundled private plugins,
-# enabled and cached so paid features are available out of the box.
+# Trakli hosted image: the public base plus bundled plugins, enabled and cached
+# so their features are available out of the box.
 #
-# The build context is prepared by the hosted-image workflow on the runner
-# (private plugins cloned into plugins/, their dependencies installed into
-# vendor/, and the plugin cache regenerated) before this image is built.
+# The build context is prepared on the runner by the workflow in the repository
+# that owns those plugins (plugins cloned into plugins/, their dependencies
+# installed into vendor/, and the plugin cache regenerated) before this image is
+# built.
 ARG BASE_IMAGE=ghcr.io/trakli/webservice:latest
 
 FROM ${BASE_IMAGE}

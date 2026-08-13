@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Group;
+use App\Models\ModelSyncState;
 use App\Models\Party;
 use App\Models\Transaction;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -103,5 +105,71 @@ class SyncableModelsTest extends TestCase
 
         $this->assertEquals('The updated at date is less than the created at date', $message);
 
+    }
+
+    /** @test */
+    public function soft_deleting_a_transaction_over_the_api_updates_last_synced_at()
+    {
+        $user = User::factory()->create();
+        $wallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        /** @var Transaction */
+        $transaction = Transaction::factory()->create([
+            'user_id' => $user->id,
+            'wallet_id' => $wallet->id,
+        ]);
+
+        $before = Carbon::parse($transaction->syncState->last_synced_at);
+        $this->travel(5)->minutes();
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/transactions/' . $transaction->id)
+            ->assertStatus(200);
+
+        $state = ModelSyncState::where('syncable_type', Transaction::class)
+            ->where('syncable_id', $transaction->id)
+            ->first();
+
+        $this->assertTrue(Carbon::parse($state->last_synced_at)->gt($before));
+    }
+
+    /** @test */
+    public function soft_deleting_a_wallet_over_the_api_updates_last_synced_at()
+    {
+        $user = User::factory()->create();
+        $wallet = Wallet::factory()->create(['user_id' => $user->id]);
+
+        $before = Carbon::parse($wallet->syncState->last_synced_at);
+        $this->travel(5)->minutes();
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/wallets/' . $wallet->id)
+            ->assertStatus(200);
+
+        $state = ModelSyncState::where('syncable_type', Wallet::class)
+            ->where('syncable_id', $wallet->id)
+            ->first();
+
+        $this->assertTrue(Carbon::parse($state->last_synced_at)->gt($before));
+    }
+
+    /** @test */
+    public function soft_deleting_a_category_over_the_api_updates_last_synced_at()
+    {
+        $user = User::factory()->create();
+        $category = Category::factory()->create(['user_id' => $user->id]);
+
+        $before = Carbon::parse($category->syncState->last_synced_at);
+        $this->travel(5)->minutes();
+
+        $this->actingAs($user)
+            ->deleteJson('/api/v1/categories/' . $category->id)
+            ->assertStatus(204);
+
+        $state = ModelSyncState::where('syncable_type', Category::class)
+            ->where('syncable_id', $category->id)
+            ->first();
+
+        $this->assertTrue(Carbon::parse($state->last_synced_at)->gt($before));
     }
 }

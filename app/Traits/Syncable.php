@@ -17,6 +17,14 @@ trait Syncable
                 'last_synced_at' => now(),
             ]);
         });
+
+        // Only soft deletes leave a row behind to sync; a hard delete would
+        // just recreate an orphaned sync state here.
+        static::deleted(function ($model) {
+            if (method_exists($model, 'isForceDeleting') && ! $model->isForceDeleting()) {
+                $model->markAsSynced();
+            }
+        });
     }
 
     public function syncState()

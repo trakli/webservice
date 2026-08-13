@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Trakli API",
-        "version": "2.0.0-beta.1"
+        "version": "2.0.0-beta.2"
     },
     "servers": [
         {
@@ -603,6 +603,78 @@
                     },
                     "409": {
                         "description": "Action already executed"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/batches/{batch}/confirm": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Confirm every action proposed together as one batch",
+                "operationId": "d128ebef97eb4df88716c5a6e61480f4",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "batch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch processed"
+                    },
+                    "404": {
+                        "description": "Batch not found"
+                    }
+                }
+            }
+        },
+        "/ai/chats/{chat}/actions/batches/{batch}/reject": {
+            "post": {
+                "tags": [
+                    "AI"
+                ],
+                "summary": "Dismiss every action proposed together as one batch",
+                "operationId": "02c43f82323f9a0a6ad21f1deb423415",
+                "parameters": [
+                    {
+                        "name": "chat",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "batch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Batch dismissed"
+                    },
+                    "404": {
+                        "description": "Batch not found"
                     }
                 }
             }
@@ -1716,6 +1788,203 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/transactions/export": {
+            "get": {
+                "tags": [
+                    "Exports"
+                ],
+                "summary": "Download the filtered transaction list as a file",
+                "description": "Accepts the same filters as the transaction list endpoint so the download matches what the client is showing.",
+                "operationId": "ce9e29ced3553313e76747c07d38288b",
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "csv",
+                            "enum": [
+                                "csv",
+                                "xlsx",
+                                "pdf"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "income",
+                                "expense"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "wallet_ids",
+                        "in": "query",
+                        "description": "Comma-separated wallet ids",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_ids",
+                        "in": "query",
+                        "description": "Comma-separated category ids",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "intent",
+                        "in": "query",
+                        "description": "Comma-separated transaction intents",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "exclude_transfers",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The export as a file download"
+                    },
+                    "422": {
+                        "description": "Unsupported format, invalid filter, or too many rows"
+                    }
+                }
+            }
+        },
+        "/reports/export": {
+            "get": {
+                "tags": [
+                    "Exports"
+                ],
+                "summary": "Download a financial statement as a file",
+                "description": "Renders the same analytics as the stats endpoint into a formatted statement.",
+                "operationId": "f46810a8f80612df8304c4baf47ea4d8",
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "pdf",
+                            "enum": [
+                                "csv",
+                                "xlsx",
+                                "pdf"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "preset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all_time",
+                                "current_week",
+                                "current_month",
+                                "last_3_months"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "wallet_ids",
+                        "in": "query",
+                        "description": "Comma-separated wallet ids",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "month",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month",
+                                "year"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The statement as a file download"
+                    },
+                    "422": {
+                        "description": "Unsupported format or invalid wallet ids"
                     }
                 }
             }
@@ -6557,6 +6826,10 @@
         {
             "name": "Currency",
             "description": "Exchange rates and asset prices"
+        },
+        {
+            "name": "Exports",
+            "description": "Downloadable transaction lists and statements"
         },
         {
             "name": "Files",

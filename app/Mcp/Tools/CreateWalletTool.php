@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Mcp\Auth\McpGateRegistrar;
 use App\Models\Wallet;
 use Illuminate\Contracts\JsonSchema\JsonSchema;

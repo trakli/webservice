@@ -32,7 +32,7 @@ class CreateWalletTool extends AbstractWriteTool
         return [
             ParameterSpec::string('name', 'The wallet name, e.g. "Cash".'),
             ParameterSpec::enum('type', 'The wallet type.', ['bank', 'cash', 'credit_card', 'mobile']),
-            ParameterSpec::string('currency', 'ISO 4217 currency code, 3 letters, e.g. "USD".'),
+            ParameterSpec::string('currency', "ISO 4217 currency code, 3 letters. Default to the user's own currency when they do not name one."),
             ParameterSpec::string('description', 'Optional description.', required: false),
         ];
     }
@@ -51,7 +51,7 @@ class CreateWalletTool extends AbstractWriteTool
 
         $currency = strtoupper(trim((string) ($arguments['currency'] ?? '')));
         if (strlen($currency) !== 3) {
-            throw new InvalidArgumentException('Currency must be a 3-letter code, e.g. USD.');
+            throw new InvalidArgumentException('Currency must be a 3-letter ISO 4217 code.');
         }
 
         return array_filter([

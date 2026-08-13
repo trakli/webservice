@@ -89,8 +89,8 @@ class FileImportService
                         );
                         Log::error($e);
                     }
-                } elseif ($transactionType == '+Transfer') {
-                    if (isset($csvData[$i + 1]) && $csvData[$i + 1][2] == '-Transfer') {
+                } elseif ($transactionType == '+transfer') {
+                    if (isset($csvData[$i + 1]) && strtolower(trim($csvData[$i + 1][2])) == '-transfer') {
                         try {
                             $this->importTransfer($data, $csvData[$i + 1], $user);
                         } catch (FileImportException $e) {
@@ -190,6 +190,9 @@ class FileImportService
             // get the data we need
 
             $amount = floatval($data[0]);
+            if ($amount <= 0) {
+                throw new FileImportException(__('Amount must be a number greater than zero'));
+            }
             $currency = $data[1];
             $party = $data[3];
             $wallet = $data[4];
@@ -282,6 +285,11 @@ class FileImportService
         bool $linkFee = false,
     ): void {
         DB::transaction(function () use ($merged, $transactionType, $user, $autoCreateWallets, $autoCreateParties, $autoCreateCategories, $linkFee) {
+            $amount = (float) ($merged['amount'] ?? 0);
+            if ($amount <= 0) {
+                throw new FileImportException(__('Amount must be a number greater than zero'));
+            }
+
             $wallet = $this->resolveWalletForConfirm(
                 $user,
                 $merged['wallet_id'] ?? null,
@@ -304,7 +312,7 @@ class FileImportService
             );
 
             $transaction = $user->transactions()->create([
-                'amount' => (float) ($merged['amount'] ?? 0),
+                'amount' => $amount,
                 'description' => $merged['description'] ?? null,
                 'datetime' => $merged['date'] ?? null,
                 'type' => $transactionType,

@@ -9,6 +9,7 @@ use App\Http\Controllers\API\v1\McpTokenController;
 use App\Http\Controllers\API\v1\BudgetController;
 use App\Http\Controllers\API\v1\BudgetPeriodStateController;
 use App\Http\Controllers\API\v1\CategoryController;
+use App\Http\Controllers\API\v1\ExportController;
 use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
@@ -59,6 +60,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
         Route::get('stats', [StatsController::class, 'index']);
     });
     Route::get('integrations', [IntegrationController::class, 'index']);
+    // Ahead of the resource route so "export" is not read as a transaction id.
+    Route::get('transactions/export', [ExportController::class, 'transactions']);
+    Route::get('reports/export', [ExportController::class, 'report']);
     Route::apiResource('transactions', TransactionController::class);
     Route::post('/transactions/{id}/files', [TransactionController::class, 'uploadFiles']);
     Route::delete('/transactions/{id}/files/{file_id}', [TransactionController::class, 'deleteFiles']);
@@ -90,6 +94,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('ai/chats/{chat}/messages', [AiController::class, 'storeMessage']);
     Route::post('ai/chats/{chat}/messages/{message}/files', [AiController::class, 'uploadFiles']);
     Route::get('ai/chats/{chat}/messages/{message}/export', [AiController::class, 'exportCanvas']);
+    // Batch routes come first so "batches" is not captured as an {action} id.
+    Route::post('ai/chats/{chat}/actions/batches/{batch}/confirm', [AiController::class, 'confirmActionBatch']);
+    Route::post('ai/chats/{chat}/actions/batches/{batch}/reject', [AiController::class, 'rejectActionBatch']);
     Route::post('ai/chats/{chat}/actions/{action}/confirm', [AiController::class, 'confirmAction']);
     Route::post('ai/chats/{chat}/actions/{action}/reject', [AiController::class, 'rejectAction']);
     Route::get('ai/health', [AiController::class, 'health']);

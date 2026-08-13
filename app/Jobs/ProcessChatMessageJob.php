@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Contracts\Entitlements;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Models\ChatMessage;
 use App\Services\AgentRunner;
 use Whilesmart\AgentMetrics\Facades\TokenMeter;

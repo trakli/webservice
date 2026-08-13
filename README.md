@@ -7,20 +7,45 @@
 [![Tests](https://github.com/trakli/webservice/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/tests.yml)
 [![Lint & Sniffs](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml/badge.svg?branch=main)](https://github.com/trakli/webservice/actions/workflows/lint-sniffs.yml)
 
-## Overview
+Trakli gets your money under control by showing you where it actually goes. Every wallet, balance, and
+holding you have, in as many accounts and currencies as you keep them, adds up to your real net worth,
+not just what you spent this month. And you barely type any of it: say what happened, or hand over a
+receipt, and the assistant does the logging.
 
-Trakli is a personal income tracking application built using Laravel. The application allows users to manage and categorize their income and expenses under various groups and categories.
+This is the Laravel API behind it, and what the web and mobile apps talk to.
 
 ## Features
 
+AI native:
+
+- **An assistant that acts:** say what happened ("log $40 dinner at Mama's, split under food") and it
+  records, categorizes, transfers, and cleans up your books in bulk, proposing every change for you to
+  approve before anything is written.
+- **Reads your paperwork:** hand it receipts, statements, CSVs, or PDFs and it turns them into
+  transactions.
+- **Reports on a canvas:** ask for a report, watch it get built, then take it with you.
+- **MCP built in:** Trakli runs an MCP server, so Claude or any MCP client can read your books and record
+  transactions through tokens you mint and revoke yourself.
+
+For pro users:
+
+- **Wallets that match reality:** cash, mobile money, bank and card, side by side.
+- **Any currency, at your rate:** forty-eight of them, held at once; transfers convert at the rate you
+  set, not one scraped from a market you cannot get.
+- **Offline-first:** the phone works with no signal, and changes settle cleanly when it reconnects.
+- **Yours to run:** open source end to end; audit it, fork it, self-host it, with no one else holding the
+  ledger of what you earn.
+
+A full finance app, not a spreadsheet:
+
 - **Transactions:** Income and expenses across multiple wallets, with attachments and recurring rules.
 - **Transfers:** Move money between wallets, including cross-currency at user-set rates.
+- **Holdings:** Crypto, stocks, property, any asset; crypto priced live, everything else at the price you set.
 - **Budgets:** Scoped to categories, groups, or wallets; weekly / monthly / yearly / custom range; optional rollover; threshold and forecast alerts.
 - **Refunds:** Mark an income as refunding an earlier expense; matching budgets adjust automatically.
 - **Reminders:** Bills, budget alerts, and custom events with pause, resume, and snooze.
 - **Imports:** Pull transactions from CSVs, PDFs, and photos of receipts.
-- **Insights & AI:** Dashboard stats, digest emails, and a chat assistant for your finances.
-- **Offline-first:** Changes made on mobile sync cleanly when the device reconnects.
+- **Insights:** Dashboard stats and digest emails.
 
 ## Setup instructions
 

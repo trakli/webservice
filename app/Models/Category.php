@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use OpenApi\Attributes as OA;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 
 #[OA\Schema(
     schema: 'Category',
@@ -36,7 +39,7 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class Category extends Model
+class Category extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
@@ -74,5 +77,27 @@ class Category extends Model
                 'source' => 'name',
             ],
         ];
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'categories',
+            model: self::class,
+            table: 'categories',
+            description: 'Labels the user classifies transactions under.',
+            aliases: ['category', 'tags', 'labels'],
+            labelColumn: 'name',
+            ownerKey: 'user_id',
+            ownerBypassRoles: ['admin'],
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Category name'),
+                ResourceField::enum('type', ['income', 'expense', 'invoice'], 'What the category applies to'),
+                ResourceField::text('description', 'What the category covers'),
+                ResourceField::internal('user_id'),
+            ],
+            readTool: false,
+        );
     }
 }

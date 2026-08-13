@@ -1,5 +1,16 @@
-version: "1.0"
+# Semantic layer for the natural-language query tool.
+#
+# The entities, relationships, allowed_tables and required_filters below are
+# generated from the models that implement HasAgentResource:
+#
+#   php artisan agents:export-schema --output=storage/app/exported.yml
+#
+# Change a model's agentResource(), regenerate, and merge the result here rather
+# than editing those sections by hand. Everything else (connection details, LLM
+# settings, business rules, prompt examples, and the two entities with no model
+# of their own) is maintained in this file.
 
+version: '1.0'
 database:
   type: mysql
   connection:
@@ -8,7 +19,6 @@ database:
     database: ${DB_DATABASE}
     user: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-
 llm:
   provider: ${LLM_PROVIDER}
   gemini:
@@ -16,225 +26,699 @@ llm:
     api_key: ${GEMINI_API_KEY}
   temperature: ${LLM_TEMPERATURE}
   retries: ${LLM_RETRIES}
-
 semantic_layer:
   entities:
     transactions:
       table: transactions
-      description: "Financial transactions representing income or expenses"
-      aliases: [spending, expenses, income, payments, purchases]
+      description: Money in and out. An income or expense against one wallet.
+      aliases:
+      - spending
+      - expenses
+      - income
+      - payments
+      - purchases
+      label_column: description
       columns:
         id:
           type: integer
           primary: true
         amount:
           type: decimal
-          description: "Transaction amount in the wallet's currency"
+          description: Amount in the wallet's currency
         type:
-          type: string
-          description: "Transaction type: 'income' or 'expense'"
+          type: enum
+          description: Whether money came in or went out
+          values:
+          - income
+          - expense
         intent:
           type: string
-          description: "What the money movement is: regular, loan_received, loan_repayment, debt_owed, debt_settled, investment_buy, investment_return, gift"
+          description: 'What the movement is: regular, loan_received, loan_repayment, debt_owed, debt_settled, investment_buy, investment_return, gift'
         datetime:
           type: datetime
-          description: "When the transaction occurred"
+          description: When the transaction happened
         description:
           type: text
-          description: "Transaction description or notes"
-        user_id:
-          type: integer
-          description: "Owner of the transaction"
+          description: What it was for
         wallet_id:
           type: integer
-          description: "Wallet this transaction belongs to"
+          description: Wallet the money moved through
+          references: wallets.id
         party_id:
           type: integer
-          description: "The counterparty (vendor, merchant, payer)"
-
+          description: Who it was with
+          references: parties.id
+        transfer_id:
+          type: integer
+          description: Set when this row is one leg of a wallet-to-wallet transfer rather than real income or spending
+          references: transfers.id
+        user_id:
+          type: integer
+          hidden: true
     wallets:
       table: wallets
-      description: "User's financial accounts (bank accounts, cash, credit cards)"
-      aliases: [accounts, bank accounts, cards]
+      description: 'The user''s accounts: bank accounts, cash, credit cards, mobile money.'
+      aliases:
+      - accounts
+      - bank accounts
+      - cards
+      label_column: name
       columns:
         id:
           type: integer
           primary: true
         name:
           type: string
-          description: "Wallet name"
+          description: Wallet name
         balance:
           type: decimal
-          description: "Current balance"
+          description: Current balance
         currency:
           type: string
-          description: "Currency code (USD, EUR, XAF, etc.)"
+          description: Currency code (USD, EUR, XAF, ...)
         type:
-          type: string
-          description: "Wallet type: bank, cash, credit_card, mobile"
+          type: enum
+          description: What kind of account it is
+          values:
+          - bank
+          - cash
+          - credit_card
+          - mobile
+        description:
+          type: text
+          description: Notes about the wallet
         user_id:
           type: integer
-          description: "Owner of the wallet"
-
+          hidden: true
     categories:
       table: categories
-      description: "Transaction categories for classification"
-      aliases: [category, tags, labels]
+      description: Labels the user classifies transactions under.
+      aliases:
+      - category
+      - tags
+      - labels
+      label_column: name
       columns:
         id:
           type: integer
           primary: true
         name:
           type: string
-          description: "Category name"
+          description: Category name
         type:
-          type: string
-          description: "Category type: 'income' or 'expense'"
+          type: enum
+          description: What the category applies to
+          values:
+          - income
+          - expense
+          - invoice
+        description:
+          type: text
+          description: What the category covers
         user_id:
           type: integer
-          description: "Owner of the category"
-
+          hidden: true
     parties:
       table: parties
-      description: "Counterparties in transactions (vendors, merchants, employers)"
-      aliases: [vendors, merchants, payees, payers, contacts]
+      description: The people and businesses on the other side of a transaction.
+      aliases:
+      - vendors
+      - merchants
+      - payees
+      - payers
+      - contacts
+      label_column: name
       columns:
         id:
           type: integer
           primary: true
         name:
           type: string
-          description: "Party name"
+          description: Party name
         type:
           type: string
-          description: "Party type classification"
+          description: How the party is classified
+        description:
+          type: text
+          description: Notes about the party
         user_id:
           type: integer
-          description: "Owner of this party record"
-
+          hidden: true
+    transfers:
+      table: transfers
+      description: Money moved between two of the user's own wallets. Not income or expense.
+      aliases:
+      - moves
+      - wallet transfers
+      columns:
+        id:
+          type: integer
+          primary: true
+        amount:
+          type: decimal
+          description: Amount taken from the source wallet
+        exchange_rate:
+          type: decimal
+          description: Destination currency units per source unit
+        from_wallet_id:
+          type: integer
+          description: Wallet the money left
+          references: wallets.id
+        to_wallet_id:
+          type: integer
+          description: Wallet the money arrived in
+          references: wallets.id
+        datetime:
+          type: datetime
+          description: When the transfer happened
+        user_id:
+          type: integer
+          hidden: true
+        created_at:
+          type: datetime
+          description: When the transfer was recorded
+    budgets:
+      table: budgets
+      description: Spending limits the user sets for a period, optionally targeting categories, groups or wallets.
+      aliases:
+      - budget
+      - spending limits
+      - caps
+      label_column: name
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: Budget name
+        description:
+          type: text
+          description: What the budget covers
+        amount:
+          type: decimal
+          description: The spending limit for one period
+        currency:
+          type: string
+          description: Currency of the limit
+        period_type:
+          type: enum
+          description: How often the budget resets
+          values:
+          - weekly
+          - monthly
+          - yearly
+          - custom
+        start_date:
+          type: date
+          description: First day the budget applies
+        end_date:
+          type: date
+          description: Last day the budget applies, if it ends
+        rollover_enabled:
+          type: boolean
+          description: Whether unspent money carries into the next period
+        threshold_percent:
+          type: integer
+          description: Percentage used at which the user is warned
+        is_active:
+          type: boolean
+          description: Whether the budget is currently in force
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: string
+          hidden: true
+        created_at:
+          type: datetime
+    budget_period_states:
+      table: budget_period_states
+      description: What a budget actually spent in a period once that period closed. Written by the system, never by the user.
+      aliases:
+      - budget history
+      - budget periods
+      columns:
+        id:
+          type: integer
+          primary: true
+        budget_id:
+          type: integer
+          description: Budget this period belongs to
+          references: budgets.id
+        period_start:
+          type: date
+          description: First day of the period
+        period_end:
+          type: date
+          description: Last day of the period
+        net_spent:
+          type: decimal
+          description: Spending in the period after refunds
+        rollover_in:
+          type: decimal
+          description: Unspent money carried in from the previous period
+        rollover_out:
+          type: decimal
+          description: Unspent money carried out to the next period
+        closed_at:
+          type: datetime
+          description: When the period was closed
+    recurring_rules:
+      table: recurring_transaction_rules
+      description: Rules that repeat a transaction on a schedule (rent, salary, subscriptions).
+      aliases:
+      - recurring transactions
+      - repeats
+      - subscriptions
+      - standing orders
+      columns:
+        id:
+          type: integer
+          primary: true
+        transaction_id:
+          type: integer
+          description: The transaction being repeated
+          references: transactions.id
+        recurrence_period:
+          type: enum
+          description: Unit the rule repeats on
+          values:
+          - daily
+          - weekly
+          - monthly
+          - yearly
+        recurrence_interval:
+          type: integer
+          description: How many periods between occurrences
+        next_scheduled_at:
+          type: datetime
+          description: When the next occurrence is due
+        recurrence_ends_at:
+          type: datetime
+          description: When the rule stops repeating
+    refunds:
+      table: refunds
+      description: Money returned for an earlier expense, linking the incoming transaction to the one it reverses.
+      aliases:
+      - returns
+      - reimbursements
+      - money back
+      columns:
+        id:
+          type: integer
+          primary: true
+        refund_transaction_id:
+          type: integer
+          description: The income transaction carrying the refunded money
+          references: transactions.id
+        original_transaction_id:
+          type: integer
+          description: The expense being refunded
+          references: transactions.id
+        created_at:
+          type: datetime
+          description: When the refund was recorded
+    reminders:
+      table: reminders
+      description: Things the user asked to be reminded about, such as a bill due date.
+      aliases:
+      - alerts
+      - nudges
+      - to-dos
+      label_column: title
+      columns:
+        id:
+          type: integer
+          primary: true
+        title:
+          type: string
+          description: What the reminder is about
+        description:
+          type: text
+          description: Longer note attached to the reminder
+        type:
+          type: string
+          description: What kind of reminder it is
+        status:
+          type: string
+          description: Whether the reminder is active, done or dismissed
+        trigger_at:
+          type: datetime
+          description: When the reminder first fires
+        due_at:
+          type: datetime
+          description: When the thing being remembered is due
+        next_trigger_at:
+          type: datetime
+          description: When it fires next
+        priority:
+          type: integer
+          description: How important it is, higher is more urgent
+        user_id:
+          type: integer
+          hidden: true
+        created_at:
+          type: datetime
+    notifications:
+      table: notifications
+      description: Messages Trakli has sent the user, such as a budget warning. Generated by the system.
+      aliases:
+      - alerts
+      - messages
+      label_column: title
+      columns:
+        id:
+          type: integer
+          primary: true
+        type:
+          type: string
+          description: What kind of notification it is
+        title:
+          type: string
+          description: Notification headline
+        body:
+          type: text
+          description: Notification text
+        read_at:
+          type: datetime
+          description: When the user read it, empty if unread
+        user_id:
+          type: integer
+          hidden: true
+        created_at:
+          type: datetime
+          description: When it was sent
+    groups:
+      table: groups
+      description: Groupings the user files transactions and budgets under, such as a household or a project.
+      aliases:
+      - group
+      - projects
+      - households
+      label_column: name
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: Group name
+        slug:
+          type: string
+          description: URL-safe form of the name
+        description:
+          type: text
+          description: What the group covers
+        user_id:
+          type: integer
+          hidden: true
+        created_at:
+          type: datetime
+    exchange_rates:
+      table: exchange_rates
+      description: Reference conversion rates between currencies. The same for every user.
+      aliases:
+      - rates
+      - fx
+      - currency rates
+      columns:
+        id:
+          type: integer
+          primary: true
+        base_currency:
+          type: string
+          description: Currency being converted from
+        target_currency:
+          type: string
+          description: Currency being converted to
+        rate:
+          type: decimal
+          description: Target units per one base unit
+        fetched_at:
+          type: datetime
+          description: When the rate was last refreshed
+    holdings:
+      table: holdings
+      description: Owned assets (crypto, stocks, property) tracked by quantity and unit price; value = quantity * unit_price
+      aliases:
+      - assets
+      - investments
+      - crypto
+      - stocks
+      - portfolio
+      - net worth
+      label_column: name
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: Asset name (e.g. Bitcoin, Apple, Rental flat)
+        symbol:
+          type: string
+          description: Ticker or short symbol
+        quantity:
+          type: decimal
+          description: Units held
+        currency:
+          type: string
+          description: Currency the unit price is denominated in
+        unit_price:
+          type: decimal
+          description: Current price per unit
+        price_source:
+          type: string
+          description: '''manual'' or ''auto'' (live-priced)'
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: string
+          hidden: true
     categorizables:
       table: categorizables
-      description: "Links transactions to categories (many-to-many)"
+      description: Links transactions to categories (many-to-many)
       columns:
         category_id:
           type: integer
+          references: categories.id
         categorizable_id:
           type: integer
-          description: "Transaction ID"
+          description: Transaction ID
         categorizable_type:
           type: string
-          description: "Always 'App\\Models\\Transaction'"
-
-    holdings:
-      table: holdings
-      description: "Owned assets (crypto, stocks, property) tracked by quantity and unit price; value = quantity * unit_price"
-      aliases: [assets, investments, crypto, stocks, portfolio, net worth]
-      columns:
-        id:
-          type: integer
-          primary: true
-        name:
-          type: string
-          description: "Asset name (e.g. Bitcoin, Apple, Rental flat)"
-        symbol:
-          type: string
-          description: "Ticker or short symbol"
-        quantity:
-          type: decimal
-          description: "Units held"
-        currency:
-          type: string
-          description: "Currency the unit price is denominated in"
-        unit_price:
-          type: decimal
-          description: "Current price per unit"
-        price_source:
-          type: string
-          description: "'manual' or 'auto' (live-priced)"
-        owner_type:
-          type: string
-          description: "Always 'App\\Models\\User'"
-        owner_id:
-          type: integer
-          description: "Owner of the holding"
-
+          description: Always 'App\Models\Transaction'
   relationships:
-    - name: transaction_wallet
-      from: transactions
-      to: wallets
-      foreign_key: wallet_id
-      description: "Each transaction belongs to a wallet"
-
-    - name: transaction_party
-      from: transactions
-      to: parties
-      foreign_key: party_id
-      description: "Each transaction may have a counterparty"
-
-    - name: transaction_category
-      from: categorizables
-      to: categories
-      foreign_key: category_id
-      description: "Categories assigned to transactions"
-
-    - name: transaction_categorizable
-      from: categorizables
-      to: transactions
-      foreign_key: categorizable_id
-      description: "Transaction that has categories"
-
+  - name: transaction_wallet
+    type: many_to_one
+    from: transactions
+    to: wallets
+    foreign_key: wallet_id
+    description: Each transaction belongs to a wallet
+  - name: transaction_party
+    type: many_to_one
+    from: transactions
+    to: parties
+    foreign_key: party_id
+    description: Each transaction may have a counterparty
+  - name: transaction_transfer
+    type: many_to_one
+    from: transactions
+    to: transfers
+    foreign_key: transfer_id
+    description: A transfer leg points at its transfer
+  - name: transfer_source_wallet
+    type: many_to_one
+    from: transfers
+    to: wallets
+    foreign_key: from_wallet_id
+    description: Wallet the money left
+  - name: transfer_destination_wallet
+    type: many_to_one
+    from: transfers
+    to: wallets
+    foreign_key: to_wallet_id
+    description: Wallet the money arrived in
+  - name: budget_period_states
+    type: one_to_many
+    from: budgets
+    to: budget_period_states
+    foreign_key: budget_id
+    description: Closed periods of a budget
+  - name: budget_targets
+    type: many_to_many
+    from: budgets
+    to: categories
+    pivot_table: budgetables
+    pivot_from: budget_id
+    pivot_to: budgetable_id
+    description: Categories, groups or wallets a budget applies to
+  - name: period_state_budget
+    type: many_to_one
+    from: budget_period_states
+    to: budgets
+    foreign_key: budget_id
+  - name: recurring_rule_transaction
+    type: many_to_one
+    from: recurring_rules
+    to: transactions
+    foreign_key: transaction_id
+  - name: refund_transaction
+    type: many_to_one
+    from: refunds
+    to: transactions
+    foreign_key: refund_transaction_id
+  - name: refunded_transaction
+    type: many_to_one
+    from: refunds
+    to: transactions
+    foreign_key: original_transaction_id
+  - name: transaction_category
+    type: many_to_one
+    from: categorizables
+    to: categories
+    foreign_key: category_id
+    description: Categories assigned to transactions
+  - name: transaction_categorizable
+    type: many_to_one
+    from: categorizables
+    to: transactions
+    foreign_key: categorizable_id
+    description: Transaction that has categories
   business_rules:
-    - name: income
-      applies_to: [transactions]
-      definition: "type = 'income'"
-      description: "Filter for income transactions only"
-
-    - name: expense
-      applies_to: [transactions]
-      definition: "type = 'expense'"
-      description: "Filter for expense transactions only"
-
-    - name: this_month
-      applies_to: [transactions]
-      definition: "MONTH(datetime) = MONTH(CURRENT_DATE()) AND YEAR(datetime) = YEAR(CURRENT_DATE())"
-      description: "Transactions from the current month"
-
-    - name: last_month
-      applies_to: [transactions]
-      definition: "MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND YEAR(datetime) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
-      description: "Transactions from last month"
-
-    - name: this_year
-      applies_to: [transactions]
-      definition: "YEAR(datetime) = YEAR(CURRENT_DATE())"
-      description: "Transactions from the current year"
-
+  - name: income
+    applies_to:
+    - transactions
+    definition: type = 'income' AND transfer_id IS NULL
+    description: Money genuinely coming in, excluding the incoming leg of a wallet-to-wallet transfer
+  - name: expense
+    applies_to:
+    - transactions
+    definition: type = 'expense' AND transfer_id IS NULL
+    description: Money genuinely going out, excluding the outgoing leg of a wallet-to-wallet transfer
+  - name: transfer_leg
+    applies_to:
+    - transactions
+    definition: transfer_id IS NOT NULL
+    description: One side of a wallet-to-wallet transfer; never real income or spending
+  - name: this_month
+    applies_to:
+    - transactions
+    definition: MONTH(datetime) = MONTH(CURRENT_DATE()) AND YEAR(datetime) = YEAR(CURRENT_DATE())
+    description: Transactions from the current month
+  - name: last_month
+    applies_to:
+    - transactions
+    definition: MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)) AND YEAR(datetime) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    description: Transactions from last month
+  - name: this_year
+    applies_to:
+    - transactions
+    definition: YEAR(datetime) = YEAR(CURRENT_DATE())
+    description: Transactions from the current year
+  - name: active_budget
+    applies_to:
+    - budgets
+    definition: is_active = 1
+    description: Budgets currently in force
+  - name: unread
+    applies_to:
+    - notifications
+    definition: read_at IS NULL
+    description: Notifications the user has not opened
 security:
   mode: read_only
   max_rows: 100
   max_join_depth: 4
   permission_key: role
-  allowed_tables: [transactions, wallets, categories, parties, categorizables]
+  allowed_tables:
+  - budget_period_states
+  - budgets
+  - categories
+  - categorizables
+  - exchange_rates
+  - groups
+  - holdings
+  - notifications
+  - parties
+  - recurring_transaction_rules
+  - refunds
+  - reminders
+  - transactions
+  - transfers
+  - wallets
   required_filters:
-    transactions: { column: user_id, bypass_roles: [admin] }
-    wallets: { column: user_id, bypass_roles: [admin] }
-    categories: { column: user_id, bypass_roles: [admin] }
-    parties: { column: user_id, bypass_roles: [admin] }
+    transactions:
+      column: user_id
+      bypass_roles:
+      - admin
+    wallets:
+      column: user_id
+      bypass_roles:
+      - admin
+    categories:
+      column: user_id
+      bypass_roles:
+      - admin
+    parties:
+      column: user_id
+      bypass_roles:
+      - admin
+    transfers:
+      column: user_id
+    budgets:
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
+    budget_period_states:
+      through:
+        column: budget_id
+        references: budgets.id
+    recurring_transaction_rules:
+      through:
+        column: transaction_id
+        references: transactions.id
+    refunds:
+      through:
+        column: refund_transaction_id
+        references: transactions.id
+    reminders:
+      column: user_id
+    notifications:
+      column: user_id
+    groups:
+      column: user_id
+    holdings:
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
+      bypass_roles:
+      - admin
+    categorizables:
+      through:
+        column: categorizable_id
+        references: transactions.id
   blocked_columns:
-    - users.password
-    - users.remember_token
-    - users.email_verified_at
-
+  - users.password
+  - users.remember_token
+  - users.email_verified_at
 prompts:
   examples:
-    - question: "How much did I spend last month?"
-      sql: "SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))"
-
-    - question: "What are my top 5 expense categories?"
-      sql: "SELECT c.name, SUM(t.amount) as total FROM transactions t JOIN categorizables cz ON t.id = cz.categorizable_id JOIN categories c ON cz.category_id = c.id WHERE t.type = 'expense' AND t.user_id = :user_id GROUP BY c.id ORDER BY total DESC LIMIT 5"
-
-    - question: "Show my income this year"
-      sql: "SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND user_id = :user_id AND YEAR(datetime) = YEAR(CURRENT_DATE())"
-
-    - question: "What is my wallet balance?"
-      sql: "SELECT name, balance, currency FROM wallets WHERE user_id = :user_id"
+  - question: How much did I spend last month?
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+  - question: What are my top 5 expense categories?
+    sql: SELECT c.name, SUM(t.amount) as total FROM transactions t JOIN categorizables cz ON t.id = cz.categorizable_id JOIN categories c ON cz.category_id = c.id WHERE t.type = 'expense' AND t.transfer_id IS NULL AND t.user_id = :user_id AND c.user_id = :user_id GROUP BY c.id ORDER BY total DESC LIMIT 5
+  - question: Show my income this year
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND transfer_id IS NULL AND user_id = :user_id AND YEAR(datetime) = YEAR(CURRENT_DATE())
+  - question: What is my wallet balance?
+    sql: SELECT name, balance, currency FROM wallets WHERE user_id = :user_id
+  - question: Show my recent transfers between wallets
+    sql: SELECT t.amount, t.datetime, t.from_wallet_id, t.to_wallet_id FROM transfers t WHERE t.user_id = :user_id ORDER BY t.datetime DESC LIMIT 20
+  - question: How am I doing on my budgets?
+    sql: SELECT b.name, b.amount, b.currency, b.period_type FROM budgets b WHERE b.owner_id = :user_id AND b.owner_type = 'App\Models\User' AND b.is_active = 1
+  - question: How much did I actually spend last month, not counting transfers?
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))

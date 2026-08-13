@@ -2,14 +2,12 @@
 
 namespace App\Providers;
 
-use App\Contracts\Entitlements;
 use App\Contracts\OwnerResolver;
 use App\Services\DocumentProcessorManager;
 use App\Services\DocumentProcessors\CsvProcessor;
 use App\Services\DocumentProcessors\RemoteDocumentProcessor;
 use App\Services\IntegrationRegistry;
 use App\Services\SchemaConformance\SchemaConformanceService;
-use App\Support\AllowAllEntitlements;
 use App\Support\UserOwnerResolver;
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Carbon;
@@ -39,8 +37,6 @@ class AppServiceProvider extends ServiceProvider
             \Whilesmart\Holdings\Contracts\HoldingPriceProvider::class,
             \App\Holdings\CoingeckoPriceProvider::class
         );
-
-        $this->app->singleton(Entitlements::class, AllowAllEntitlements::class);
 
         $this->app->singleton(IntegrationRegistry::class);
 

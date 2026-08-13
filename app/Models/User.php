@@ -14,11 +14,13 @@ use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
+use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable implements HasLocalePreference
 {
     use Configurable;
+    use HasAgentActions;
     use HasApiTokens;
     use HasTokenUsage;
     use HasDevices;
