@@ -247,6 +247,24 @@
                         }
                     },
                     {
+                        "name": "joined_on",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
                         "name": "per_page",
                         "in": "query",
                         "required": false,
