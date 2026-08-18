@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5bf88146bf7bcd85f9f6c8630dd03662",
+    "content-hash": "837751bd9fcf21dfb466f12c95b978e7",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1610,6 +1610,50 @@
             "time": "2025-12-03T09:33:47+00:00"
         },
         {
+            "name": "genkgo/camt",
+            "version": "2.10.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/genkgo/camt.git",
+                "reference": "56e047d1599854ca34db0ccabce15230fcdd3f16"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/genkgo/camt/zipball/56e047d1599854ca34db0ccabce15230fcdd3f16",
+                "reference": "56e047d1599854ca34db0ccabce15230fcdd3f16",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-libxml": "*",
+                "ext-simplexml": "*",
+                "jschaedl/iban-validation": "^2.5",
+                "moneyphp/money": "^4.6",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "@stable",
+                "phpstan/phpstan": "@stable",
+                "phpunit/phpunit": "@stable"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Genkgo\\Camt\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Library to read CAMT files (XML containing bank statements).",
+            "support": {
+                "issues": "https://github.com/genkgo/camt/issues",
+                "source": "https://github.com/genkgo/camt/tree/2.10.3"
+            },
+            "time": "2025-08-26T09:01:28+00:00"
+        },
+        {
             "name": "google/auth",
             "version": "v1.53.0",
             "source": {
@@ -2575,6 +2619,65 @@
                 }
             ],
             "time": "2026-07-17T13:53:03+00:00"
+        },
+        {
+            "name": "jschaedl/iban-validation",
+            "version": "v2.7.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jschaedl/iban-validation.git",
+                "reference": "9d8054a6edeeeba676482a054b5f73f4004b6145"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jschaedl/iban-validation/zipball/9d8054a6edeeeba676482a054b5f73f4004b6145",
+                "reference": "9d8054a6edeeeba676482a054b5f73f4004b6145",
+                "shasum": ""
+            },
+            "require": {
+                "ext-ctype": "*",
+                "php": "~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "symfony/options-resolver": "^5.4|^6|^7|^8"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.5"
+            },
+            "suggest": {
+                "ext-bcmath": "This library makes use of bcmod function, so an installed bcmath extension is recommended."
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Iban\\Validation\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jan Schaedlich",
+                    "email": "mail@janschaedlich.de",
+                    "homepage": "https://www.linkedin.com/in/janschaedlich"
+                }
+            ],
+            "description": "A small library for validating International BankAccount Numbers (IBANs).",
+            "homepage": "https://github.com/jschaedl/iban-validation",
+            "keywords": [
+                "IBAN",
+                "validation"
+            ],
+            "support": {
+                "issues": "https://github.com/jschaedl/iban-validation/issues",
+                "source": "https://github.com/jschaedl/iban-validation/tree/v2.7.0"
+            },
+            "time": "2025-12-02T19:33:29+00:00"
         },
         {
             "name": "kreait/firebase-php",
@@ -8672,6 +8775,77 @@
             "time": "2026-08-07T14:56:57+00:00"
         },
         {
+            "name": "symfony/options-resolver",
+            "version": "v8.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/options-resolver.git",
+                "reference": "88f9c561f678a02d54b897014049fa839e33ff82"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/options-resolver/zipball/88f9c561f678a02d54b897014049fa839e33ff82",
+                "reference": "88f9c561f678a02d54b897014049fa839e33ff82",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.4.1",
+                "symfony/deprecation-contracts": "^2.5|^3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\Component\\OptionsResolver\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Fabien Potencier",
+                    "email": "fabien@symfony.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Provides an improved replacement for the array_replace PHP function",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "config",
+                "configuration",
+                "options"
+            ],
+            "support": {
+                "source": "https://github.com/symfony/options-resolver/tree/v8.1.0"
+            },
+            "funding": [
+                {
+                    "url": "https://symfony.com/sponsor",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/fabpot",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nicolas-grekas",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-05-29T05:06:50+00:00"
+        },
+        {
             "name": "symfony/polyfill-ctype",
             "version": "v1.37.0",
             "source": {
@@ -11491,27 +11665,24 @@
             "time": "2026-07-15T21:53:04+00:00"
         },
         {
-            "name": "whilesmart/entitlements-cashier",
-            "version": "0.1.1",
+            "name": "whilesmart/eloquent-schema-conformance",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/whilesmartphp/entitlements-cashier.git",
-                "reference": "dc58d974d61cf1ce53300d3fcdbe534fa04569f2"
+                "url": "https://github.com/whilesmartphp/eloquent-schema-conformance.git",
+                "reference": "84d813480f2b6c24c244ac8d60d4570cb75b9d92"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/entitlements-cashier/zipball/dc58d974d61cf1ce53300d3fcdbe534fa04569f2",
-                "reference": "dc58d974d61cf1ce53300d3fcdbe534fa04569f2",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-schema-conformance/zipball/84d813480f2b6c24c244ac8d60d4570cb75b9d92",
+                "reference": "84d813480f2b6c24c244ac8d60d4570cb75b9d92",
                 "shasum": ""
             },
             "require": {
-                "laravel/cashier": "^16.0",
                 "laravel/framework": "^11.0|^12.0",
-                "php": "^8.2",
-                "whilesmart/eloquent-entitlements": "^2.0"
+                "php": "^8.2"
             },
             "require-dev": {
-                "fakerphp/faker": "^1.24",
                 "laravel/pint": "^1.22",
                 "orchestra/testbench": "^9.0|^10.0"
             },
@@ -11519,14 +11690,13 @@
             "extra": {
                 "laravel": {
                     "providers": [
-                        "Whilesmart\\EntitlementsCashier\\EntitlementsCashierServiceProvider"
+                        "Whilesmart\\SchemaConformance\\SchemaConformanceServiceProvider"
                     ]
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "Whilesmart\\EntitlementsCashier\\": "src/",
-                    "Whilesmart\\EntitlementsCashier\\Database\\Factories\\": "database/factories/"
+                    "Whilesmart\\SchemaConformance\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -11538,12 +11708,12 @@
                     "name": "Whilesmart Team"
                 }
             ],
-            "description": "Laravel Cashier billing adapter for whilesmart/eloquent-entitlements: fulfils the BillingProvider seam so any entitlement owner can check out through Stripe and have its subscription state reflected onto its plan.",
+            "description": "Declarative database schema-conformance guard for Laravel: declare the columns and indexes each feature expects, verify the live DB against them, additively conform, and refuse to serve on drift.",
             "support": {
-                "issues": "https://github.com/whilesmartphp/entitlements-cashier/issues",
-                "source": "https://github.com/whilesmartphp/entitlements-cashier/tree/v0.1.1"
+                "issues": "https://github.com/whilesmartphp/eloquent-schema-conformance/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-schema-conformance/tree/v1.0.0"
             },
-            "time": "2026-07-19T18:56:31+00:00"
+            "time": "2026-08-17T17:13:50+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",
