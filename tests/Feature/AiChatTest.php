@@ -279,7 +279,7 @@ class AiChatTest extends TestCase
         $router->shouldReceive('classify')->once()
             ->with('Main Checking', Mockery::on(
                 fn ($conversation) => is_string($conversation) && str_contains($conversation, 'Which wallet')
-            ))
+            ), Mockery::type(\Illuminate\Database\Eloquent\Model::class))
             ->andReturn(AiRouter::ROUTE_AGENT);
         $router->shouldReceive('generateTitle')->andReturn(null);
 
@@ -358,7 +358,11 @@ class AiChatTest extends TestCase
 
         $router = Mockery::mock(AiRouter::class);
         $router->shouldReceive('classify')->once()->andReturn(AiRouter::ROUTE_GENERAL);
-        $router->shouldReceive('answerGeneral')->once()->with('What does expense mean?', null)
+        $router->shouldReceive('answerGeneral')->once()->with(
+            'What does expense mean?',
+            null,
+            Mockery::type(\Illuminate\Database\Eloquent\Model::class),
+        )
             ->andReturn(['success' => true, 'text' => 'An expense is money you spend.']);
         $router->shouldReceive('generateTitle')->andReturn('Definition of expense');
 

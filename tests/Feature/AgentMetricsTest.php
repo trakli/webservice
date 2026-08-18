@@ -11,11 +11,46 @@ use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
+use Prism\Prism\Enums\FinishReason;
+use Prism\Prism\Facades\Prism;
+use Prism\Prism\Text\Response as TextResponse;
+use Prism\Prism\ValueObjects\Meta;
+use Prism\Prism\ValueObjects\Usage;
 use Tests\TestCase;
 
 class AgentMetricsTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_routing_a_chat_turn_records_token_usage_for_the_owner(): void
+    {
+        $user = User::factory()->create();
+
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: AiRouter::ROUTE_DATA,
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(24, 1),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+
+        $route = app(AiRouter::class)->classify('How much did I spend?', '', $user);
+
+        $this->assertSame(AiRouter::ROUTE_DATA, $route);
+        $this->assertDatabaseHas('token_usages', [
+            'owner_type' => $user->getMorphClass(),
+            'owner_id' => $user->id,
+            'operation' => 'chat.classify',
+            'prompt_tokens' => 24,
+            'completion_tokens' => 1,
+        ]);
+        $this->assertSame(25, $user->fresh()->tokensUsed());
+    }
 
     public function test_an_agent_turn_records_token_usage_for_the_owner(): void
     {

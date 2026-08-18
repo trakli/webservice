@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Whilesmart\AgentMetrics\Facades\TokenMeter;
 use Whilesmart\Roles\Models\Role;
 
 class AdminMetricsControllerTest extends TestCase
@@ -33,6 +34,10 @@ class AdminMetricsControllerTest extends TestCase
                 'datetime' => now()->subDays(2),
             ]);
         }
+        TokenMeter::record($this->admin, 'gemini', 'gemini-flash-latest', [
+            'prompt_tokens' => 120,
+            'completion_tokens' => 30,
+        ]);
 
         $response = $this->actingAs($this->admin)->getJson('/api/v1/admin/metrics?days=30');
 
@@ -62,6 +67,11 @@ class AdminMetricsControllerTest extends TestCase
         $this->assertSame('ranking', $features['type']);
         $this->assertNotEmpty($features['rows']);
         $this->assertSame('Transactions', $features['rows'][0]['label']);
+
+        $usage = collect($groups['agent_usage']['metrics'])->keyBy('key');
+        $this->assertSame(150, $usage['ai_tokens_used']['value']);
+        $this->assertSame(150, collect($usage['ai_tokens_series']['series'])->sum('value'));
+        $this->assertSame(150, $usage['ai_tokens_by_user']['rows'][0]['value']);
     }
 
     public function test_non_admin_is_forbidden(): void
