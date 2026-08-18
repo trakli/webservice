@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
@@ -15,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 
 #[OA\Tag(name: 'Category', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
@@ -274,6 +274,16 @@ class CategoryController extends ApiController
         $data['user_id'] = $user->id;
         $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
         if ($category_exists) {
+            if (! empty($data['client_id'])) {
+                if ($category_exists->client_generated_id !== $data['client_id']) {
+                    $category_exists->setClientGeneratedId($data['client_id'], $user);
+                    $category_exists->markAsSynced();
+                }
+                $category_exists->refresh();
+
+                return $this->success($category_exists, __('Category already exists'), 200);
+            }
+
             return $this->failure(__('Category already exists'), 400);
         }
 
