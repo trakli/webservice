@@ -11,8 +11,8 @@
     "license": "proprietary",
     "require": {
         "php": "^8.4",
-        "cviebrock/eloquent-sluggable": "^12.0",
         "barryvdh/laravel-dompdf": "^3.1",
+        "cviebrock/eloquent-sluggable": "^12.0",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/cashier": "^16.6",
         "laravel/framework": "^12",
@@ -34,6 +34,7 @@
         "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/eloquent-outreach": "dev-dev",
         "whilesmart/eloquent-roles": "dev-dev",
+        "whilesmart/eloquent-schema-conformance": "^1.0",
         "whilesmart/laravel-plugin-engine": "^1.2.1",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",

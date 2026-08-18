@@ -5,9 +5,8 @@
  *
  * Each feature declares the table state it expects after all its migrations
  * have run. The `schema:verify` command compares this against the live DB;
- * `schema:conform` applies missing additive changes in place. The app can
- * refuse to boot when non-conformant — see `App\Providers\AppServiceProvider`
- * and the SCHEMA_CONFORMANCE_ENFORCE env flag.
+ * `schema:conform` applies missing additive changes in place. The package can
+ * refuse requests while the schema is non-conformant.
  *
  * Column specs use Laravel Blueprint method names. Modifiers are expressed
  * as a keyed array: ['type' => 'string', 'nullable' => true, 'length' => 255].
@@ -32,6 +31,12 @@ return [
      * experiment with partial migrations.
      */
     'enforce' => env('SCHEMA_CONFORMANCE_ENFORCE', true),
+
+    'auto_conform' => env('SCHEMA_CONFORMANCE_AUTO_CONFORM', true),
+
+    'cache_ttl' => (int) env('SCHEMA_CONFORMANCE_CACHE_TTL', 60),
+
+    'bypass_paths' => ['schema/*', 'api/v1/info'],
 
     'tables' => [
         'transactions' => [
