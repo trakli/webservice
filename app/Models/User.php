@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
-use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable implements HasLocalePreference
@@ -22,10 +22,10 @@ class User extends Authenticatable implements HasLocalePreference
     use Configurable;
     use HasAgentActions;
     use HasApiTokens;
-    use HasTokenUsage;
     use HasDevices;
     use HasFactory;
     use HasRoles;
+    use HasTokenUsage;
     use Notifiable;
     use SendsOutreach;
 
@@ -72,6 +72,7 @@ class User extends Authenticatable implements HasLocalePreference
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'tokens_used' => 'integer',
     ];
 
     public function categories(): HasMany

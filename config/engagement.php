@@ -1,6 +1,7 @@
 <?php
 
 use App\Engagement\AccountsMetricProvider;
+use App\Engagement\AgentUsageMetricProvider;
 use App\Engagement\DemographicsMetricProvider;
 use App\Engagement\EngagementMetricProvider;
 use App\Engagement\TransactionsMetricProvider;
@@ -21,5 +22,6 @@ return [
         EngagementMetricProvider::class,
         DemographicsMetricProvider::class,
         AccountsMetricProvider::class,
+        AgentUsageMetricProvider::class,
     ],
 ];

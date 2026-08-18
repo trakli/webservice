@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Prism\Prism\Facades\Prism;
+use Prism\Prism\ValueObjects\Usage;
 use Throwable;
+use Whilesmart\AgentMetrics\Facades\TokenMeter;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 
 class AiRouter
 {
@@ -15,7 +19,7 @@ class AiRouter
 
     public const ROUTE_AGENT = 'agent';
 
-    public function classify(string $question, string $conversation = ''): string
+    public function classify(string $question, string $conversation = '', ?Model $owner = null): string
     {
         try {
             $prompt = trim($conversation) !== ''
@@ -31,6 +35,8 @@ class AiRouter
                 ->withPrompt($prompt)
                 ->usingTemperature(0)
                 ->asText();
+
+            $this->recordTokenUsage($owner, $response->usage, 'chat.classify');
 
             $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
             $route = match ($label) {
@@ -55,8 +61,11 @@ class AiRouter
         }
     }
 
-    public function answerGeneral(string $question, ?string $dataFailureHint = null): array
-    {
+    public function answerGeneral(
+        string $question,
+        ?string $dataFailureHint = null,
+        ?Model $owner = null,
+    ): array {
         try {
             $response = Prism::text()
                 ->using(
@@ -67,6 +76,8 @@ class AiRouter
                 ->withPrompt($question)
                 ->usingTemperature(0.3)
                 ->asText();
+
+            $this->recordTokenUsage($owner, $response->usage, 'chat.general');
 
             return [
                 'success' => true,
@@ -82,7 +93,7 @@ class AiRouter
         }
     }
 
-    public function generateTitle(string $firstQuestion): ?string
+    public function generateTitle(string $firstQuestion, ?Model $owner = null): ?string
     {
         try {
             $response = Prism::text()
@@ -94,6 +105,8 @@ class AiRouter
                 ->withPrompt($firstQuestion)
                 ->usingTemperature(0.3)
                 ->asText();
+
+            $this->recordTokenUsage($owner, $response->usage, 'chat.title');
 
             $title = trim($response->text);
             $title = trim($title, "\"'.,;:!?\n\r\t ");
@@ -108,6 +121,30 @@ class AiRouter
 
             return null;
         }
+    }
+
+    private function recordTokenUsage(?Model $owner, Usage $usage, string $operation): void
+    {
+        if ($owner === null) {
+            return;
+        }
+
+        $values = $usage->toArray();
+        $tokens = (int) ($values['prompt_tokens'] ?? 0)
+            + (int) ($values['completion_tokens'] ?? 0);
+
+        if ($tokens <= 0) {
+            return;
+        }
+
+        app(Entitlements::class)->consume($owner, 'ai_tokens', $tokens);
+        TokenMeter::record(
+            owner: $owner,
+            provider: (string) config('services.llm.provider'),
+            model: (string) config('services.llm.model'),
+            usage: $values,
+            operation: $operation,
+        );
     }
 
     private function classifierSystemPrompt(): string

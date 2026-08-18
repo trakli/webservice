@@ -62,7 +62,11 @@ class ProcessChatMessageJob implements ShouldQueue
         // judged in isolation and misrouted.
         $route = $userMessage->files()->exists()
             ? AiRouter::ROUTE_AGENT
-            : $router->classify($userMessage->content, $this->recentConversation($userMessage));
+            : $router->classify(
+                $userMessage->content,
+                $this->recentConversation($userMessage),
+                $this->owner(),
+            );
 
         if ($route === AiRouter::ROUTE_GENERAL) {
             $this->answerGeneral($router, $userMessage->content);
@@ -234,7 +238,7 @@ class ProcessChatMessageJob implements ShouldQueue
 
     private function answerGeneral(AiRouter $router, string $question, ?string $hint = null): void
     {
-        $answer = $router->answerGeneral($question, $hint);
+        $answer = $router->answerGeneral($question, $hint, $this->owner());
 
         if (! $answer['success']) {
             $this->markFailed($answer['error']);
