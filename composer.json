@@ -19,7 +19,7 @@
         "laravel/mcp": "^0.8",
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^3.0",
+        "laravel/tinker": "^2.11.1",
         "phpoffice/phpspreadsheet": "^5.9",
         "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",

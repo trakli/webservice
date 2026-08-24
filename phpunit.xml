@@ -27,6 +27,7 @@
         <env name="BROADCAST_DRIVER" value="null"/>
         <env name="MCP_ENABLED" value="true"/>
         <env name="DB_DATABASE" value="trakli_test"/>
+        <env name="DB_USERNAME" value="root"/>
         <env name="DB_HOST" value="mysql-test"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
