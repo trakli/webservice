@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2679a3df1118c29e01bfda02d8ca8476",
+    "content-hash": "e31824a7957d8566ce35d5f96ae3854c",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -11478,6 +11478,57 @@
                 "source": "https://github.com/whilesmartphp/eloquent-roles/tree/dev"
             },
             "time": "2026-07-15T21:53:04+00:00"
+        },
+        {
+            "name": "whilesmart/eloquent-schema-conformance",
+            "version": "1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-schema-conformance.git",
+                "reference": "84d813480f2b6c24c244ac8d60d4570cb75b9d92"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-schema-conformance/zipball/84d813480f2b6c24c244ac8d60d4570cb75b9d92",
+                "reference": "84d813480f2b6c24c244ac8d60d4570cb75b9d92",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.22",
+                "orchestra/testbench": "^9.0|^10.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\SchemaConformance\\SchemaConformanceServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\SchemaConformance\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Whilesmart Team"
+                }
+            ],
+            "description": "Declarative database schema-conformance guard for Laravel: declare the columns and indexes each feature expects, verify the live DB against them, additively conform, and refuse to serve on drift.",
+            "support": {
+                "issues": "https://github.com/whilesmartphp/eloquent-schema-conformance/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-schema-conformance/tree/v1.0.0"
+            },
+            "time": "2026-08-17T17:13:50+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",
