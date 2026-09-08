@@ -171,7 +171,7 @@ class CategoryController extends ApiController
 
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
         try {
@@ -274,17 +274,15 @@ class CategoryController extends ApiController
         $data['user_id'] = $user->id;
         $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
         if ($category_exists) {
-            if (! empty($data['client_id'])) {
+            if (!empty($data['client_id'])) {
                 if ($category_exists->client_generated_id !== $data['client_id']) {
                     $category_exists->setClientGeneratedId($data['client_id'], $user);
                     $category_exists->markAsSynced();
                 }
                 $category_exists->refresh();
-
-                return $this->success($category_exists, __('Category already exists'), 200);
             }
 
-            return $this->failure(__('Category already exists'), 400);
+            return $this->success($category_exists, __('Category already exists'), 200);
         }
 
         $categoryLimit = app(Entitlements::class)->limit($user, 'max_categories');
@@ -352,7 +350,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
 
@@ -396,7 +394,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
 
