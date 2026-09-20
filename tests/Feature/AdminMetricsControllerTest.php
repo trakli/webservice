@@ -23,6 +23,58 @@ class AdminMetricsControllerTest extends TestCase
         $this->admin->assignRole('admin');
     }
 
+    public function test_admin_metrics_narrows_visitor_figures_to_the_selected_client(): void
+    {
+        config()->set('engagement.clients.website.site_key', 'website-key');
+        config()->set('engagement.clients.website.allowed_origins', ['https://www.trakli.test']);
+        config()->set('engagement.clients.dashboard.site_key', 'dashboard-key');
+        config()->set('engagement.clients.dashboard.allowed_origins', ['https://app.trakli.test']);
+
+        foreach ([
+            ['origin' => 'https://www.trakli.test', 'site_key' => 'website-key', 'visitor' => 'w1'],
+            ['origin' => 'https://app.trakli.test', 'site_key' => 'dashboard-key', 'visitor' => 'd1'],
+        ] as $visit) {
+            $this->withHeaders([
+                'Origin' => $visit['origin'],
+                'X-Engagement-Site-Key' => $visit['site_key'],
+            ])->postJson('/api/v1/engagement/events', [
+                'events' => [[
+                    'name' => 'page.view',
+                    'visitor_id' => $visit['visitor'],
+                    'session_id' => $visit['visitor'],
+                ]],
+            ])->assertAccepted();
+        }
+
+        $all = $this->actingAs($this->admin)->getJson('/api/v1/admin/metrics?days=30');
+        $scoped = $this->actingAs($this->admin)->getJson('/api/v1/admin/metrics?days=30&client=website');
+
+        $visitors = fn ($response) => collect(
+            collect($response->json('data.groups'))->firstWhere('key', 'visitors')['metrics']
+        )->firstWhere('key', 'unique_visitors')['value'];
+
+        $this->assertSame(2, $visitors($all));
+        $this->assertSame(1, $visitors($scoped), 'The client parameter must narrow visitor figures.');
+        $scoped->assertJsonPath('data.selected_client', 'website');
+    }
+
+    public function test_admin_metrics_rejects_a_client_it_does_not_know(): void
+    {
+        $this->actingAs($this->admin)
+            ->getJson('/api/v1/admin/metrics?client=typo')
+            ->assertStatus(422);
+    }
+
+    public function test_admin_metrics_says_which_groups_a_client_filter_narrows(): void
+    {
+        $response = $this->actingAs($this->admin)->getJson('/api/v1/admin/metrics?days=7');
+
+        $groups = collect($response->json('data.groups'))->keyBy('key');
+
+        $this->assertTrue($groups['visitors']['client_scoped']);
+        $this->assertFalse($groups['users']['client_scoped']);
+    }
+
     public function test_admin_metrics_reports_real_counts(): void
     {
         $wallet = $this->admin->wallets()->create(['name' => 'W', 'balance' => 0]);
