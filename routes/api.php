@@ -1,19 +1,23 @@
 <?php
 
 use App\Http\Controllers\API\v1\AccountController;
+use App\Http\Controllers\API\v1\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\API\v1\Admin\MetricsController as AdminMetricsController;
 use App\Http\Controllers\API\v1\Admin\OutreachController as AdminOutreachController;
 use App\Http\Controllers\API\v1\Admin\UserController as AdminUserController;
 use App\Http\Controllers\API\v1\AiController;
-use App\Http\Controllers\API\v1\McpTokenController;
+use App\Http\Controllers\API\v1\AssetPriceController;
 use App\Http\Controllers\API\v1\BudgetController;
 use App\Http\Controllers\API\v1\BudgetPeriodStateController;
 use App\Http\Controllers\API\v1\CategoryController;
+use App\Http\Controllers\API\v1\ExchangeRateController;
 use App\Http\Controllers\API\v1\ExportController;
+use App\Http\Controllers\API\v1\FeedbackController;
 use App\Http\Controllers\API\v1\FileController;
 use App\Http\Controllers\API\v1\GroupController;
 use App\Http\Controllers\API\v1\ImportController;
 use App\Http\Controllers\API\v1\IntegrationController;
+use App\Http\Controllers\API\v1\McpTokenController;
 use App\Http\Controllers\API\v1\NotificationController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\ReminderController;
@@ -22,8 +26,6 @@ use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransactionRefundController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
-use App\Http\Controllers\API\v1\AssetPriceController;
-use App\Http\Controllers\API\v1\ExchangeRateController;
 use App\Http\Controllers\API\v1\WalletController;
 use App\Http\Controllers\API\VersionController;
 use Illuminate\Support\Facades\Route;
@@ -129,6 +131,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
 
+    Route::get('feedback', [FeedbackController::class, 'index']);
+    Route::post('feedback', [FeedbackController::class, 'store']);
+
     // Admin routes
     Route::group(['prefix' => 'admin', 'middleware' => ['role:admin']], function () {
         Route::get('metrics', [AdminMetricsController::class, 'show']);
@@ -136,6 +141,8 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
         Route::post('outreach/preview', [AdminOutreachController::class, 'preview']);
         Route::post('outreach/media', [AdminOutreachController::class, 'media']);
         Route::post('outreach/send', [AdminOutreachController::class, 'send']);
+        Route::get('feedback', [AdminFeedbackController::class, 'index']);
+        Route::patch('feedback/{feedback}', [AdminFeedbackController::class, 'update']);
         Route::get('users', [AdminUserController::class, 'index']);
         Route::get('users/{id}', [AdminUserController::class, 'show']);
         Route::delete('users/{id}', [AdminUserController::class, 'destroy']);

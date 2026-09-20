@@ -147,6 +147,14 @@
                                 "month"
                             ]
                         }
+                    },
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
