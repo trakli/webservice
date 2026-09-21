@@ -27,6 +27,23 @@ class FeedbackControllerTest extends TestCase
             ->assertJsonPath('data.0.message', 'Please add shared budgets.');
     }
 
+    public function test_feedback_submission_is_rate_limited(): void
+    {
+        $user = User::factory()->create();
+
+        for ($i = 0; $i < 10; $i++) {
+            $this->actingAs($user)->postJson('/api/v1/feedback', [
+                'type' => 'bug',
+                'message' => "Report number {$i}.",
+            ])->assertCreated();
+        }
+
+        $this->actingAs($user)->postJson('/api/v1/feedback', [
+            'type' => 'bug',
+            'message' => 'One too many.',
+        ])->assertStatus(429);
+    }
+
     public function test_admin_triages_feedback(): void
     {
         $user = User::factory()->create();
