@@ -132,7 +132,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
 
     Route::get('feedback', [FeedbackController::class, 'index']);
-    Route::post('feedback', [FeedbackController::class, 'store']);
+    Route::post('feedback', [FeedbackController::class, 'store'])->middleware('throttle:10,1');
 
     // Admin routes
     Route::group(['prefix' => 'admin', 'middleware' => ['role:admin']], function () {
