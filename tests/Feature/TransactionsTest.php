@@ -163,6 +163,39 @@ class TransactionsTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_validation_failure_on_a_named_field_is_rejected_as_unprocessable()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'wallet_id' => $this->wallet->id,
+        ])->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['success', 'message', 'errors' => ['amount']]);
+    }
+
+    public function test_validation_failure_on_a_nested_field_is_reported_under_its_own_key()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'categories' => [999999],
+        ])->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonStructure(['success', 'message', 'errors' => ['categories.0']]);
+    }
+
+    public function test_a_textual_boolean_is_accepted_for_a_boolean_field()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/transactions', [
+            'type' => 'income',
+            'amount' => 100,
+            'wallet_id' => $this->wallet->id,
+            'datetime' => '2025-04-30T15:17:54.120Z',
+            'is_recurring' => 'false',
+        ])->assertStatus(201);
+    }
+
     private function createTransaction(string $type, array $recurrentData = []): array
     {
         $data = [
