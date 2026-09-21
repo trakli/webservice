@@ -6,6 +6,7 @@ use App\Events\AccountDeleted;
 use App\Events\BudgetForecastBreached;
 use App\Events\BudgetThresholdBreached;
 use App\Events\TransactionRecorded;
+use App\Listeners\AdvanceTransactionStreak;
 use App\Listeners\CreateBudgetAlertReminder;
 use App\Listeners\PasswordResetCodeGeneratedListener;
 use App\Listeners\PasswordResetCompleteListener;
@@ -52,6 +53,7 @@ class EventServiceProvider extends ServiceProvider
         ],
         TransactionRecorded::class => [
             QueueBudgetRecompute::class,
+            AdvanceTransactionStreak::class,
         ],
         BudgetThresholdBreached::class => [
             [CreateBudgetAlertReminder::class, 'handleThreshold'],

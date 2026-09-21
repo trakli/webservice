@@ -6609,6 +6609,51 @@
                 },
                 "type": "object"
             },
+            "Streak": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "owner_id": {
+                        "type": "integer"
+                    },
+                    "owner_type": {
+                        "type": "string",
+                        "example": "App\\Models\\User"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "transaction",
+                            "check_in"
+                        ]
+                    },
+                    "period": {
+                        "type": "string",
+                        "enum": [
+                            "daily",
+                            "weekly"
+                        ]
+                    },
+                    "current_length": {
+                        "type": "integer"
+                    },
+                    "longest_length": {
+                        "type": "integer"
+                    },
+                    "started_on": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "last_tracked_on": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "Transaction": {
                 "required": [
                     "amount",

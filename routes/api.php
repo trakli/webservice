@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RecordCheckInStreak;
 use App\Http\Controllers\API\v1\AccountController;
 use App\Http\Controllers\API\v1\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\API\v1\Admin\MetricsController as AdminMetricsController;
@@ -45,7 +46,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('info', [VersionController::class, 'getServerInfo']);
 
 // Stateful authenticated routes
-Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum']], function () {
+Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInStreak::class]], function () {
     Route::group(['middleware' => ['request.body.json']], function () {
         Route::get('/user', [UserController::class, 'show']);
         Route::delete('/account', [AccountController::class, 'destroy']);
