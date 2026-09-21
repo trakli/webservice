@@ -1,16 +1,49 @@
-<x-mail::message>
-# {{ __('Keep it going') }}
+@extends('emails.layouts.base', [
+    'title' => __(':count :period in a row', ['count' => $milestone, 'period' => $periodLabel]),
+    'preheader' => __('You have kept :activity going for :count :period in a row.', ['activity' => $activity, 'count' => $milestone, 'period' => $periodLabel]),
+])
 
-{{ __('You have kept :activity going for :count :period in a row.', ['activity' => $activity, 'count' => $milestone, 'period' => $periodLabel]) }}
+@section('content')
+    @if (! empty($streak->owner?->first_name))
+        <p style="margin:0 0 14px; font-size:15px; line-height:1.6; color:#1f2937;">
+            {{ __('Hi :name,', ['name' => $streak->owner->first_name]) }}
+        </p>
+    @endif
 
-@if ($longest > $milestone)
-{{ __('Your best run so far is :count.', ['count' => $longest]) }}
-@endif
+    <p style="margin:0 0 8px; font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; font-weight:500;">
+        {{ __('Your streak') }}
+    </p>
+    <h1 class="h1 text-heading" style="margin:0 0 16px; font-size:24px; line-height:1.3; color:#0f3a23; font-weight:700;">
+        {{ __(':count :period in a row', ['count' => $milestone, 'period' => $periodLabel]) }}
+    </h1>
 
-<x-mail::button :url="config('app.frontend_url', config('app.url'))">
-{{ __('Open Trakli') }}
-</x-mail::button>
+    <p style="margin:0 0 24px; font-size:15px; line-height:1.65; color:#1f2937;">
+        {{ __('You have kept :activity going for :count :period in a row. Money is easier to see when the record is complete.', ['activity' => $activity, 'count' => $milestone, 'period' => $periodLabel]) }}
+    </p>
 
-{{ __('Thanks,') }}<br>
-{{ config('app.name') }}
-</x-mail::message>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+        <tr>
+            <td class="panel border-soft" style="background-color:#f7faf8; border:1px solid #e5e9e7; border-left:3px solid #047844; border-radius:6px; padding:20px;">
+                <p style="margin:0 0 8px; font-size:12px; color:#0f3a23; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                    @if ($longest > $milestone)
+                        {{ __('Your best run is :count', ['count' => $longest]) }}
+                    @else
+                        {{ __('This is your best run yet') }}
+                    @endif
+                </p>
+                <p style="margin:0 0 16px; font-size:14px; line-height:1.65; color:#1f2937;">
+                    {{ __('Record one more and the run carries on.') }}
+                </p>
+                @include('emails.partials.button', [
+                    'href' => config('app.frontend_url', config('app.url')) . '/transactions',
+                    'label' => __('Add a transaction'),
+                    'variant' => 'primary',
+                ])
+            </td>
+        </tr>
+    </table>
+@endsection
+
+@section('footerNote')
+    {{ __("You're receiving this because streak emails are on.") }}
+@endsection
