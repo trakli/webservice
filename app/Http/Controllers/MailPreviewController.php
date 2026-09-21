@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StreakPeriod;
+use App\Enums\StreakType;
 use App\Mail\AccountDeletedMail;
 use App\Mail\GenericMail;
 use App\Mail\InactivityReminderMail;
 use App\Mail\InsightsMail;
+use App\Mail\StreakMilestoneMail;
+use App\Models\Streak;
 use App\Models\User;
 use App\Services\InactivityService;
 use Illuminate\Contracts\View\View;
@@ -20,6 +24,7 @@ class MailPreviewController extends Controller
         'insights' => 'Periodic insights',
         'account-deleted' => 'Account deleted',
         'generic' => 'Generic notification',
+        'streak' => 'Streak milestone',
     ];
 
     public function index(): View
@@ -36,6 +41,7 @@ class MailPreviewController extends Controller
             'insights' => $this->buildInsights($request),
             'account-deleted' => $this->buildAccountDeleted($request),
             'generic' => $this->buildGeneric($request),
+            'streak' => $this->buildStreak($request),
             default => abort(404, "Unknown mail preview type: {$type}"),
         };
     }
@@ -122,6 +128,27 @@ class MailPreviewController extends Controller
         $user = $this->fakeUser($request);
 
         return new AccountDeletedMail(trim($user->first_name . ' ' . $user->last_name));
+    }
+
+    private function buildStreak(Request $request): StreakMilestoneMail
+    {
+        $milestone = max(1, (int) $request->query('milestone', 7));
+        $period = $request->query('period') === 'weekly' ? StreakPeriod::WEEKLY : StreakPeriod::DAILY;
+
+        $streak = new Streak([
+            'owner_type' => User::class,
+            'owner_id' => 0,
+            'type' => StreakType::TRANSACTION,
+            'period' => $period,
+            'current_length' => $milestone,
+            'longest_length' => max($milestone, (int) $request->query('longest', $milestone)),
+            'started_on' => now()->subDays($milestone - 1)->toDateString(),
+            'last_tracked_on' => now()->toDateString(),
+        ]);
+
+        $streak->setRelation('owner', new User(['first_name' => $request->query('name', 'Alex')]));
+
+        return new StreakMilestoneMail($streak, $milestone);
     }
 
     private function buildGeneric(Request $request): GenericMail
