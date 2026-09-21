@@ -112,7 +112,8 @@
         "merge-plugin": {
             "include": [
                 "plugins/*/composer.json"
-            ]
+            ],
+            "merge-dev": false
         }
     },
     "config": {
