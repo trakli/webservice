@@ -9,22 +9,58 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 abstract class ApiFormRequest extends FormRequest
 {
     /**
-     * Handle a failed validation attempt.
+     * Cast textual booleans for attributes the rules declare as boolean.
      *
-     * @param  \Illuminate\Contracts\Validation\Validator  $validator
-     * @return void
-     *
-     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     * Unrecognised values are left untouched so the boolean rule still rejects them
+     * instead of silently reading as false.
      */
-    protected function failedValidation(Validator $validator)
+    public function validationData(): array
     {
-        // This exactly mirrors the ApiController's failure() structure
-        $response = response()->json([
-            'success' => false,
-            'message' => __('Server failed to validate request.'),
-            'errors'  => $validator->errors()->toArray(),
-        ], 422);
+        $data = parent::validationData();
 
-        throw new HttpResponseException($response);
+        foreach ($this->rules() as $attribute => $rule) {
+            if (! array_key_exists($attribute, $data) || ! is_string($data[$attribute])) {
+                continue;
+            }
+
+            if (! $this->expectsBoolean($rule)) {
+                continue;
+            }
+
+            $casted = filter_var($data[$attribute], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            if (! is_null($casted)) {
+                $data[$attribute] = $casted;
+            }
+        }
+
+        return $data;
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        $errors = $validator->errors();
+        $named = $errors->hasAny(array_keys($this->rules()));
+
+        throw new HttpResponseException(response()->json([
+            'success' => false,
+            'message' => $named
+                ? __('Server failed to validate request.')
+                : __('Server unable to process request.'),
+            'errors' => $errors->toArray(),
+        ], $named ? 422 : 400));
+    }
+
+    private function expectsBoolean($rule): bool
+    {
+        $rules = is_array($rule) ? $rule : explode('|', (string) $rule);
+
+        foreach ($rules as $singleRule) {
+            if (is_string($singleRule) && strtolower(explode(':', $singleRule)[0]) === 'boolean') {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
