@@ -6,12 +6,19 @@ use App\Enums\StreakPeriod;
 use App\Enums\StreakType;
 use App\Mail\StreakMilestoneMail;
 use App\Models\Streak;
+use App\Models\User;
+use App\Support\ConfigurationKeys;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
 
 class StreakService
 {
+    public function __construct(
+        private readonly NotificationService $notifications,
+    ) {
+    }
+
     /**
      * Record that the owner did something worth a streak, and return the
      * streaks that grew. One row per period, so a single action can advance
@@ -42,7 +49,7 @@ class StreakService
      */
     private function advance(Model $owner, StreakType $type, StreakPeriod $period, CarbonImmutable $occurredAt): ?Streak
     {
-        $bucket = $period->bucket($occurredAt);
+        $bucket = $period->bucket($occurredAt->setTimezone($this->timezoneFor($owner)));
 
         $streak = Streak::firstOrNew([
             'owner_type' => $owner->getMorphClass(),
@@ -52,7 +59,7 @@ class StreakService
         ]);
 
         $last = $streak->last_tracked_on
-            ? $period->bucket(CarbonImmutable::parse($streak->last_tracked_on))
+            ? $period->bucket(CarbonImmutable::parse($streak->last_tracked_on->format('Y-m-d'), $bucket->timezone))
             : null;
 
         if ($last !== null && $last->greaterThanOrEqualTo($bucket)) {
@@ -101,6 +108,10 @@ class StreakService
             return;
         }
 
+        if ($recipient instanceof User && ! $this->notifications->isChannelEnabled($recipient, 'email')) {
+            return;
+        }
+
         $streak->forceFill(['last_notified_length' => $milestone])->save();
 
         Mail::to($recipient->email)->queue(new StreakMilestoneMail($streak, $milestone));
@@ -114,5 +125,18 @@ class StreakService
         ));
 
         return in_array($length, $milestones, true) ? $length : null;
+    }
+
+    /**
+     * A day belongs to whoever lived it. Falls back to the application zone
+     * for an owner that carries no preference, such as a group.
+     */
+    private function timezoneFor(Model $owner): string
+    {
+        $configured = method_exists($owner, 'getConfigValue')
+            ? $owner->getConfigValue(ConfigurationKeys::TIMEZONE)
+            : null;
+
+        return is_string($configured) && $configured !== '' ? $configured : config('app.timezone');
     }
 }

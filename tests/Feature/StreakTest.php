@@ -11,6 +11,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
+use Whilesmart\ModelConfiguration\Enums\ConfigValueType;
 
 class StreakTest extends TestCase
 {
@@ -137,6 +138,35 @@ class StreakTest extends TestCase
         CarbonImmutable::setTestNow();
 
         Mail::assertQueued(StreakMilestoneMail::class, 1);
+    }
+
+    public function test_a_streak_day_follows_the_users_own_timezone(): void
+    {
+        $this->user->setConfigValue('timezone', 'Pacific/Auckland', ConfigValueType::String);
+
+        // 20:00 UTC is already the next day in Auckland, so these two land on
+        // different local days and the streak reaches two rather than one.
+        CarbonImmutable::setTestNow($this->start->startOfDay()->setTime(6, 0));
+        $this->recordTransaction();
+        CarbonImmutable::setTestNow($this->start->startOfDay()->setTime(20, 0));
+        $this->recordTransaction();
+        CarbonImmutable::setTestNow();
+
+        $this->assertSame(2, $this->streak(StreakType::TRANSACTION, StreakPeriod::DAILY)->current_length);
+    }
+
+    public function test_a_user_who_turned_email_off_is_not_mailed(): void
+    {
+        Mail::fake();
+        $this->user->setConfigValue('notifications-email', false, ConfigValueType::Boolean);
+
+        foreach ([2, 1, 0] as $daysAgo) {
+            CarbonImmutable::setTestNow($this->start->subDays($daysAgo));
+            $this->recordTransaction();
+        }
+        CarbonImmutable::setTestNow();
+
+        Mail::assertNothingQueued();
     }
 
     private function recordTransaction(): void
