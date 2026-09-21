@@ -129,17 +129,5 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "repositories": [
-        {
-            "name": "eloquent-agents",
-            "type": "vcs",
-            "url": "https://github.com/whilesmartphp/eloquent-agents"
-        },
-        {
-            "name": "eloquent-admin",
-            "type": "vcs",
-            "url": "https://github.com/whilesmartphp/eloquent-admin"
-        }
-    ]
+    "prefer-stable": true
 }

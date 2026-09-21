@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a0170b025c18834cab69f7df7cfae084",
+    "content-hash": "9c61f0fae0c99998863b450de360ab8d",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -11168,22 +11168,7 @@
                     "Whilesmart\\Admin\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/testbench package:test"
-                ],
-                "pint": [
-                    "./vendor/bin/pint"
-                ],
-                "pint:test": [
-                    "./vendor/bin/pint --test"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -11194,8 +11179,8 @@
             ],
             "description": "Shared measurements, user directory and automatic email templates for Laravel applications.",
             "support": {
-                "source": "https://github.com/whilesmartphp/eloquent-admin/tree/v0.1.0",
-                "issues": "https://github.com/whilesmartphp/eloquent-admin/issues"
+                "issues": "https://github.com/whilesmartphp/eloquent-admin/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-admin/tree/v0.1.0"
             },
             "time": "2026-09-20T10:29:34+00:00"
         },
@@ -11346,24 +11331,7 @@
                     "Whilesmart\\Agents\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Tests\\": "tests/",
-                    "Workbench\\App\\": "workbench/app/",
-                    "Workbench\\Database\\Factories\\": "workbench/database/factories/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/testbench package:test"
-                ],
-                "pint": [
-                    "./vendor/bin/pint"
-                ],
-                "pint:test": [
-                    "./vendor/bin/pint --test"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -11375,8 +11343,8 @@
             ],
             "description": "AI tool-calling foundation for Laravel: ready-made tools, an agent harness, and an extension API on top of Prism",
             "support": {
-                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/v1.1.0",
-                "issues": "https://github.com/whilesmartphp/eloquent-agents/issues"
+                "issues": "https://github.com/whilesmartphp/eloquent-agents/issues",
+                "source": "https://github.com/whilesmartphp/eloquent-agents/tree/v1.1.0"
             },
             "time": "2026-07-29T22:00:43+00:00"
         },
