@@ -169,6 +169,46 @@ class StreakTest extends TestCase
         Mail::assertNothingQueued();
     }
 
+    public function test_a_check_in_is_not_swallowed_when_the_local_day_rolls_over(): void
+    {
+        $this->user->setConfigValue('timezone', 'Pacific/Auckland', ConfigValueType::String);
+
+        // Both fall on the same UTC day, but 05:00 and 20:00 UTC are different
+        // days in Auckland, so this is two local check-in days, not one.
+        CarbonImmutable::setTestNow($this->start->startOfDay()->setTime(5, 0));
+        $this->actingAs($this->user)->getJson('/api/v1/user')->assertOk();
+        CarbonImmutable::setTestNow($this->start->startOfDay()->setTime(20, 0));
+        $this->actingAs($this->user)->getJson('/api/v1/user')->assertOk();
+        CarbonImmutable::setTestNow();
+
+        $this->assertSame(2, $this->streak(StreakType::CHECK_IN, StreakPeriod::DAILY)->current_length);
+    }
+
+    public function test_one_action_never_sends_two_milestone_emails(): void
+    {
+        // Three consecutive weeks, with the last seven days unbroken, so the
+        // final action carries the weekly count and the daily count over a
+        // milestone at the same moment.
+        $monday = $this->start->startOfWeek();
+
+        foreach (array_merge([-8], range(-6, -1)) as $offset) {
+            CarbonImmutable::setTestNow($monday->addDays($offset));
+            $this->recordTransaction();
+        }
+
+        Mail::fake();
+        CarbonImmutable::setTestNow($monday);
+        $this->recordTransaction();
+        CarbonImmutable::setTestNow();
+
+        $daily = $this->streak(StreakType::TRANSACTION, StreakPeriod::DAILY);
+        $weekly = $this->streak(StreakType::TRANSACTION, StreakPeriod::WEEKLY);
+
+        $this->assertSame(7, $daily->current_length);
+        $this->assertSame(3, $weekly->current_length);
+        Mail::assertQueued(StreakMilestoneMail::class, 1);
+    }
+
     private function recordTransaction(): void
     {
         $this->actingAs($this->user)->postJson('/api/v1/transactions', [

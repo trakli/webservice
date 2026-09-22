@@ -36,7 +36,14 @@ class StreakService
 
             if ($streak !== null) {
                 $advanced[] = $streak;
-                $this->announce($streak);
+            }
+        }
+
+        // One action earns one message. Cases run shortest period first, so walk
+        // back over them and stop at the first that had something to say.
+        foreach (array_reverse($advanced) as $streak) {
+            if ($this->announce($streak)) {
+                break;
             }
         }
 
@@ -86,35 +93,37 @@ class StreakService
      * Mail only on the lengths worth hearing about, so a long streak does not
      * mean a message every single day.
      */
-    private function announce(Streak $streak): void
+    private function announce(Streak $streak): bool
     {
         if (! config('streaks.mail.enabled', true)) {
-            return;
+            return false;
         }
 
         if (! in_array($streak->type->value, (array) config('streaks.mail.types', []), true)) {
-            return;
+            return false;
         }
 
         $milestone = $this->milestoneFor($streak->current_length);
 
         if ($milestone === null || $milestone <= $streak->last_notified_length) {
-            return;
+            return false;
         }
 
         $recipient = $streak->owner;
 
         if (! $recipient instanceof Model || empty($recipient->email)) {
-            return;
+            return false;
         }
 
         if ($recipient instanceof User && ! $this->notifications->isChannelEnabled($recipient, 'email')) {
-            return;
+            return false;
         }
 
         $streak->forceFill(['last_notified_length' => $milestone])->save();
 
         Mail::to($recipient->email)->queue(new StreakMilestoneMail($streak, $milestone));
+
+        return true;
     }
 
     private function milestoneFor(int $length): ?int
@@ -125,6 +134,15 @@ class StreakService
         ));
 
         return in_array($length, $milestones, true) ? $length : null;
+    }
+
+    /**
+     * The owner's current day, for callers that need to agree with the bucket
+     * this service counts against rather than keep a clock of their own.
+     */
+    public function localDate(Model $owner): string
+    {
+        return CarbonImmutable::now($this->timezoneFor($owner))->toDateString();
     }
 
     /**
