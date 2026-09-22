@@ -26,9 +26,9 @@ class RecordCheckInStreak
         $user = $request->user();
 
         if ($user !== null) {
-            $key = "streak:check-in:{$user->getKey()}:" . now()->toDateString();
+            $key = "streak:check-in:{$user->getKey()}:" . $this->streaks->localDate($user);
 
-            if (Cache::add($key, true, now()->endOfDay())) {
+            if (Cache::add($key, true, now()->addDay())) {
                 $this->streaks->track($user, StreakType::CHECK_IN);
             }
         }
