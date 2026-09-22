@@ -31,7 +31,10 @@ class ConfigurationKeys
 
     public const LANDING_EXPERIENCE = 'landing-experience';
 
+    public const TRANSFER_MYSELF_TRANSACTIONS = 'transfer-myself-transactions';
+
     public const NAMES = [
+        self::TRANSFER_MYSELF_TRANSACTIONS,
         self::DEFAULT_WALLET,
         self::DEFAULT_CURRENCY,
         self::DEFAULT_GROUP,
@@ -79,6 +82,7 @@ class ConfigurationKeys
         self::LAST_INACTIVITY_REMINDER_SENT => 'date',
         self::WALLETS_ALLOW_NEGATIVE_BALANCE => 'boolean',
         self::TRANSACTION_INTENTS_ENABLED => 'boolean',
+        self::TRANSFER_MYSELF_TRANSACTIONS => 'boolean',
         self::ASSET_TRACKING_ENABLED => 'boolean',
         self::LANDING_EXPERIENCE => 'string|in:chat,dashboard',
     ];

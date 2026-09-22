@@ -140,7 +140,7 @@ class PartyController extends ApiController
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             // @phpcs:ignore
-            'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
+            'type' => 'sometimes|string|in:myself,individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
             'created_at' => ['nullable', new Iso8601DateTime()],
         ]);
 
@@ -303,7 +303,7 @@ class PartyController extends ApiController
             'icon' => 'nullable',
             'icon_type' => 'required_with:icon|string|in:icon,image,emoji',
             // @phpcs:ignore
-            'type' => 'sometimes|string|in:individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
+            'type' => 'sometimes|string|in:myself,individual,organization,business,partnership,non_profit,government_agency,educational_institution,healthcare_provider',
             'updated_at' => ['nullable', new Iso8601DateTime()],
         ]);
 

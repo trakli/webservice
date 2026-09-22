@@ -5182,6 +5182,7 @@
                                     "key": {
                                         "type": "string",
                                         "enum": [
+                                            "transfer-myself-transactions",
                                             "default-wallet",
                                             "default-currency",
                                             "default-group",
@@ -5268,6 +5269,7 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "transfer-myself-transactions",
                                 "default-wallet",
                                 "default-currency",
                                 "default-group",
@@ -5327,6 +5329,7 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "transfer-myself-transactions",
                                 "default-wallet",
                                 "default-currency",
                                 "default-group",
@@ -5424,6 +5427,7 @@
                         "schema": {
                             "type": "string",
                             "enum": [
+                                "transfer-myself-transactions",
                                 "default-wallet",
                                 "default-currency",
                                 "default-group",

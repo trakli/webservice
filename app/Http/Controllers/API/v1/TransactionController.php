@@ -9,6 +9,8 @@ use App\Jobs\RecurrentTransactionJob;
 use App\Models\RecurringTransactionRule;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\TransferService;
+use App\Support\ConfigurationKeys;
 use App\Services\FileService;
 use App\Services\RecurringTransactionService;
 use App\Services\TransactionWriter;
@@ -29,7 +31,8 @@ class TransactionController extends ApiController
 
     public function __construct(
         private RecurringTransactionService $recurringTransactionService,
-        private TransactionWriter $transactionWriter
+        private TransactionWriter $transactionWriter,
+        private TransferService $transferService
     ) {
     }
 
@@ -317,6 +320,10 @@ class TransactionController extends ApiController
 
         $data = $request->validated();
         $user = $request->user();
+
+        if ($this->movesMoneyBetweenOwnWallets($request, $data, $user)) {
+            return $this->transferBetweenOwnWallets($data, $user);
+        }
 
         if (! empty($data['client_id'])) {
             $existingTransaction = Transaction::findByClientId($data['client_id'], $user);
@@ -794,5 +801,53 @@ class TransactionController extends ApiController
         $transaction->delete();
 
         return $this->success(['message' => __('Transaction deleted successfully')]);
+    }
+
+    /**
+     * A transaction against a party that stands for the account holder is not
+     * income or spending, it is money moving between their own wallets.
+     */
+    private function movesMoneyBetweenOwnWallets(Request $request, array $data, User $user): bool
+    {
+        $partyId = $data['party_id'] ?? null;
+
+        if ($partyId === null || $user->parties()->whereKey($partyId)->value('type') !== 'myself') {
+            return false;
+        }
+
+        if ($request->has('convert_myself_to_transfer')) {
+            return $request->boolean('convert_myself_to_transfer');
+        }
+
+        // Unset means on, the way the notification preferences read.
+        $preference = $user->getConfigValue(ConfigurationKeys::TRANSFER_MYSELF_TRANSACTIONS);
+
+        return $preference === null || $preference === true || $preference === 'true' || $preference === '1';
+    }
+
+    private function transferBetweenOwnWallets(array $data, User $user): JsonResponse
+    {
+        if (empty($data['from_wallet_id'])) {
+            return $this->failure(__('Server failed to validate request.'), 422, [
+                'from_wallet_id' => [__('Name the wallet the money leaves, or send convert_myself_to_transfer as false.')],
+            ]);
+        }
+
+        $transfer = $this->transferService->transfer(
+            amountToSend: (float) $data['amount'],
+            fromWallet: $user->wallets()->findOrFail($data['from_wallet_id']),
+            amountToReceive: (float) $data['amount'],
+            toWallet: $user->wallets()->findOrFail($data['wallet_id']),
+            user: $user,
+            exchangeRate: 1.0,
+            datetime: $data['datetime'] ?? null,
+            transactionClientIds: ['income_transaction_client_id' => $data['client_id'] ?? null],
+        );
+
+        // The caller asked to record money arriving, so hand back that leg. Its
+        // transfer_id is how they tell a transfer from an ordinary transaction.
+        $received = $transfer->transactions()->where('type', 'income')->firstOrFail();
+
+        return $this->success($received, statusCode: 201);
     }
 }

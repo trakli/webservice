@@ -12,6 +12,8 @@ class StoreTransactionRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
+            'convert_myself_to_transfer' => 'sometimes|boolean',
+            'from_wallet_id' => 'sometimes|integer|exists:wallets,id',
             'client_id' => ['nullable', 'string', new ValidateClientId()],
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
