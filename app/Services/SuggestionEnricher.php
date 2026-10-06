@@ -49,7 +49,7 @@ class SuggestionEnricher
         $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties, $documentContext);
 
         try {
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($user, fn () => Prism::text())
                 ->using(
                     config('services.llm.provider', 'groq'),
                     config('services.llm.model', 'llama-3.1-8b-instant'),

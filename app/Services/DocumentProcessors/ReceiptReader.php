@@ -15,13 +15,13 @@ class ReceiptReader
 {
     use ParsesLlmData;
 
-    public function read(string $rawText): ?TransactionSuggestion
+    public function read(string $rawText, ?\App\Models\User $owner = null): ?TransactionSuggestion
     {
         $provider = config('services.llm.provider', 'groq');
         $model = config('services.llm.model', 'llama-3.1-8b-instant');
 
         try {
-            $llm = Prism::text()
+            $llm = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
                 ->using($provider, $model)
                 ->withSystemPrompt(<<<'PROMPT'
 You are a receipt parser. The text is one store or shop receipt for a single

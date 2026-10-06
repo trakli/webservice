@@ -93,7 +93,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         // code becomes the amount). Read the header semantically instead.
         $mode = config('services.document_processor.response_mapping.mode', 'fields');
         if ($mode === 'text_block' && $rawText !== '') {
-            $structured = (new StatementStructurer())->structure($rawText);
+            $structured = (new StatementStructurer())->structure($rawText, owner: $user);
             if (! empty($structured)) {
                 return $structured;
             }
@@ -104,7 +104,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         // Fallback: if mapping couldn't extract transactions, send raw data to LLM
         if (empty($suggestions) && ! empty($rawText)) {
             Log::info('RemoteDocumentProcessor: mapping returned empty, falling back to LLM');
-            $suggestions = $this->extractViaLlm($rawText);
+            $suggestions = $this->extractViaLlm($rawText, $user);
         }
 
         return $suggestions;
@@ -196,9 +196,6 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         };
     }
 
-    /**
-     * Mode: fields — each item has named keys for date, amount, etc.
-     */
     private function parseFields(array $items, array $mapping): array
     {
         $dateField = $mapping['date_field'] ?? 'date';
@@ -255,7 +252,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
     }
 
     /**
-     * Mode: text_block — each item has a text blob, split by newlines, mapped by line index.
+     * Mode: text_block, each item has a text blob, split by newlines, mapped by line index.
      *
      * Example: content = "31 Mar, 2024\nCard charge (Starlink)\n-36.12\nEUR\n3437.35"
      * With line_mapping: { date: 0, description: 1, amount: 2, currency: 3 }
@@ -407,7 +404,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
      *
      * @return TransactionSuggestion[]
      */
-    private function extractViaLlm(string $rawText): array
+    private function extractViaLlm(string $rawText, User $user): array
     {
         $provider = config('services.llm.provider', 'groq');
         $model = config('services.llm.model', 'llama-3.1-8b-instant');
@@ -416,7 +413,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         $rawText = mb_substr($rawText, 0, 8000);
 
         try {
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($user, fn () => Prism::text())
                 ->using($provider, $model)
                 ->withSystemPrompt(<<<'PROMPT'
 You are a financial document parser. Given raw text extracted from a financial
@@ -481,7 +478,7 @@ PROMPT)
      * Read a store/shop receipt as a single purchase (printed total, merchant,
      * date, category), not the generic per-line-item extraction.
      */
-    public function extractReceipt(UploadedFile $file): ?TransactionSuggestion
+    public function extractReceipt(UploadedFile $file, ?User $user = null): ?TransactionSuggestion
     {
         if (empty(config('services.document_processor.url'))) {
             return null;
@@ -494,6 +491,6 @@ PROMPT)
 
         $rawText = mb_substr($this->extractRawText($response), 0, 8000);
 
-        return $rawText === '' ? null : (new ReceiptReader())->read($rawText);
+        return $rawText === '' ? null : (new ReceiptReader())->read($rawText, $user);
     }
 }

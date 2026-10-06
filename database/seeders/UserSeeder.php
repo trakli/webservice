@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 use Whilesmart\Roles\Models\Role;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 
 class UserSeeder extends Seeder
 {
@@ -109,7 +110,7 @@ class UserSeeder extends Seeder
     private function createCategoriesForUser(User $user): void
     {
         foreach ($this->incomeCategories as $category) {
-            Category::create([
+            Category::createSeeded([
                 'user_id' => $user->id,
                 'name' => $category['name'],
                 'description' => $category['description'],
@@ -118,7 +119,7 @@ class UserSeeder extends Seeder
         }
 
         foreach ($this->expenseCategories as $category) {
-            Category::create([
+            Category::createSeeded([
                 'user_id' => $user->id,
                 'name' => $category['name'],
                 'description' => $category['description'],
@@ -150,7 +151,9 @@ class UserSeeder extends Seeder
 
     private function createWalletsForUser(User $user): void
     {
-        foreach ($this->wallets as $wallet) {
+        $limit = app(Entitlements::class)->limit($user, 'max_wallets');
+        $wallets = $limit === null ? $this->wallets : array_slice($this->wallets, 0, $limit);
+        foreach ($wallets as $wallet) {
             Wallet::create([
                 'user_id' => $user->id,
                 'name' => $wallet['name'],

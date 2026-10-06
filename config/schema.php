@@ -39,6 +39,12 @@ return [
     'bypass_paths' => ['schema/*', 'api/v1/info'],
 
     'tables' => [
+        'categories' => [
+            'columns' => [
+                'provenance' => ['type' => 'string', 'default' => 'custom'],
+            ],
+        ],
+
         'transactions' => [
             'columns' => [
                 'intent' => ['type' => 'string', 'default' => 'regular'],

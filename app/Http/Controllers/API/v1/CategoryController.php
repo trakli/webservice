@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
-use Whilesmart\Entitlements\Contracts\Entitlements;
 
 #[OA\Tag(name: 'Category', description: 'Endpoints for managing transaction categories')]
 class CategoryController extends ApiController
@@ -186,6 +185,8 @@ class CategoryController extends ApiController
             return $this->success($category, __('Category updated successfully'));
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to update category'), 500, [$e->getMessage()]);
         }
@@ -285,11 +286,6 @@ class CategoryController extends ApiController
             return $this->success($category_exists, __('Category already exists'), 200);
         }
 
-        $categoryLimit = app(Entitlements::class)->limit($user, 'max_categories');
-        if ($categoryLimit !== null && $user->categories()->count() >= $categoryLimit) {
-            return $this->failure(__('You have reached the maximum number of categories allowed.'), 403);
-        }
-
         try {
             $category = DB::transaction(function () use ($data, $request, $user) {
                 /** @var Category $category */
@@ -310,6 +306,8 @@ class CategoryController extends ApiController
             return $this->success($category, __('Category created successfully'), 201);
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create category'), 500, [$e->getMessage()]);
         }
@@ -481,7 +479,7 @@ class CategoryController extends ApiController
                         continue;
                     }
 
-                    $category = $user->categories()->create($categoryData);
+                    $category = Category::createSeeded([...$categoryData, 'user_id' => $user->getKey()]);
                     $category->markAsSynced();
                     $created[] = $category;
                 }
@@ -492,6 +490,8 @@ class CategoryController extends ApiController
                 'skipped' => $skipped,
                 'categories' => $created,
             ], __('Default categories created successfully'), 201);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create default categories'), 500, [$e->getMessage()]);
         }

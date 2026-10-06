@@ -85,11 +85,11 @@ class EntitlementsTest extends TestCase
         $this->assertEquals('quota_exceeded', $assistant->result['source']);
     }
 
-    public function test_agent_turn_consumes_summed_tokens(): void
+    public function test_agent_results_do_not_consume_already_accounted_tokens(): void
     {
         $fake = Mockery::mock(Entitlements::class);
         $fake->shouldReceive('remaining')->with(Mockery::any(), 'ai_tokens')->andReturn(INF);
-        $fake->shouldReceive('consume')->once()->with(Mockery::any(), 'ai_tokens', 15);
+        $fake->shouldNotReceive('consume');
         $this->app->instance(Entitlements::class, $fake);
 
         [$assistant] = $this->makeTurn('log 20 for coffee');

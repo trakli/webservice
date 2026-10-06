@@ -39,6 +39,7 @@ return [
 
     'smartql' => [
         'url' => env('SMARTQL_URL', 'http://smartql:8000'),
+        'api_key' => env('SMARTQL_API_KEY'),
     ],
 
     'llm' => [

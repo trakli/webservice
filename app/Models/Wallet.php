@@ -46,6 +46,7 @@ use Whilesmart\Agents\Resources\ResourceField;
 )]
 class Wallet extends Model implements HasAgentResource
 {
+    use \App\Traits\EnforcesCreationLimit;
     use HasClientCreatedAt;
     use HasFactory;
     use Iconable;

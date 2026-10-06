@@ -5,7 +5,6 @@ namespace App\Jobs;
 use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Models\ChatMessage;
 use App\Services\AgentRunner;
-use Whilesmart\AgentMetrics\Facades\TokenMeter;
 use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Bus\Queueable;
@@ -187,8 +186,6 @@ class ProcessChatMessageJob implements ShouldQueue
             ],
             'completed_at' => now(),
         ]);
-
-        $this->recordTokenUsage($result['usage'] ?? []);
     }
 
     /**
@@ -198,32 +195,6 @@ class ProcessChatMessageJob implements ShouldQueue
     private function owner(): ?Model
     {
         return $this->assistantMessage->session->owner;
-    }
-
-    /**
-     * @param  array{prompt_tokens?: int, completion_tokens?: int}  $usage
-     */
-    private function recordTokenUsage(array $usage): void
-    {
-        $tokens = (int) ($usage['prompt_tokens'] ?? 0) + (int) ($usage['completion_tokens'] ?? 0);
-
-        if ($tokens <= 0) {
-            return;
-        }
-
-        $owner = $this->owner();
-        app(Entitlements::class)->consume($owner, 'ai_tokens', $tokens);
-
-        if ($owner !== null) {
-            TokenMeter::record(
-                owner: $owner,
-                provider: (string) config('agents.provider', 'gemini'),
-                model: (string) config('agents.model', 'gemini-flash-latest'),
-                usage: $usage,
-                operation: 'chat.agent',
-                subject: $this->assistantMessage,
-            );
-        }
     }
 
     private function answerQuotaExceeded(): void
