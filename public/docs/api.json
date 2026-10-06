@@ -3876,6 +3876,80 @@
                 }
             }
         },
+        "/streaks": {
+            "get": {
+                "tags": [
+                    "Streaks"
+                ],
+                "summary": "List your daily and weekly transaction and check-in streaks",
+                "description": "Current length is zero after a missed period. The previous day or week remains continuable. Reading this endpoint records a check-in.",
+                "operationId": "7ce698b44836a837455d31153c56e0f6",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/limitParam"
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Owner-scoped streaks with flat pagination",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/Streak"
+                                                    }
+                                                },
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/transactions": {
             "get": {
                 "tags": [
@@ -6614,13 +6688,6 @@
                     "id": {
                         "type": "integer"
                     },
-                    "owner_id": {
-                        "type": "integer"
-                    },
-                    "owner_type": {
-                        "type": "string",
-                        "example": "App\\Models\\User"
-                    },
                     "type": {
                         "type": "string",
                         "enum": [
@@ -6640,6 +6707,9 @@
                     },
                     "longest_length": {
                         "type": "integer"
+                    },
+                    "is_running": {
+                        "type": "boolean"
                     },
                     "started_on": {
                         "type": "string",
@@ -6965,6 +7035,10 @@
         {
             "name": "Party",
             "description": "Party"
+        },
+        {
+            "name": "Streaks",
+            "description": "Streaks"
         },
         {
             "name": "Wallet",
