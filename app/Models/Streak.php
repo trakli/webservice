@@ -13,12 +13,11 @@ use OpenApi\Attributes as OA;
     schema: 'Streak',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
-        new OA\Property(property: 'owner_id', type: 'integer'),
-        new OA\Property(property: 'owner_type', type: 'string', example: 'App\\Models\\User'),
         new OA\Property(property: 'type', type: 'string', enum: ['transaction', 'check_in']),
         new OA\Property(property: 'period', type: 'string', enum: ['daily', 'weekly']),
         new OA\Property(property: 'current_length', type: 'integer'),
         new OA\Property(property: 'longest_length', type: 'integer'),
+        new OA\Property(property: 'is_running', type: 'boolean'),
         new OA\Property(property: 'started_on', type: 'string', format: 'date', nullable: true),
         new OA\Property(property: 'last_tracked_on', type: 'string', format: 'date', nullable: true),
     ],

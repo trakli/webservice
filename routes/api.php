@@ -23,6 +23,7 @@ use App\Http\Controllers\API\v1\NotificationController;
 use App\Http\Controllers\API\v1\PartyController;
 use App\Http\Controllers\API\v1\ReminderController;
 use App\Http\Controllers\API\v1\StatsController;
+use App\Http\Controllers\API\v1\StreakController;
 use App\Http\Controllers\API\v1\TransactionController;
 use App\Http\Controllers\API\v1\TransactionRefundController;
 use App\Http\Controllers\API\v1\TransferController;
@@ -62,6 +63,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
 
         Route::get('stats', [StatsController::class, 'index']);
     });
+    Route::get('streaks', [StreakController::class, 'index']);
     Route::get('integrations', [IntegrationController::class, 'index']);
     // Ahead of the resource route so "export" is not read as a transaction id.
     Route::get('transactions/export', [ExportController::class, 'transactions']);

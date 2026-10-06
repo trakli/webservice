@@ -136,6 +136,21 @@ class StreakService
         return in_array($length, $milestones, true) ? $length : null;
     }
 
+    public function effectiveLength(Streak $streak, Model $owner): int
+    {
+        if ($streak->last_tracked_on === null) {
+            return 0;
+        }
+
+        $timezone = $this->timezoneFor($owner);
+        $current = $streak->period->bucket(CarbonImmutable::now($timezone));
+        $last = $streak->period->bucket(CarbonImmutable::parse($streak->last_tracked_on->format('Y-m-d'), $timezone));
+
+        return $last->greaterThanOrEqualTo($streak->period->previousBucket($current))
+            ? $streak->current_length
+            : 0;
+    }
+
     /**
      * The owner's current day, for callers that need to agree with the bucket
      * this service counts against rather than keep a clock of their own.
