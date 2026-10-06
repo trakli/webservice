@@ -170,6 +170,34 @@ class ModelCallGate
         ], ['owner_type', 'owner_id'], ['reason', 'call_id', 'created_at']);
     }
 
+    public function recordRemoteUsage(?Model $owner, mixed $usage): void
+    {
+        foreach (['input_tokens', 'output_tokens', 'total_tokens'] as $key) {
+            if (! is_array($usage) || ! isset($usage[$key]) || ! is_int($usage[$key]) || $usage[$key] < 0) {
+                $this->blockPendingAccounting($owner, null);
+                throw new RuntimeException('SmartQL usage is unavailable.');
+            }
+        }
+        if ($owner !== null) {
+            TokenMeter::record(
+                owner: $owner,
+                provider: 'smartql',
+                model: 'smartql',
+                usage: [
+                    'prompt_tokens' => $usage['input_tokens'],
+                    'completion_tokens' => $usage['output_tokens'],
+                    'total_tokens' => $usage['total_tokens'],
+                ],
+                operation: 'smartql.request',
+            );
+            app(Entitlements::class)->consume($owner, 'ai_tokens', $usage['total_tokens']);
+        }
+        if (($usage['complete'] ?? false) !== true) {
+            $this->blockPendingAccounting($owner, null);
+            throw new RuntimeException('SmartQL usage is incomplete.');
+        }
+    }
+
     public static function totalTokens(Usage $usage, string $provider): int
     {
         $total = $usage->promptTokens + $usage->completionTokens;
