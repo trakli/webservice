@@ -45,7 +45,6 @@ use Illuminate\Support\Facades\Route;
 
 // Stateless public routes are now automatically registered by the user-authentication package
 Route::get('info', [VersionController::class, 'getServerInfo']);
-Route::post('v1/internal/model', [\App\Http\Controllers\API\v1\RemoteModelController::class, 'store'])->middleware('throttle:120,1');
 
 // Stateful authenticated routes
 Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInStreak::class]], function () {
