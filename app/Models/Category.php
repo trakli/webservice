@@ -41,6 +41,7 @@ use Whilesmart\Agents\Resources\ResourceField;
 )]
 class Category extends Model implements HasAgentResource
 {
+    use \App\Traits\EnforcesCreationLimit;
     use HasClientCreatedAt;
     use HasFactory;
     use Iconable;
@@ -64,6 +65,19 @@ class Category extends Model implements HasAgentResource
         'user_id',
         'slug',
     ];
+
+    protected $attributes = ['provenance' => 'custom'];
+
+    protected $hidden = ['provenance'];
+
+    public static function createSeeded(array $attributes): self
+    {
+        $category = new static($attributes);
+        $category->provenance = 'seeded';
+        $category->save();
+
+        return $category;
+    }
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
 

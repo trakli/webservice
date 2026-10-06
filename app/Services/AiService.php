@@ -23,6 +23,15 @@ class AiService
         ?string $language = null,
         ?string $role = null
     ): array {
+        $paidHost = ! app(\Whilesmart\Entitlements\Contracts\Entitlements::class) instanceof \Whilesmart\Entitlements\Support\AllowAllEntitlements;
+        $owner = \App\Models\User::find($userId);
+        if ($paidHost) {
+            if ($owner === null || blank(config('services.smartql.api_key'))) {
+                return ['success' => false, 'error' => __('Authenticated remote AI is unavailable.')];
+            }
+            app(\App\Ai\Billing\ModelCallGate::class)->assertAllowed($owner);
+        }
+
         try {
             $payload = [
                 'question' => $question,
@@ -42,7 +51,14 @@ class AiService
                 $payload['format_hint'] = $formatHint;
             }
 
-            $response = Http::timeout(60)->post("{$this->baseUrl}/ask", $payload);
+            if ($paidHost) {
+                $payload['owner_grant'] = app(\App\Ai\Billing\RemoteModelGrant::class)->issue($owner);
+            }
+            $http = Http::timeout(240);
+            if (filled(config('services.smartql.api_key'))) {
+                $http->withHeaders(['X-API-Key' => config('services.smartql.api_key')]);
+            }
+            $response = $http->post("{$this->baseUrl}/ask", $payload);
 
             if ($response->successful()) {
                 return [
@@ -53,7 +69,6 @@ class AiService
 
             Log::warning('SmartQL request failed', [
                 'status' => $response->status(),
-                'body' => $response->body(),
             ]);
 
             return [
@@ -63,7 +78,6 @@ class AiService
         } catch (\Exception $e) {
             Log::error('SmartQL service error', [
                 'message' => $e->getMessage(),
-                'question' => $question,
             ]);
 
             return [

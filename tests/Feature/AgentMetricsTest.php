@@ -11,10 +11,6 @@ use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Prism\Prism\Enums\FinishReason;
-use Prism\Prism\Facades\Prism;
-use Prism\Prism\Text\Response as TextResponse;
-use Prism\Prism\ValueObjects\Meta;
 use Prism\Prism\ValueObjects\Usage;
 use Tests\TestCase;
 
@@ -22,37 +18,23 @@ class AgentMetricsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_routing_a_chat_turn_records_token_usage_for_the_owner(): void
+    public function test_completed_model_call_records_token_usage_for_the_owner(): void
     {
         $user = User::factory()->create();
 
-        Prism::fake([
-            new TextResponse(
-                steps: collect([]),
-                text: AiRouter::ROUTE_DATA,
-                finishReason: FinishReason::Stop,
-                toolCalls: [],
-                toolResults: [],
-                usage: new Usage(24, 1),
-                meta: new Meta('fake', 'fake'),
-                messages: collect([]),
-            ),
-        ]);
+        app(\App\Ai\Billing\ModelCallGate::class)->record($user, new Usage(24, 1), 'groq', 'test-model');
 
-        $route = app(AiRouter::class)->classify('How much did I spend?', '', $user);
-
-        $this->assertSame(AiRouter::ROUTE_DATA, $route);
         $this->assertDatabaseHas('token_usages', [
             'owner_type' => $user->getMorphClass(),
             'owner_id' => $user->id,
-            'operation' => 'chat.classify',
+            'operation' => 'model.call',
             'prompt_tokens' => 24,
             'completion_tokens' => 1,
         ]);
         $this->assertSame(25, $user->fresh()->tokensUsed());
     }
 
-    public function test_an_agent_turn_records_token_usage_for_the_owner(): void
+    public function test_agent_results_do_not_duplicate_completed_model_usage(): void
     {
         $user = User::factory()->create();
         $session = ChatSession::create([
@@ -84,14 +66,7 @@ class AgentMetricsTest extends TestCase
 
         (new ProcessChatMessageJob($assistant))->handle(Mockery::mock(AiService::class), $router, $agent);
 
-        $this->assertDatabaseHas('token_usages', [
-            'owner_type' => $user->getMorphClass(),
-            'owner_id' => $user->id,
-            'operation' => 'chat.agent',
-            'prompt_tokens' => 120,
-            'completion_tokens' => 30,
-        ]);
-
-        $this->assertSame(150, $user->fresh()->tokensUsed());
+        $this->assertDatabaseCount('token_usages', 0);
+        $this->assertSame(0, $user->fresh()->tokensUsed());
     }
 }

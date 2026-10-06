@@ -440,7 +440,8 @@ class AiChatTest extends TestCase
         (new ProcessChatMessageJob($assistant))->handle(app(AiService::class), $router, app(AgentRunner::class));
 
         Http::assertSent(function ($request) {
-            return $request['context']['user_id'] === $this->user->id
+            return str_ends_with($request->url(), '/ask')
+                && $request['context']['user_id'] === $this->user->id
                 && ! array_key_exists('role', $request['context']);
         });
     }
@@ -470,7 +471,8 @@ class AiChatTest extends TestCase
         (new ProcessChatMessageJob($assistant))->handle(app(AiService::class), $router, app(AgentRunner::class));
 
         Http::assertSent(function ($request) {
-            return $request['context']['user_id'] === $this->user->id
+            return str_ends_with($request->url(), '/ask')
+                && $request['context']['user_id'] === $this->user->id
                 && ($request['context']['role'] ?? null) === 'admin';
         });
     }
@@ -494,7 +496,8 @@ class AiChatTest extends TestCase
         $this->assertEquals('scalar', $out['format_type']);
 
         Http::assertSent(function ($request) {
-            return $request['context']['user_id'] === $this->user->id
+            return str_ends_with($request->url(), '/ask')
+                && $request['context']['user_id'] === $this->user->id
                 && $request['generate_response'] === false;
         });
     }

@@ -66,7 +66,7 @@ class ExtractReceiptTool extends RecordTransactionTool
         }
 
         $uploaded = new UploadedFile(Storage::path($path), basename($path), $mimeType, null, true);
-        $suggestion = $processor->extractReceipt($uploaded);
+        $suggestion = $processor->extractReceipt($uploaded, $context->user);
         if ($suggestion === null || ! $suggestion->amount) {
             throw new InvalidArgumentException('Could not read a transaction from that receipt.');
         }
