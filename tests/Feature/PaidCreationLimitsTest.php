@@ -22,7 +22,7 @@ class PaidCreationLimitsTest extends TestCase
             {
                 return match ($key) {
                     'max_wallets' => 3,
-                    'max_categories' => 10,
+                    'max_categories' => 5,
                     default => null,
                 };
             }
@@ -53,16 +53,16 @@ class PaidCreationLimitsTest extends TestCase
         Category::createSeeded(['name' => 'Default food', 'type' => 'expense', 'user_id' => $user->id]);
         $this->actingAs($user);
 
-        for ($index = 0; $index < 10; $index++) {
+        for ($index = 0; $index < 5; $index++) {
             $this->postJson('/api/v1/categories', [
                 'name' => "Custom {$index}", 'type' => 'expense', 'provenance' => 'seeded',
             ])->assertCreated();
         }
 
         $this->postJson('/api/v1/categories', [
-            'name' => 'Eleventh custom', 'type' => 'expense', 'provenance' => 'grandfathered',
-        ])->assertStatus(403)->assertJsonPath('errors.maximum', 10);
-        $this->assertSame(10, Category::where('user_id', $user->id)->where('provenance', 'custom')->count());
+            'name' => 'Sixth custom', 'type' => 'expense', 'provenance' => 'grandfathered',
+        ])->assertStatus(403)->assertJsonPath('errors.maximum', 5);
+        $this->assertSame(5, Category::where('user_id', $user->id)->where('provenance', 'custom')->count());
         $this->assertSame(1, Category::where('user_id', $user->id)->where('provenance', 'seeded')->count());
     }
 
