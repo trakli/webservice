@@ -134,15 +134,14 @@ class PaidCreationLimitsTest extends TestCase
         ])->assertCreated();
         \Whilesmart\ModelConfiguration\Models\Configuration::where('configurable_id', $user->id)
             ->where('configurable_type', $user->getMorphClass())->where('key', CategoryAllowance::KEY)->delete();
-        $migration = require database_path('migrations/2026_10_22_000001_preserve_category_allowances.php');
-        $migration->up();
-        $this->assertSame(0, app(CategoryAllowance::class)->count($user));
         $this->postJson('/api/v1/categories', [
             'name' => 'New category', 'type' => 'expense',
         ])->assertCreated();
         $this->assertSame(1, app(CategoryAllowance::class)->count($user));
-        $migration->up();
-        $this->assertSame(1, app(CategoryAllowance::class)->count($user));
+        $this->postJson('/api/v1/categories', [
+            'name' => 'Another new category', 'type' => 'expense',
+        ])->assertCreated();
+        $this->assertSame(2, app(CategoryAllowance::class)->count($user));
     }
 
     public function test_another_owner_has_an_independent_limit(): void

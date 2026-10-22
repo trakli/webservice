@@ -68,8 +68,6 @@ class Category extends Model implements HasAgentResource
 
     protected bool $seeded = false;
 
-    protected $hidden = ['provenance'];
-
     public static function createSeeded(array $attributes): self
     {
         $category = new static($attributes);
