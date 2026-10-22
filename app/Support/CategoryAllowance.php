@@ -23,13 +23,6 @@ class CategoryAllowance
         $this->store($owner, array_values(array_unique([...$this->exemptIds($owner), $category->getKey()])));
     }
 
-    public function initialize(User $owner, array $ids): void
-    {
-        if ($this->query($owner)->lockForUpdate()->first() === null) {
-            $this->store($owner, $ids);
-        }
-    }
-
     private function exemptIds(User $owner): array
     {
         $configuration = $this->query($owner)->lockForUpdate()->first();
