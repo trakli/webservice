@@ -95,9 +95,7 @@ class AiService
             }
             $response = $http->post("{$this->baseUrl}/ask", $payload);
             $usage = $response->json('usage') ?? $response->json('detail.usage');
-            if ($paidHost || (is_array($usage) && ($usage['complete'] ?? false) === true)) {
-                $gate->recordRemoteUsage($owner, $usage);
-            }
+            $gate->recordRemoteUsage($owner, $usage);
 
             return $response;
         });
