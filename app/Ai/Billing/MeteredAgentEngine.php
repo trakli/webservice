@@ -14,20 +14,12 @@ class MeteredAgentEngine extends \Whilesmart\Agents\Engines\Prism\PrismEngine
 
     public function stream(AgentRequest $request, callable $onEvent): AgentResult
     {
-        if (app(\Whilesmart\Entitlements\Contracts\Entitlements::class) instanceof \Whilesmart\Entitlements\Support\AllowAllEntitlements) {
-            return app(ModelCallGate::class)->withOwner($request->context->user, fn () => parent::stream($request, $onEvent));
-        }
+        $gate = app(ModelCallGate::class);
+        $owner = $request->context->user;
 
-        $result = $this->run($request);
-
-        if ($result->text !== '') {
-            $onEvent(\Whilesmart\Agents\ValueObjects\AgentStreamEvent::textDelta($result->text));
-        }
-
-        for ($step = 0; $step < $result->steps; $step++) {
-            $onEvent(\Whilesmart\Agents\ValueObjects\AgentStreamEvent::stepFinish());
-        }
-
-        return $result;
+        return $gate->serialized($owner, fn () => $gate->withOwner(
+            $owner,
+            fn () => parent::stream($request, $onEvent),
+        ));
     }
 }

@@ -12,7 +12,6 @@ use Prism\Prism\Enums\FinishReason;
 use Prism\Prism\ValueObjects\Messages\ToolResultMessage;
 use Prism\Prism\Streaming\Events\StreamEndEvent;
 use RuntimeException;
-use LogicException;
 use Generator;
 use Illuminate\Database\Eloquent\Model;
 use Prism\Prism\Text\Response;
@@ -110,7 +109,8 @@ class MeteredPendingRequest extends PendingRequest
     public function asStream(): Generator
     {
         if (! app(Entitlements::class) instanceof AllowAllEntitlements) {
-            throw new LogicException('Metered model calls use the agent engine progress stream.');
+            app(ModelCallGate::class)->assertAllowed($this->owner);
+            $this->maxTokens = min($this->maxTokens ?? 4096, 4096);
         }
 
         foreach (parent::asStream() as $event) {
