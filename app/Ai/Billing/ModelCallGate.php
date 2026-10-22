@@ -4,7 +4,6 @@ namespace App\Ai\Billing;
 
 use Whilesmart\Entitlements\Support\AllowAllEntitlements;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -102,8 +101,7 @@ class ModelCallGate
         foreach ($required as $key) {
             $value = data_get($data, $key);
             if (! is_int($value) || $value < 0) {
-                $this->blockPendingAccounting($this->activeCall['owner'], $this->activeCall['metadata']['call_id'] ?? null);
-                throw new RuntimeException('Provider usage requires reconciliation before another model call.');
+                return $response;
             }
         }
         $metadata = $this->activeCall['metadata'];
@@ -137,18 +135,6 @@ class ModelCallGate
     public function assertAllowed(?Model $owner): void
     {
         $entitlements = app(Entitlements::class);
-        if (
-            ! $entitlements instanceof AllowAllEntitlements && $owner !== null
-            && DB::table('model_usage_blocks')->where('owner_type', $owner->getMorphClass())
-                ->where('owner_id', $owner->getKey())->exists()
-        ) {
-            throw new HttpResponseException(app(config('user-authentication.response_formatter'))->failure(
-                'AI access is paused until provider usage has been reconciled.',
-                402,
-                ['feature' => 'ai', 'reason' => 'accounting_pending'],
-            ));
-        }
-
         if (! $entitlements->allows($owner, 'ai') || $entitlements->remaining($owner, 'ai_tokens') <= 0) {
             throw new HttpResponseException(app(config('user-authentication.response_formatter'))->failure(
                 'Paid AI access or the monthly token allowance is unavailable.',
@@ -158,24 +144,11 @@ class ModelCallGate
         }
     }
 
-    private function blockPendingAccounting(?Model $owner, ?string $callId): void
-    {
-        if ($owner === null) {
-            throw new RuntimeException('The model call has no accountable owner.');
-        }
-
-        DB::table('model_usage_blocks')->upsert([
-            'owner_type' => $owner->getMorphClass(), 'owner_id' => $owner->getKey(),
-            'reason' => 'provider_usage_missing', 'call_id' => $callId, 'created_at' => now('UTC'),
-        ], ['owner_type', 'owner_id'], ['reason', 'call_id', 'created_at']);
-    }
-
     public function recordRemoteUsage(?Model $owner, mixed $usage): void
     {
         foreach (['input_tokens', 'output_tokens', 'total_tokens'] as $key) {
             if (! is_array($usage) || ! isset($usage[$key]) || ! is_int($usage[$key]) || $usage[$key] < 0) {
-                $this->blockPendingAccounting($owner, null);
-                throw new RuntimeException('SmartQL usage is unavailable.');
+                return;
             }
         }
         if ($owner !== null) {
@@ -191,10 +164,6 @@ class ModelCallGate
                 operation: 'smartql.request',
             );
             app(Entitlements::class)->consume($owner, 'ai_tokens', $usage['total_tokens']);
-        }
-        if (($usage['complete'] ?? false) !== true) {
-            $this->blockPendingAccounting($owner, null);
-            throw new RuntimeException('SmartQL usage is incomplete.');
         }
     }
 
