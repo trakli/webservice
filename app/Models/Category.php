@@ -66,17 +66,22 @@ class Category extends Model implements HasAgentResource
         'slug',
     ];
 
-    protected $attributes = ['provenance' => 'custom'];
+    protected bool $seeded = false;
 
     protected $hidden = ['provenance'];
 
     public static function createSeeded(array $attributes): self
     {
         $category = new static($attributes);
-        $category->provenance = 'seeded';
+        $category->seeded = true;
         $category->save();
 
         return $category;
+    }
+
+    public function isSeeded(): bool
+    {
+        return $this->seeded;
     }
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
@@ -89,6 +94,7 @@ class Category extends Model implements HasAgentResource
         return [
             'slug' => [
                 'source' => 'name',
+                'includeTrashed' => true,
             ],
         ];
     }
