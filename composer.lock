@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6fbb11602efec2373a00a2783c09e807",
+    "content-hash": "02a17bc12bb4e63cc8a37f6636a89a2f",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -11095,16 +11095,16 @@
         },
         {
             "name": "whilesmart/eloquent-admin",
-            "version": "0.2.0",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-admin.git",
-                "reference": "984a814aeac6389a3ed665ff9027e76e8fc48c0b"
+                "reference": "e6ba79f00991a29f0b637542c6b794b9aa2abc03"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-admin/zipball/984a814aeac6389a3ed665ff9027e76e8fc48c0b",
-                "reference": "984a814aeac6389a3ed665ff9027e76e8fc48c0b",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-admin/zipball/e6ba79f00991a29f0b637542c6b794b9aa2abc03",
+                "reference": "e6ba79f00991a29f0b637542c6b794b9aa2abc03",
                 "shasum": ""
             },
             "require": {
@@ -11117,7 +11117,13 @@
             "require-dev": {
                 "fakerphp/faker": "^1.24",
                 "laravel/pint": "^1.22",
-                "orchestra/testbench": "^9.0|^10.0"
+                "orchestra/testbench": "^9.0|^10.0",
+                "whilesmart/eloquent-entitlements": "^2.1",
+                "whilesmart/entitlements-cashier": "^0.4"
+            },
+            "suggest": {
+                "whilesmart/eloquent-entitlements": "Free passes on the discounts page (^2.1)",
+                "whilesmart/entitlements-cashier": "Stripe discount codes on the discounts page (^0.4)"
             },
             "type": "library",
             "extra": {
@@ -11145,9 +11151,9 @@
             "description": "Shared measurements, user directory and automatic email templates for Laravel applications.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-admin/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-admin/tree/v0.2.0"
+                "source": "https://github.com/whilesmartphp/eloquent-admin/tree/v0.3.0"
             },
-            "time": "2026-09-22T17:57:01+00:00"
+            "time": "2026-10-23T08:51:42+00:00"
         },
         {
             "name": "whilesmart/eloquent-agent-actions",
@@ -11371,16 +11377,16 @@
         },
         {
             "name": "whilesmart/eloquent-entitlements",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-entitlements.git",
-                "reference": "66be36b3f07a09861bb7ee41acc409496d5e6bed"
+                "reference": "542a65ef37c05f5ff07d9cdb00121232e5d5ac8a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-entitlements/zipball/66be36b3f07a09861bb7ee41acc409496d5e6bed",
-                "reference": "66be36b3f07a09861bb7ee41acc409496d5e6bed",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-entitlements/zipball/542a65ef37c05f5ff07d9cdb00121232e5d5ac8a",
+                "reference": "542a65ef37c05f5ff07d9cdb00121232e5d5ac8a",
                 "shasum": ""
             },
             "require": {
@@ -11419,9 +11425,9 @@
             "description": "Provider-neutral feature gating, plan limits and metered usage for Laravel, scoped per polymorphic owner. Ships an allow-all default so self-hosting stays free; hosts rebind to enforce.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-entitlements/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-entitlements/tree/v2.0.0"
+                "source": "https://github.com/whilesmartphp/eloquent-entitlements/tree/v2.1.0"
             },
-            "time": "2026-07-19T12:33:11+00:00"
+            "time": "2026-10-23T02:31:33+00:00"
         },
         {
             "name": "whilesmart/eloquent-feedback",
