@@ -14,9 +14,11 @@ return [
     'register_routes' => env('ENGAGEMENT_REGISTER_ROUTES', false),
     'register_report_route' => env('ENGAGEMENT_REGISTER_REPORT_ROUTE', false),
     'register_ingest_route' => env('ENGAGEMENT_REGISTER_INGEST_ROUTE', true),
+    'register_identify_route' => env('ENGAGEMENT_REGISTER_IDENTIFY_ROUTE', true),
     'route_prefix' => env('ENGAGEMENT_ROUTE_PREFIX', 'api/v1'),
     'route_middleware' => ['api', 'auth:sanctum'],
     'ingest_route_middleware' => ['api', 'throttle:60,1'],
+    'identify_route_middleware' => ['api', 'auth:sanctum', 'throttle:30,1'],
     'max_batch_size' => 20,
     'clients' => [
         'dashboard' => [

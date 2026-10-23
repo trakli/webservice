@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "02a17bc12bb4e63cc8a37f6636a89a2f",
+    "content-hash": "1b0a37db92a7ac933de79d9e722bbd5d",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -11321,16 +11321,16 @@
         },
         {
             "name": "whilesmart/eloquent-engagement",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-engagement.git",
-                "reference": "0a28da8f2c46a67210e7f5911f8af711b7698862"
+                "reference": "7020fb8e67f14041cd50952a5cadbbb39c79b5fc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-engagement/zipball/0a28da8f2c46a67210e7f5911f8af711b7698862",
-                "reference": "0a28da8f2c46a67210e7f5911f8af711b7698862",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-engagement/zipball/7020fb8e67f14041cd50952a5cadbbb39c79b5fc",
+                "reference": "7020fb8e67f14041cd50952a5cadbbb39c79b5fc",
                 "shasum": ""
             },
             "require": {
@@ -11371,9 +11371,9 @@
             "description": "Host-agnostic engagement and metrics aggregation for Laravel: record usage events and report app metrics from provider classes the host implements.",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-engagement/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-engagement/tree/v1.0.0"
+                "source": "https://github.com/whilesmartphp/eloquent-engagement/tree/v1.1.0"
             },
-            "time": "2026-09-20T10:18:25+00:00"
+            "time": "2026-10-23T21:01:27+00:00"
         },
         {
             "name": "whilesmart/eloquent-entitlements",
