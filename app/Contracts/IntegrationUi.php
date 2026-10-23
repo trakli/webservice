@@ -15,6 +15,7 @@ namespace App\Contracts;
  *     'connect'    => array|null,          // ['type' => ..., ...type-specific keys]
  *     'onboarding' => array|null,          // ['step' => ..., 'optional' => bool, 'order' => int]
  *     'component'  => string|null,         // slot-key a plugin Nuxt layer registered, or null
+ *     'tab'        => array|null,          // settings.tabs: ['key' => ..., 'title' => ..., 'component' => ..., 'order' => int]
  *     'show_when_unconfigured' => bool,    // optional; render with a needs-setup state instead of hiding when not configured
  *   ]
  */
