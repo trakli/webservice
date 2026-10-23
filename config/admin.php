@@ -8,6 +8,7 @@ return [
     'user_model' => User::class,
     'user_search_columns' => ['first_name', 'last_name', 'email', 'username'],
     'owner' => ['type' => 'platform', 'id' => 0],
+    'posthog' => ['dashboard_url' => env('ADMIN_POSTHOG_DASHBOARD_URL')],
     'templates' => [
         'welcome' => [
             'name' => 'Welcome email',
