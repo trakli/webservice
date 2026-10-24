@@ -320,6 +320,7 @@ class Transaction extends Model implements HasAgentResource
                     'Set when this row is one leg of a wallet-to-wallet transfer rather than real income or spending',
                 ),
                 ResourceField::internal('user_id'),
+                ResourceField::internal('created_by_user_id'),
             ],
             relationships: [
                 ResourceRelationship::belongsTo('transaction_wallet', 'wallets', 'wallet_id', 'Each transaction belongs to a wallet'),

@@ -49,13 +49,29 @@ class CreateBudgetAlertReminder
         }
 
         $owner = $budget->owner;
+        if ($owner instanceof \App\Models\Workspace) {
+            if (! $owner->is_active) {
+                return;
+            }
+            foreach ($owner->members()->distinct()->get() as $member) {
+                $this->createUserReminder($member, $budget, $periodStart, $source, $titleKey, $bodyKey, $bodyContext);
+            }
+            return;
+        }
         if (! $owner || ! method_exists($owner, 'reminders')) {
             return;
         }
 
+        $this->createUserReminder($owner, $budget, $periodStart, $source, $titleKey, $bodyKey, $bodyContext);
+    }
+
+    private function createUserReminder(\App\Models\User $owner, Budget $budget, string $periodStart, string $source, string $titleKey, string $bodyKey, array $bodyContext): void
+    {
+        $budgetId = $budget->id;
         // Idempotent per (budget, source, period) — a new period naturally
         // re-opens eligibility since we key off the period_start date.
         $exists = Reminder::query()
+            ->where('user_id', $owner->id)
             ->where('remindable_type', Budget::class)
             ->where('remindable_id', $budgetId)
             ->where('source', $source)

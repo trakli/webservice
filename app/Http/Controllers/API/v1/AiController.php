@@ -269,6 +269,18 @@ class AiController extends ApiController
                 'error' => $e->getMessage(),
             ]);
 
+            if ($action->action_type === 'workspace.change') {
+                if ($e instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+                    return $e->getResponse();
+                }
+                if ($e instanceof \Illuminate\Validation\ValidationException) {
+                    return $this->failure($e->getMessage(), 422, $e->errors());
+                }
+                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                    return $this->failure('The workspace or record is no longer available.', 404);
+                }
+            }
+
             return $this->failure(__('Failed to perform the action.'), Response::HTTP_INTERNAL_SERVER_ERROR, [$e->getMessage()]);
         }
 

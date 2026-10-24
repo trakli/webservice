@@ -114,6 +114,8 @@ class Category extends Model implements HasAgentResource
                 ResourceField::enum('type', ['income', 'expense', 'invoice'], 'What the category applies to'),
                 ResourceField::text('description', 'What the category covers'),
                 ResourceField::internal('user_id'),
+                ResourceField::internal('workspace_id'),
+                ResourceField::internal('created_by_user_id'),
             ],
             readTool: false,
         );

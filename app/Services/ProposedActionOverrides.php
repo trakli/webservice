@@ -39,6 +39,7 @@ class ProposedActionOverrides
             'party.create' => ['name', 'type', 'description'],
             'group.create' => ['name', 'description'],
             'reminder.create' => ['title', 'description', 'trigger_at', 'due_at', 'priority'],
+            'workspace.change' => ['name', 'amount', 'currency', 'period_type', 'start_date', 'end_date', 'description', 'datetime', 'targets', 'is_refund'],
             'budget.create' => [
                 'name', 'amount', 'currency', 'period_type', 'start_date', 'end_date',
                 'description', 'threshold_percent', 'rollover_enabled', 'targets',
