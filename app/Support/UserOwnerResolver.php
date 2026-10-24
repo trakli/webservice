@@ -14,6 +14,10 @@ class UserOwnerResolver implements OwnerResolver
             return [$owner->id];
         }
 
+        if ($owner instanceof \App\Models\Workspace) {
+            return $owner->members()->distinct()->pluck('users.id')->all();
+        }
+
         return [];
     }
 

@@ -35,7 +35,11 @@ class SendBudgetWeeklyDigestJob implements ShouldQueue
             return;
         }
 
-        $budgets = $user->budgets()->where('is_active', true)->get();
+        $workspaceIds = $user->workspaces()->where('is_active', true)->pluck('workspaces.id');
+        $budgets = \App\Models\Budget::where('is_active', true)->where(function ($query) use ($user, $workspaceIds) {
+            $query->where(fn ($personal) => $personal->where('owner_type', User::class)->where('owner_id', $user->id))
+                ->orWhere(fn ($shared) => $shared->where('owner_type', \App\Models\Workspace::class)->whereIn('owner_id', $workspaceIds));
+        })->get();
         if ($budgets->isEmpty()) {
             return;
         }

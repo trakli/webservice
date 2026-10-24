@@ -123,6 +123,8 @@ class Wallet extends Model implements HasAgentResource
                 ResourceField::enum('type', ['bank', 'cash', 'credit_card', 'mobile'], 'What kind of account it is'),
                 ResourceField::text('description', 'Notes about the wallet'),
                 ResourceField::internal('user_id'),
+                ResourceField::internal('workspace_id'),
+                ResourceField::internal('created_by_user_id'),
             ],
             readTool: false,
         );

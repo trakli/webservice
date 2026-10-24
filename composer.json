@@ -10,7 +10,6 @@
     ],
     "license": "proprietary",
     "require": {
-        "php": "^8.4",
         "barryvdh/laravel-dompdf": "^3.1",
         "cviebrock/eloquent-sluggable": "^12.0",
         "guzzlehttp/guzzle": "^7.2",
@@ -20,6 +19,7 @@
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "php": "^8.4",
         "phpoffice/phpspreadsheet": "^5.9",
         "prism-php/prism": "^0.100.1",
         "rlanvin/php-rrule": "^2.6",
@@ -37,6 +37,7 @@
         "whilesmart/eloquent-outreach": "dev-dev",
         "whilesmart/eloquent-roles": "dev-dev",
         "whilesmart/eloquent-schema-conformance": "^1.0",
+        "whilesmart/eloquent-workspaces": "^1.3",
         "whilesmart/laravel-plugin-engine": "^1.2.1",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",

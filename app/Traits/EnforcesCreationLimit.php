@@ -13,6 +13,11 @@ trait EnforcesCreationLimit
 {
     protected function performInsert(Builder $query)
     {
+        if ($this->workspace_id !== null) {
+            app(\App\Services\WorkspaceFinance::class)->requireEligible(\App\Models\Workspace::findOrFail($this->workspace_id));
+            return parent::performInsert($query);
+        }
+
         return $this->getConnection()->transaction(function () use ($query) {
             $owner = User::whereKey($this->user_id)->lockForUpdate()->first();
             $key = $this instanceof Category ? 'max_categories' : 'max_wallets';

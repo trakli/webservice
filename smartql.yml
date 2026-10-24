@@ -75,6 +75,9 @@ semantic_layer:
         user_id:
           type: integer
           hidden: true
+        created_by_user_id:
+          type: integer
+          hidden: true
     wallets:
       table: wallets
       description: 'The user''s accounts: bank accounts, cash, credit cards, mobile money.'
@@ -110,6 +113,12 @@ semantic_layer:
         user_id:
           type: integer
           hidden: true
+        workspace_id:
+          type: integer
+          hidden: true
+        created_by_user_id:
+          type: integer
+          hidden: true
     categories:
       table: categories
       description: Labels the user classifies transactions under.
@@ -136,6 +145,12 @@ semantic_layer:
           type: text
           description: What the category covers
         user_id:
+          type: integer
+          hidden: true
+        workspace_id:
+          type: integer
+          hidden: true
+        created_by_user_id:
           type: integer
           hidden: true
     parties:
@@ -433,6 +448,12 @@ semantic_layer:
         user_id:
           type: integer
           hidden: true
+        workspace_id:
+          type: integer
+          hidden: true
+        created_by_user_id:
+          type: integer
+          hidden: true
         created_at:
           type: datetime
     exchange_rates:
@@ -510,6 +531,26 @@ semantic_layer:
         categorizable_type:
           type: string
           description: Always 'App\Models\Transaction'
+    workspaces:
+      table: workspaces
+      description: Families and groups collaborating on shared finances.
+      label_column: name
+      columns:
+        id:
+          type: integer
+          primary: true
+        name:
+          type: string
+          description: Workspace name
+        description:
+          type: text
+          description: What the workspace is for
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: integer
+          hidden: true
   relationships:
   - name: transaction_wallet
     type: many_to_one
@@ -649,6 +690,7 @@ security:
   - transactions
   - transfers
   - wallets
+  - workspaces
   required_filters:
     transactions:
       column: user_id
@@ -702,6 +744,10 @@ security:
       through:
         column: categorizable_id
         references: transactions.id
+    workspaces:
+      column: owner_id
+      constants:
+        owner_type: App\Models\User
   blocked_columns:
   - users.password
   - users.remember_token

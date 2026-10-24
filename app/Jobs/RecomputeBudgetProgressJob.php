@@ -40,7 +40,7 @@ class RecomputeBudgetProgressJob implements ShouldQueue, ShouldBeUnique
     public function handle(BudgetProgressService $service): void
     {
         $budget = Budget::query()->find($this->budgetId);
-        if (! $budget) {
+        if (! $budget || ! $budget->owner) {
             return;
         }
 
