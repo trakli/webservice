@@ -132,16 +132,27 @@ class WorkspaceFinanceTest extends TestCase
             'period_type' => 'monthly', 'start_date' => now()->toDateString(), 'targets' => [['type' => 'wallet', 'id' => $wallet]]])->assertUnprocessable();
     }
 
-    public function test_cloud_expiry_is_read_only_and_still_allows_unsharing(): void
+    public function test_workspace_creation_restrictions_use_generic_denials(): void
+    {
+        $entitlements = \Mockery::mock(Entitlements::class);
+        $entitlements->shouldReceive('allows')->withArgs(fn ($owner, $feature) => $feature === 'shared_workspaces')->andReturn(false);
+        $this->app->instance(Entitlements::class, $entitlements);
+        $this->actingAs($this->owner)->getJson('/api/v1/workspaces')->assertOk()->assertJsonPath('data.can_create', false);
+        $this->postJson('/api/v1/workspaces', ['name' => 'Another space'])->assertForbidden()
+            ->assertJsonPath('message', 'You cannot create shared workspaces.')->assertJsonPath('success', false);
+    }
+
+    public function test_denied_workspace_writes_still_allow_reading_unsharing_and_leaving(): void
     {
         $wallet = $this->personalWallet($this->member);
         $this->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
         $entitlements = \Mockery::mock(Entitlements::class);
-        $entitlements->shouldReceive('allows')->withArgs(fn ($owner, $feature) => $owner->id === $this->owner->id && $feature === 'shared_workspaces')->andReturn(false);
+        $entitlements->shouldReceive('allows')->withArgs(fn ($owner, $feature) => $owner instanceof \App\Models\Workspace && $feature === 'shared_workspaces')->andReturn(false);
         $this->app->instance(Entitlements::class, $entitlements);
         $this->getJson($this->base . '/finance')->assertOk();
-        $this->postJson($this->base . '/transactions', [])->assertStatus(402)->assertJsonPath('success', false);
-        $this->actingAs($this->owner)->postJson($this->base . '/members/invite', ['email' => 'new@example.com', 'role' => 'member'])->assertStatus(402);
+        $this->postJson($this->base . '/transactions', [])->assertForbidden()->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Changes to this workspace are not allowed.');
+        $this->actingAs($this->owner)->postJson($this->base . '/members/invite', ['email' => 'new@example.com', 'role' => 'member'])->assertForbidden();
         $this->actingAs($this->member)->deleteJson($this->base . '/shares/wallets/' . $wallet)->assertOk();
         $this->postJson($this->base . '/leave')->assertOk();
     }

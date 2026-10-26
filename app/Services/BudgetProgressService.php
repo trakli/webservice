@@ -110,16 +110,7 @@ class BudgetProgressService
 
         $netSpent = max(0.0, $grossSpent - $refunds);
 
-        $rolloverIn = 0.0;
-        if ($budget->rollover_enabled) {
-            $previousState = BudgetPeriodState::query()
-                ->where('budget_id', $budget->id)
-                ->where('period_end', '<', $periodStart->toDateString())
-                ->whereNotNull('closed_at')
-                ->orderByDesc('period_end')
-                ->first();
-            $rolloverIn = $previousState ? (float) $previousState->rollover_out : 0.0;
-        }
+        $rolloverIn = $this->rolloverIn($budget, $periodStart);
 
         $effectiveLimit = $limit + $rolloverIn;
         $remaining = $effectiveLimit - $netSpent;
@@ -168,6 +159,22 @@ class BudgetProgressService
         }
 
         return $snapshot;
+    }
+
+    private function rolloverIn(Budget $budget, CarbonInterface $periodStart): float
+    {
+        $rolloverIn = 0.0;
+        if ($budget->rollover_enabled) {
+            $previousState = BudgetPeriodState::query()
+                ->where('budget_id', $budget->id)
+                ->where('period_end', '<', $periodStart->toDateString())
+                ->whereNotNull('closed_at')
+                ->orderByDesc('period_end')
+                ->first();
+            $rolloverIn = $previousState ? (float) $previousState->rollover_out : 0.0;
+        }
+
+        return $rolloverIn;
     }
 
     /**

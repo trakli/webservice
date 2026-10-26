@@ -269,19 +269,7 @@ class AiController extends ApiController
                 'error' => $e->getMessage(),
             ]);
 
-            if ($action->action_type === 'workspace.change') {
-                if ($e instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
-                    return $e->getResponse();
-                }
-                if ($e instanceof \Illuminate\Validation\ValidationException) {
-                    return $this->failure($e->getMessage(), 422, $e->errors());
-                }
-                if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                    return $this->failure('The workspace or record is no longer available.', 404);
-                }
-            }
-
-            return $this->failure(__('Failed to perform the action.'), Response::HTTP_INTERNAL_SERVER_ERROR, [$e->getMessage()]);
+            return $this->actionFailure($action, $e);
         }
 
         $action->update([
@@ -297,6 +285,23 @@ class AiController extends ApiController
         $this->continueChainAfterCreate($chat, $action);
 
         return $this->success(['action' => $action->fresh(), 'resource' => $resource], __('Action completed.'));
+    }
+
+    private function actionFailure(AgentProposedAction $action, Throwable $exception): JsonResponse
+    {
+        if ($action->action_type === 'workspace.change') {
+            if ($exception instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+                return $exception->getResponse();
+            }
+            if ($exception instanceof \Illuminate\Validation\ValidationException) {
+                return $this->failure($exception->getMessage(), 422, $exception->errors());
+            }
+            if ($exception instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return $this->failure('The workspace or record is no longer available.', 404);
+            }
+        }
+
+        return $this->failure(__('Failed to perform the action.'), Response::HTTP_INTERNAL_SERVER_ERROR, [$exception->getMessage()]);
     }
 
     /**

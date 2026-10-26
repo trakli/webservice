@@ -41,14 +41,13 @@ class WorkspaceFinance
 
     public function eligible(Workspace $workspace): bool
     {
-        return $workspace->owner instanceof User
-            && app(Entitlements::class)->allows($workspace->owner, 'shared_workspaces');
+        return app(Entitlements::class)->allows($workspace, 'shared_workspaces');
     }
 
     public function requireEligible(Workspace $workspace): void
     {
         if (! $this->eligible($workspace)) {
-            $this->deny('This workspace is read-only until its owner restores an eligible plan.', 402);
+            $this->deny('Changes to this workspace are not allowed.', 403);
         }
     }
 
@@ -120,7 +119,9 @@ class WorkspaceFinance
             'contributor' => $creator ? trim($creator->first_name . ' ' . $creator->last_name) : 'Former member',
             'source' => $native ? 'workspace' : ($walletVisible ? 'shared_wallet' : 'shared_transaction'),
             'can_edit' => $editable && $this->eligible($workspace),
-            'can_unshare' => ! $native && DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)->where('transaction_id', $transaction->id)->exists() && ($transaction->user_id === $user->id || in_array($this->role($workspace, $user), ['owner', 'admin'], true)),
+            'can_unshare' => ! $native && DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)
+                ->where('transaction_id', $transaction->id)->exists() && ($transaction->user_id === $user->id || in_array($this
+                ->role($workspace, $user), ['owner', 'admin'], true)),
             'is_refund' => $transaction->refund()->exists(),
         ];
         foreach (['category', 'group'] as $kind) {

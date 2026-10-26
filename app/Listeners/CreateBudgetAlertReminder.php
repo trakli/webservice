@@ -65,8 +65,15 @@ class CreateBudgetAlertReminder
         $this->createUserReminder($owner, $budget, $periodStart, $source, $titleKey, $bodyKey, $bodyContext);
     }
 
-    private function createUserReminder(\App\Models\User $owner, Budget $budget, string $periodStart, string $source, string $titleKey, string $bodyKey, array $bodyContext): void
-    {
+    private function createUserReminder(
+        \App\Models\User $owner,
+        Budget $budget,
+        string $periodStart,
+        string $source,
+        string $titleKey,
+        string $bodyKey,
+        array $bodyContext
+    ): void {
         $budgetId = $budget->id;
         // Idempotent per (budget, source, period) — a new period naturally
         // re-opens eligibility since we key off the period_start date.

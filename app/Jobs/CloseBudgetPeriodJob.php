@@ -39,8 +39,10 @@ class CloseBudgetPeriodJob implements ShouldQueue
             return;
         }
 
-        if ($budget->owner instanceof \App\Models\Workspace && BudgetPeriodState::where('budget_id', $budget->id)
-            ->whereDate('period_start', $periodStart)->whereNotNull('closed_at')->exists()) {
+        if (
+            $budget->owner instanceof \App\Models\Workspace && BudgetPeriodState::where('budget_id', $budget->id)
+            ->whereDate('period_start', $periodStart)->whereNotNull('closed_at')->exists()
+        ) {
             return;
         }
 

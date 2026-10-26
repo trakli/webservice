@@ -26,13 +26,13 @@ class WorkspaceController extends BaseController
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:255', 'kind' => 'required|in:family,group',
+        $data = $request->validate(['name' => 'required|string|max:255', 'kind' => 'sometimes|in:family,group',
             'description' => 'nullable|string|max:500']);
         if (! app(Entitlements::class)->allows($request->user(), 'shared_workspaces')) {
-            app(WorkspaceFinance::class)->deny('Your plan does not include shared workspaces.', 402);
+            app(WorkspaceFinance::class)->deny('You cannot create shared workspaces.', 403);
         }
         $workspace = DB::transaction(fn () => $request->user()->createWorkspace($data['name'], [
-            'type' => 'team', 'description' => $data['description'] ?? null, 'metadata' => ['kind' => $data['kind']],
+            'type' => 'team', 'description' => $data['description'] ?? null, 'metadata' => ['kind' => $data['kind'] ?? 'group'],
         ]));
 
         return $this->respond(['data' => $this->present($workspace)], 201);

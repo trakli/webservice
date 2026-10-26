@@ -79,12 +79,12 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
         Route::post('shares/transactions', [$controller, 'shareTransaction']);
         Route::delete('shares/transactions/{transactionId}', [$controller, 'unshareTransaction']);
         Route::post('labels/{kind}', [$controller, 'storeLabel'])->whereIn('kind', ['categories', 'groups']);
-        Route::post('budgets', [$controller, 'storeBudget']);
-        Route::put('budgets/{budgetId}', [$controller, 'updateBudget']);
-        Route::delete('budgets/{budgetId}', [$controller, 'deleteBudget']);
-        Route::get('budgets/{budgetId}/transactions', [$controller, 'budgetTransactions']);
-        Route::get('budgets/{budgetId}/periods', [$controller, 'budgetPeriods']);
-        Route::post('budgets/{budgetId}/close-period', [$controller, 'closeBudget']);
+        Route::post('budgets', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'storeBudget']);
+        Route::put('budgets/{budgetId}', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'updateBudget']);
+        Route::delete('budgets/{budgetId}', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'deleteBudget']);
+        Route::get('budgets/{budgetId}/transactions', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'budgetTransactions']);
+        Route::get('budgets/{budgetId}/periods', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'budgetPeriods']);
+        Route::post('budgets/{budgetId}/close-period', [\App\Http\Controllers\API\v1\WorkspaceBudgetController::class, 'closeBudget']);
     });
     Route::get('streaks', [StreakController::class, 'index']);
     Route::get('integrations', [IntegrationController::class, 'index']);
