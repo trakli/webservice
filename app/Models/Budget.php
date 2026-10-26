@@ -188,9 +188,7 @@ class Budget extends Model implements HasAgentResource
             $workspace = $this->owner;
             return \Illuminate\Support\Facades\DB::table('budgetables')->where('budget_id', $this->id)->get()
                 ->map(function ($target) use ($workspace) {
-                    $type = match ($target->budgetable_type) {
-                        Category::class => 'category', Group::class => 'group', Wallet::class => 'wallet', default => null,
-                    };
+                    $type = [Category::class => 'category', Group::class => 'group', Wallet::class => 'wallet'][$target->budgetable_type] ?? null;
                     if (! $type) {
                         return null;
                     }

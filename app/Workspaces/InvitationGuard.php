@@ -10,11 +10,13 @@ use Whilesmart\Workspaces\Models\WorkspaceInvitation;
 
 class InvitationGuard implements Guard
 {
+    /** {@inheritDoc} */
     public function beforeInvite(Workspace $workspace, string $email, string $role, ?Authenticatable $inviter): void
     {
         app(WorkspaceFinance::class)->requireEligible(\App\Models\Workspace::findOrFail($workspace->id));
     }
 
+    /** {@inheritDoc} */
     public function beforeAccept(WorkspaceInvitation $invitation, Authenticatable $user): void
     {
         app(WorkspaceFinance::class)->requireEligible(\App\Models\Workspace::findOrFail($invitation->workspace_id));

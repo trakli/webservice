@@ -23,9 +23,13 @@ class QueueBudgetRecompute
                 continue;
             }
             $workspaceIds = \Illuminate\Support\Facades\DB::table('workspace_wallet_shares')->where('wallet_id', $snapshot->walletId)->pluck('workspace_id')
-                ->merge(\Illuminate\Support\Facades\DB::table('workspace_transaction_shares')->where('transaction_id', $snapshot->transactionId)->pluck('workspace_id'))
+                ->merge(\Illuminate\Support\Facades\DB::table('workspace_transaction_shares')->where('transaction_id', $snapshot
+                    ->transactionId)->pluck('workspace_id'))
                 ->merge(\App\Models\Wallet::withTrashed()->whereKey($snapshot->walletId)->whereNotNull('workspace_id')->pluck('workspace_id'));
-            foreach (Budget::where('owner_type', \App\Models\Workspace::class)->whereIn('owner_id', $workspaceIds)->where('is_active', true)->pluck('id') as $id) {
+            foreach (
+                Budget::where('owner_type', \App\Models\Workspace::class)->whereIn('owner_id', $workspaceIds)->where('is_active', true)
+                ->pluck('id') as $id
+            ) {
                 $affectedIds[$id] = true;
             }
         }

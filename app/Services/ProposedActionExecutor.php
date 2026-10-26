@@ -53,14 +53,15 @@ class ProposedActionExecutor
         if ($payload['operation'] === 'create_workspace') {
             $data = $request->validate(['name' => 'required|string|max:255', 'kind' => 'required|in:family,group', 'description' => 'nullable|string|max:500']);
             if (! app(\Whilesmart\Entitlements\Contracts\Entitlements::class)->allows($action->owner, 'shared_workspaces')) {
-                app(WorkspaceFinance::class)->deny('Your plan does not include creating shared workspaces.', 402);
+                app(WorkspaceFinance::class)->deny('You cannot create shared workspaces.', 403);
             }
-            return $action->owner->createWorkspace($data['name'], ['type' => 'team', 'description' => $data['description'] ?? null, 'metadata' => ['kind' => $data['kind']]]);
+            return $action->owner->createWorkspace($data['name'], ['type' => 'team', 'description' => $data['description'] ?? null,
+                'metadata' => ['kind' => $data['kind']]]);
         }
         $workspace = \App\Models\Workspace::where('slug', $payload['workspace'])->firstOrFail();
         $controller = app(\App\Http\Controllers\API\v1\WorkspaceFinanceController::class);
         if ($payload['operation'] === 'create_budget') {
-            $response = $controller->storeBudget($request, $workspace);
+            $response = app(\App\Http\Controllers\API\v1\WorkspaceBudgetController::class)->storeBudget($request, $workspace);
             return $workspace->budgets()->findOrFail($response->getData(true)['data']['id']);
         }
         if ($payload['operation'] === 'record_transaction') {

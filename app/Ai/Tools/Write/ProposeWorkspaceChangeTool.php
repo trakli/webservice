@@ -2,7 +2,10 @@
 
 namespace App\Ai\Tools\Write;
 
+use InvalidArgumentException;
 use App\Models\Workspace;
+use App\Models\Wallet;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Services\WorkspaceFinance;
 use Illuminate\Support\Facades\Validator;
 use Whilesmart\Agents\ValueObjects\ParameterSpec;
@@ -22,14 +25,19 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
 
     public function description(): string
     {
-        return 'Propose creating a family/group, a shared budget, or a transaction in a workspace-owned wallet. Requires confirmation. Always identify the workspace explicitly before proposing a shared financial change.';
+        return 'Propose creating a family/group, a shared budget, or a transaction in a workspace-owned wallet. Requires' .
+            ' confirmation. Always identify the workspace explicitly before proposing a shared financial change.';
     }
 
     public function parameters(): array
     {
         return [
             ParameterSpec::enum('operation', 'What to propose.', ['create_workspace', 'create_budget', 'record_transaction']),
-            ParameterSpec::string('workspace', 'Exact workspace slug from list_workspace_finances. Required except when creating a workspace.', required: false),
+            ParameterSpec::string(
+                'workspace',
+                'Exact workspace slug from list_workspace_finances. Required except when creating a workspace.',
+                required: false
+            ),
             ParameterSpec::string('name', 'Workspace or budget name.', required: false),
             ParameterSpec::enum('kind', 'Workspace kind.', ['family', 'group'], required: false),
             ParameterSpec::number('amount', 'Budget limit or transaction amount.', required: false),
@@ -62,15 +70,16 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
             'start_date' => 'required_if:operation,create_budget|date', 'end_date' => 'required_if:period_type,custom|date|after_or_equal:start_date',
             'wallet_id' => 'required_if:operation,record_transaction|integer', 'type' => 'required_if:operation,record_transaction|in:income,expense',
             'datetime' => 'required_if:operation,record_transaction|date', 'is_refund' => 'sometimes|boolean',
-            'targets' => 'sometimes|array', 'targets.*.type' => 'required|in:category,group,wallet', 'targets.*.id' => 'required|integer', 'description' => 'sometimes|string|max:2000'])->validate();
+            'targets' => 'sometimes|array', 'targets.*.type' => 'required|in:category,group,wallet', 'targets.*.id' => 'required|integer',
+                'description' => 'sometimes|string|max:2000'])->validate();
         if ($operation !== 'create_workspace') {
             $workspace = Workspace::where('slug', $data['workspace'])->firstOrFail();
             app(WorkspaceFinance::class)->authorize($workspace, $context->user, manage: $operation === 'create_budget', write: true);
-            if ($operation === 'record_transaction' && ! \App\Models\Wallet::where('workspace_id', $workspace->id)->whereKey($data['wallet_id'])->exists()) {
-                throw new \InvalidArgumentException('Choose a wallet owned by this workspace.');
+            if ($operation === 'record_transaction' && ! Wallet::where('workspace_id', $workspace->id)->whereKey($data['wallet_id'])->exists()) {
+                throw new InvalidArgumentException('Choose a wallet owned by this workspace.');
             }
-        } elseif (! app(\Whilesmart\Entitlements\Contracts\Entitlements::class)->allows($context->user, 'shared_workspaces')) {
-            throw new \InvalidArgumentException('Your plan does not include creating shared workspaces.');
+        } elseif (! app(Entitlements::class)->allows($context->user, 'shared_workspaces')) {
+            throw new InvalidArgumentException('You cannot create shared workspaces.');
         }
 
         return $data;
