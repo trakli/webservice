@@ -26,18 +26,18 @@ class WorkspaceFinanceController extends ApiController
         $wallets = $this->finance->wallets($workspace)->withCount('transactions')->get()
             ->map(fn ($wallet) => $this->presentWallet($request, $workspace, $wallet));
         $budgets = $workspace->budgets()->with(['categories', 'groups', 'wallets'])->latest()->get();
-        $totals = [];
-        foreach ($this->finance->transactions($workspace)->whereNull('transfer_id')->with('wallet')->cursor() as $transaction) {
-            $currency = $transaction->wallet->currency;
-            $totals[$currency] ??= ['currency' => $currency, 'income' => 0, 'expenses' => 0];
-            $key = TransactionRecorded::normalizeType($transaction->type) === 'income' ? 'income' : 'expenses';
-            $totals[$currency][$key] += (float) $transaction->amount;
-        }
+        $totals = $this->finance->transactions($workspace)->join('wallets', 'wallets.id', '=', 'transactions.wallet_id')
+            ->whereNull('transactions.transfer_id')->select('wallets.currency')
+            ->selectRaw("SUM(CASE WHEN transactions.type = 'income' THEN transactions.amount ELSE 0 END) AS income")
+            ->selectRaw("SUM(CASE WHEN transactions.type = 'expense' THEN transactions.amount ELSE 0 END) AS expenses")
+            ->groupBy('wallets.currency')->get()->map(fn ($row) => [
+                'currency' => $row->currency, 'income' => (float) $row->income, 'expenses' => (float) $row->expenses,
+            ]);
 
         return $this->success(['wallets' => $wallets, 'budgets' => $budgets,
             'categories' => Category::where('workspace_id', $workspace->id)->get(['id', 'name', 'type']),
             'groups' => Group::where('workspace_id', $workspace->id)->get(['id', 'name']),
-            'totals' => array_values($totals)]);
+            'totals' => $totals]);
     }
 
     public function transactions(Request $request, Workspace $workspace): JsonResponse
@@ -58,11 +58,7 @@ class WorkspaceFinanceController extends ApiController
         }
         $page = $query->paginate(25);
 
-        return $this->success(['data' => collect($page->items())->map(fn ($transaction) => $this->finance->presentTransaction(
-            $workspace,
-            $transaction,
-            $request->user()
-        )),
+        return $this->success(['data' => $this->finance->presentTransactions($workspace, $page->getCollection(), $request->user()),
             'current_page' => $page->currentPage(), 'last_page' => $page->lastPage(),
             'per_page' => $page->perPage(), 'total' => $page->total()]);
     }

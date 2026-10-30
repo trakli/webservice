@@ -2,7 +2,6 @@
 
 namespace App\Ai\Tools\Read;
 
-use App\Models\Workspace;
 use App\Services\WorkspaceFinance;
 use Whilesmart\Agents\Enums\ToolPermission;
 use Whilesmart\Agents\Tools\AbstractTool;
@@ -18,7 +17,7 @@ class ListWorkspaceFinancesTool extends AbstractTool
 
     public function description(): string
     {
-        return 'List the families and groups you belong to. Supply a workspace slug to read its shared budgets, wallets,' .
+        return 'List the shared groups you belong to. Supply a workspace slug to read its shared budgets, wallets,' .
             ' labels, and up to 50 shared transactions. Personal records are excluded unless explicitly shared.';
     }
 
@@ -44,8 +43,12 @@ class ListWorkspaceFinancesTool extends AbstractTool
                 ->map(fn ($workspace) => ['name' => $workspace->name, 'slug' => $workspace->slug,
                     'role' => $finance->role($workspace, $user)])->all()];
         }
-        $workspace = Workspace::where('slug', $arguments['workspace'])->firstOrFail();
+        $workspace = $user->workspaces()->where('is_active', true)->where('slug', $arguments['workspace'])->first();
+        if (! $workspace) {
+            return ['error' => 'Shared space not found or no longer accessible.'];
+        }
         $finance->authorize($workspace, $user);
+        $transactions = $finance->transactions($workspace)->latest('datetime')->limit(50)->get();
 
         return ['workspace' => $workspace->name, 'read_only' => ! $finance->eligible($workspace),
             'budgets' => $workspace->budgets()->get()->map(fn ($budget) => [
@@ -57,7 +60,6 @@ class ListWorkspaceFinancesTool extends AbstractTool
                 'client_generated_id', 'icon'])->toArray(),
             'groups' => \App\Models\Group::where('workspace_id', $workspace->id)->get(['id', 'name'])->setHidden(['last_synced_at',
                 'client_generated_id', 'icon'])->toArray(),
-            'transactions' => $finance->transactions($workspace)->latest('datetime')->limit(50)->get()
-                ->map(fn ($transaction) => $finance->presentTransaction($workspace, $transaction, $user))->all()];
+            'transactions' => $finance->presentTransactions($workspace, $transactions, $user)->all()];
     }
 }
