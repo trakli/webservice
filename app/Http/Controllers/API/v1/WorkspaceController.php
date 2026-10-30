@@ -26,13 +26,13 @@ class WorkspaceController extends BaseController
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:255', 'kind' => 'sometimes|in:family,group',
+        $data = $request->validate(['name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500']);
         if (! app(Entitlements::class)->allows($request->user(), 'shared_workspaces')) {
             app(WorkspaceFinance::class)->deny('You cannot create shared workspaces.', 403);
         }
         $workspace = DB::transaction(fn () => $request->user()->createWorkspace($data['name'], [
-            'type' => 'team', 'description' => $data['description'] ?? null, 'metadata' => ['kind' => $data['kind'] ?? 'group'],
+            'type' => 'team', 'description' => $data['description'] ?? null,
         ]));
 
         return $this->respond(['data' => $this->present($workspace)], 201);
@@ -84,7 +84,7 @@ class WorkspaceController extends BaseController
         $role = $finance->role($workspace, auth()->user());
 
         return ['id' => $workspace->id, 'slug' => $workspace->slug, 'name' => $workspace->name,
-            'description' => $workspace->description, 'kind' => $workspace->metadata['kind'] ?? 'group',
+            'description' => $workspace->description,
             'role' => $role, 'read_only' => ! $finance->eligible($workspace),
             'can_manage' => in_array($role, ['owner', 'admin'], true),
             'member_count' => $workspace->members()->distinct()->count('users.id')];

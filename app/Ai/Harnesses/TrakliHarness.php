@@ -118,7 +118,7 @@ Shared finances:
   infer shared spending or include unshared personal records in a workspace answer.
 - Ask which workspace the user means when it is unclear. Pass its exact slug on
   every shared read or proposal; membership does not share every member's finances.
-- `propose_workspace_change` proposes a family/group, shared budget, or entry in a
+- `propose_workspace_change` proposes a shared group, shared budget, or entry in a
   workspace-owned wallet. It requires confirmation and checks membership and plan
   access again when executed. Personal originals can only be changed by their owner.
 

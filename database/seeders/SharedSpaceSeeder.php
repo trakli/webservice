@@ -37,7 +37,7 @@ class SharedSpaceSeeder
     public function run(User $owner, User $member, string $invitee): Workspace
     {
         $workspace = $owner->createWorkspace('Fischer household', [
-            'type' => 'team', 'description' => 'Bills and groceries we share at home', 'metadata' => ['kind' => 'family'],
+            'type' => 'team', 'description' => 'Bills and groceries we share at home',
         ]);
         if (! app(WorkspaceFinance::class)->eligible($workspace)) {
             return $workspace;
@@ -70,7 +70,7 @@ class SharedSpaceSeeder
             $transaction->forceFill(['user_id' => null, 'created_by_user_id' => ($author === 'owner' ? $owner : $member)->id,
                 'wallet_id' => $wallet->id, 'amount' => $amount, 'type' => 'expense', 'description' => $description,
                 'datetime' => $datetime])->save();
-            DB::table('workspace_transaction_categorys')->insert(['workspace_id' => $workspace->id,
+            DB::table('workspace_transaction_categories')->insert(['workspace_id' => $workspace->id,
                 'transaction_id' => $transaction->id, 'category_id' => $categories[$category]->id]);
         }
 

@@ -10,6 +10,7 @@ use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Whilesmart\Entitlements\Contracts\Entitlements;
 
 class WorkspaceFinance
@@ -89,7 +90,7 @@ class WorkspaceFinance
                 foreach (['category' => $categoryIds, 'group' => $groupIds] as $kind => $ids) {
                     if ($ids) {
                         $targets->orWhereExists(function ($labels) use ($workspace, $kind, $ids) {
-                            $labels->selectRaw('1')->from("workspace_transaction_{$kind}s")
+                            $labels->selectRaw('1')->from('workspace_transaction_' . Str::plural($kind))
                                 ->where('workspace_id', $workspace->id)
                                 ->whereColumn('transaction_id', 'transactions.id')
                                 ->whereIn("{$kind}_id", $ids);
@@ -125,7 +126,7 @@ class WorkspaceFinance
             'is_refund' => $transaction->refund()->exists(),
         ];
         foreach (['category', 'group'] as $kind) {
-            $data["{$kind}_ids"] = DB::table("workspace_transaction_{$kind}s")
+            $data["{$kind}_ids"] = DB::table('workspace_transaction_' . Str::plural($kind))
                 ->where('workspace_id', $workspace->id)->where('transaction_id', $transaction->id)->pluck("{$kind}_id")->all();
         }
 
