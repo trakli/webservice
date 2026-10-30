@@ -37,7 +37,7 @@
         "whilesmart/eloquent-outreach": "dev-dev",
         "whilesmart/eloquent-roles": "dev-dev",
         "whilesmart/eloquent-schema-conformance": "^1.0",
-        "whilesmart/eloquent-workspaces": "^1.3",
+        "whilesmart/eloquent-workspaces": "^1.4",
         "whilesmart/laravel-plugin-engine": "^1.2.1",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",

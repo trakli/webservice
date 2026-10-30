@@ -22,7 +22,8 @@ class WorkspaceFinanceController extends ApiController
 
     public function overview(Request $request, Workspace $workspace): JsonResponse
     {
-        $wallets = $this->finance->wallets($workspace)->get()->map(fn ($wallet) => $this->presentWallet($request, $workspace, $wallet));
+        $wallets = $this->finance->wallets($workspace)->withCount('transactions')->get()
+            ->map(fn ($wallet) => $this->presentWallet($request, $workspace, $wallet));
         $budgets = $workspace->budgets()->with(['categories', 'groups', 'wallets'])->latest()->get();
         $totals = [];
         foreach ($this->finance->transactions($workspace)->whereNull('transfer_id')->with('wallet')->cursor() as $transaction) {
@@ -268,6 +269,7 @@ class WorkspaceFinanceController extends ApiController
         return ['id' => $wallet->id, 'name' => $wallet->name, 'type' => $wallet->type,
             'currency' => $wallet->currency, 'balance' => (float) $wallet->balance,
             'source' => $native ? 'workspace' : 'shared_wallet',
+            'transactions_count' => (int) $wallet->transactions_count,
             'can_edit' => $native && $admin && $this->finance->eligible($workspace),
             'can_unshare' => ! $native && ($wallet->user_id === $request->user()->id || $admin)];
     }

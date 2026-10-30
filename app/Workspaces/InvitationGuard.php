@@ -8,6 +8,7 @@ use Whilesmart\Workspaces\Contracts\InvitationGuard as Guard;
 use Whilesmart\Workspaces\Models\Workspace;
 use Whilesmart\Workspaces\Models\WorkspaceInvitation;
 
+/** @SuppressWarnings(PHPMD.UnusedFormalParameter) */
 class InvitationGuard implements Guard
 {
     public function beforeInvite(Workspace $workspace, string $email, string $role, ?Authenticatable $inviter): void

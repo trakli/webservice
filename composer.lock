@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "23933a0639ebdb159e7b7dbb94825955",
+    "content-hash": "829bb23d3da550013cfac1e283ef7ebd",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -12048,16 +12048,16 @@
         },
         {
             "name": "whilesmart/eloquent-workspaces",
-            "version": "1.3.0",
+            "version": "1.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/whilesmartphp/eloquent-workspaces.git",
-                "reference": "02b7b8b3215c3368c79a006f790473a5e872d446"
+                "reference": "979ff978bada48ceb7e568bf5fb63547342169be"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/whilesmartphp/eloquent-workspaces/zipball/02b7b8b3215c3368c79a006f790473a5e872d446",
-                "reference": "02b7b8b3215c3368c79a006f790473a5e872d446",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-workspaces/zipball/979ff978bada48ceb7e568bf5fb63547342169be",
+                "reference": "979ff978bada48ceb7e568bf5fb63547342169be",
                 "shasum": ""
             },
             "require": {
@@ -12104,9 +12104,9 @@
             "description": "Workspace management package for Laravel applications",
             "support": {
                 "issues": "https://github.com/whilesmartphp/eloquent-workspaces/issues",
-                "source": "https://github.com/whilesmartphp/eloquent-workspaces/tree/v1.3.0"
+                "source": "https://github.com/whilesmartphp/eloquent-workspaces/tree/v1.4.0"
             },
-            "time": "2026-10-23T18:17:30+00:00"
+            "time": "2026-10-30T12:37:52+00:00"
         },
         {
             "name": "whilesmart/laravel-plugin-engine",

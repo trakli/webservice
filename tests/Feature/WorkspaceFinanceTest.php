@@ -101,7 +101,9 @@ class WorkspaceFinanceTest extends TestCase
         $this->postJson($this->base . '/leave')->assertOk();
         $this->getJson($this->base . '/transactions')->assertForbidden();
         $this->actingAs($this->owner)->getJson($this->base . '/transactions')->assertJsonCount(1, 'data.data');
-        $this->getJson($this->base . '/finance')->assertJsonPath('data.wallets.0.balance', 80);
+        $this->getJson($this->base . '/finance')->assertJsonPath('data.wallets.0.balance', 80)
+            ->assertJsonPath('data.wallets.0.transactions_count', 1);
+        $this->deleteJson($this->base . '/wallets/' . $wallet)->assertUnprocessable();
     }
 
     public function test_members_cannot_manage_budgets_but_can_be_promoted(): void
