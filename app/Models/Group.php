@@ -93,6 +93,8 @@ class Group extends Model implements HasAgentResource
                 ResourceField::string('slug', 'URL-safe form of the name'),
                 ResourceField::text('description', 'What the group covers'),
                 ResourceField::internal('user_id'),
+                ResourceField::internal('workspace_id'),
+                ResourceField::internal('created_by_user_id'),
                 ResourceField::datetime('created_at'),
             ],
             writable: [

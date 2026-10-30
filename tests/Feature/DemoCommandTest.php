@@ -67,6 +67,43 @@ class DemoCommandTest extends TestCase
         }
     }
 
+    public function test_shared_space_owner_sees_a_seeded_shared_space(): void
+    {
+        $credentials = $this->createDemo('shared-space');
+        $token = $this->postJson('/api/v1/login', [
+            'email' => $credentials['username'],
+            'password' => $credentials['password'],
+        ])->assertOk()->json('data.token');
+        $this->withToken($token);
+
+        $this->getJson('/api/v1/workspaces')->assertOk()->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.slug', $credentials['workspace'])
+            ->assertJsonMissingPath('data.data.0.kind')
+            ->assertJsonPath('data.data.0.role', 'owner')
+            ->assertJsonPath('data.data.0.member_count', 2);
+        $base = '/api/v1/workspaces/' . $credentials['workspace'];
+        $this->getJson($base . '/finance')->assertOk()->assertJsonCount(1, 'data.wallets')
+            ->assertJsonCount(2, 'data.budgets')->assertJsonCount(4, 'data.categories')->assertJsonCount(1, 'data.groups');
+        $this->getJson($base . '/transactions')->assertOk()->assertJsonPath('data.total', 11);
+        $this->getJson($base . '/invitations')->assertOk()->assertJsonCount(1, 'data');
+        $this->assertMatchesRegularExpression('#^/invitations/[A-Za-z0-9]+$#', $credentials['invitation']);
+        $this->getJson('/api/v1/workspaces/invitations/' . basename($credentials['invitation']))->assertOk();
+    }
+
+    public function test_shared_space_stays_an_empty_draft_where_changes_are_not_allowed(): void
+    {
+        $entitlements = \Mockery::mock(\Whilesmart\Entitlements\Contracts\Entitlements::class)->shouldIgnoreMissing();
+        $entitlements->shouldReceive('allows')->andReturnUsing(fn ($owner) => ! $owner instanceof \App\Models\Workspace);
+        $this->app->instance(\Whilesmart\Entitlements\Contracts\Entitlements::class, $entitlements);
+
+        $credentials = $this->createDemo('shared-space');
+        $this->assertArrayNotHasKey('invitation', $credentials);
+        $workspace = \App\Models\Workspace::where('slug', $credentials['workspace'])->firstOrFail();
+        $this->assertSame(1, $workspace->members()->distinct()->count('users.id'));
+        $this->assertSame(0, \App\Models\Wallet::where('workspace_id', $workspace->id)->count());
+        $this->assertSame(0, $workspace->budgets()->count());
+    }
+
     public function test_unknown_scenarios_do_not_create_accounts(): void
     {
         $before = User::count();

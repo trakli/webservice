@@ -35,6 +35,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Holdings\CoingeckoPriceProvider::class
         );
 
+        $this->app->bind(\Whilesmart\Workspaces\Contracts\InvitationGuard::class, \App\Workspaces\InvitationGuard::class);
+
         $this->app->singleton(IntegrationRegistry::class);
 
         $this->app->singleton(DocumentProcessorManager::class, function ($app) {

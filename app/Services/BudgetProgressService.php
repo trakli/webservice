@@ -27,6 +27,8 @@ class BudgetProgressService
      */
     private ?User $convertUser = null;
 
+    private ?Budget $workspaceBudget = null;
+
     /**
      * Currencies encountered with no available rate during the current
      * compute() run. A non-empty set flags the snapshot partial instead of
@@ -72,6 +74,7 @@ class BudgetProgressService
 
         [$periodStart, $periodEnd] = $this->resolvePeriodWindow($budget, $reference);
 
+        $this->workspaceBudget = $budget->owner instanceof \App\Models\Workspace ? $budget : null;
         $this->convertUser = $budget->owner instanceof User ? $budget->owner : null;
         $this->unconvertedCurrencies = [];
 
@@ -82,7 +85,7 @@ class BudgetProgressService
 
         $limit = (float) $budget->amount;
 
-        if (empty($userIds)) {
+        if (empty($userIds) && $this->workspaceBudget === null) {
             return $this->emptyProgress($periodStart, $periodEnd, $limit, 0.0);
         }
         // NOTE: empty target lists are intentional — they mean the budget
@@ -107,16 +110,7 @@ class BudgetProgressService
 
         $netSpent = max(0.0, $grossSpent - $refunds);
 
-        $rolloverIn = 0.0;
-        if ($budget->rollover_enabled) {
-            $previousState = BudgetPeriodState::query()
-                ->where('budget_id', $budget->id)
-                ->where('period_end', '<', $periodStart->toDateString())
-                ->whereNotNull('closed_at')
-                ->orderByDesc('period_end')
-                ->first();
-            $rolloverIn = $previousState ? (float) $previousState->rollover_out : 0.0;
-        }
+        $rolloverIn = $this->rolloverIn($budget, $periodStart);
 
         $effectiveLimit = $limit + $rolloverIn;
         $remaining = $effectiveLimit - $netSpent;
@@ -165,6 +159,22 @@ class BudgetProgressService
         }
 
         return $snapshot;
+    }
+
+    private function rolloverIn(Budget $budget, CarbonInterface $periodStart): float
+    {
+        $rolloverIn = 0.0;
+        if ($budget->rollover_enabled) {
+            $previousState = BudgetPeriodState::query()
+                ->where('budget_id', $budget->id)
+                ->where('period_end', '<', $periodStart->toDateString())
+                ->whereNotNull('closed_at')
+                ->orderByDesc('period_end')
+                ->first();
+            $rolloverIn = $previousState ? (float) $previousState->rollover_out : 0.0;
+        }
+
+        return $rolloverIn;
     }
 
     /**
@@ -239,9 +249,10 @@ class BudgetProgressService
         string $budgetCurrency,
         bool $onlyRefunds = false,
     ): float {
-        $query = Transaction::query()
-            ->whereIn('user_id', $userIds)
-            ->whereNull('transfer_id')
+        $query = $this->workspaceBudget
+            ? app(WorkspaceFinance::class)->budgetTransactions($this->workspaceBudget)
+            : Transaction::query()->whereIn('user_id', $userIds);
+        $query->whereNull('transfer_id')
             ->where('type', $type)
             ->whereBetween('datetime', [$periodStart, $periodEnd]);
 
@@ -249,7 +260,7 @@ class BudgetProgressService
             $query->whereHas('refund');
         }
 
-        if (empty($categoryIds) && empty($groupIds) && empty($walletIds)) {
+        if ($this->workspaceBudget || (empty($categoryIds) && empty($groupIds) && empty($walletIds))) {
             return $this->getReducedSum($query, $budgetCurrency);
         }
 

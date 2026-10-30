@@ -25,6 +25,7 @@ class User extends Authenticatable implements HasLocalePreference
     use HasDevices;
     use HasFactory;
     use HasRoles;
+    use \Whilesmart\Workspaces\Traits\HasWorkspaces;
     use HasTokenUsage;
     use Notifiable;
     use SendsOutreach;

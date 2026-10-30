@@ -29,13 +29,20 @@ class CloseBudgetPeriodJob implements ShouldQueue
     public function handle(BudgetProgressService $service): void
     {
         $budget = Budget::query()->find($this->budgetId);
-        if (! $budget || ! $budget->rollover_enabled) {
+        if (! $budget || ! $budget->owner || ! $budget->is_active || ! $budget->rollover_enabled) {
             return;
         }
 
         [$periodStart, $periodEnd] = $service->resolvePeriodWindow($budget, CarbonImmutable::now()->subDay());
 
         if ($periodEnd->isFuture()) {
+            return;
+        }
+
+        if (
+            $budget->owner instanceof \App\Models\Workspace && BudgetPeriodState::where('budget_id', $budget->id)
+            ->whereDate('period_start', $periodStart)->whereNotNull('closed_at')->exists()
+        ) {
             return;
         }
 

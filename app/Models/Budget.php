@@ -134,6 +134,14 @@ class Budget extends Model implements HasAgentResource
         'progress',
     ];
 
+    public function toArray(): array
+    {
+        if ($this->owner_type === Workspace::class) {
+            $this->makeHidden(['owner', 'wallets', 'categories', 'groups', 'syncState', 'sync_state']);
+        }
+        return parent::toArray();
+    }
+
     public function sluggable(): array
     {
         return [
@@ -176,6 +184,23 @@ class Budget extends Model implements HasAgentResource
      */
     public function getTargetsAttribute(): array
     {
+        if ($this->owner_type === Workspace::class) {
+            $workspace = $this->owner;
+            return \Illuminate\Support\Facades\DB::table('budgetables')->where('budget_id', $this->id)->get()
+                ->map(function ($target) use ($workspace) {
+                    $type = [Category::class => 'category', Group::class => 'group', Wallet::class => 'wallet'][$target->budgetable_type] ?? null;
+                    if (! $type) {
+                        return null;
+                    }
+                    $query = $type === 'wallet' && $workspace
+                        ? app(\App\Services\WorkspaceFinance::class)->wallets($workspace)
+                        : $target->budgetable_type::query()->where('workspace_id', $this->owner_id);
+                    $record = $workspace ? $query->find($target->budgetable_id) : null;
+                    return ['type' => $type, 'id' => $target->budgetable_id, 'client_generated_id' => null,
+                        'name' => $record?->name ?? ($type === 'wallet' ? 'Unshared wallet' : 'Unavailable label')];
+                })->filter()->values()->all();
+        }
+
         $typeMap = [
             'categories' => 'category',
             'groups' => 'group',
