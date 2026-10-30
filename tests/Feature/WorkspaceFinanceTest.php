@@ -22,13 +22,23 @@ class WorkspaceFinanceTest extends TestCase
         Queue::fake();
         $this->owner = User::factory()->create();
         $this->member = User::factory()->create();
-        $response = $this->actingAs($this->owner)->postJson('/api/v1/workspaces', ['name' => 'Our family', 'kind' => 'family']);
+        $response = $this->actingAs($this->owner)->postJson('/api/v1/workspaces', ['name' => 'Our group']);
         $response->assertCreated();
         $this->base = '/api/v1/workspaces/' . $response->json('data.slug');
         $invite = $this->postJson($this->base . '/members/invite', ['email' => $this->member->email, 'role' => 'member'])->assertCreated();
         $url = $invite->json('data.url');
         $token = basename($url);
         $this->actingAs($this->member)->postJson('/api/v1/workspaces/invitations/' . $token . '/accept')->assertOk();
+    }
+
+    public function test_marketing_kind_is_not_stored_or_returned_for_a_workspace(): void
+    {
+        $response = $this->actingAs($this->owner)->postJson('/api/v1/workspaces', [
+            'name' => 'A shared space', 'kind' => 'family',
+        ])->assertCreated()->assertJsonMissingPath('data.kind');
+        $workspace = \App\Models\Workspace::findOrFail($response->json('data.id'));
+        $this->assertArrayNotHasKey('kind', $workspace->metadata ?? []);
+        $this->getJson('/api/v1/workspaces/' . $workspace->slug)->assertOk()->assertJsonMissingPath('data.kind');
     }
 
     private function personalWallet(User $user, string $name = 'Private account'): int
@@ -215,6 +225,24 @@ class WorkspaceFinanceTest extends TestCase
         $this->actingAs($this->member)->deleteJson($this->base . '/shares/transactions/' . $transaction)->assertOk();
         $this->actingAs($this->owner)->postJson($this->base . '/budgets/' . $budget . '/close-period')->assertOk();
         $this->getJson($this->base . '/budgets/' . $budget . '/periods')->assertJsonPath('data.data.0.net_spent', '40.0000');
+    }
+
+    public function test_workspace_assistant_creates_a_group_without_a_marketing_kind(): void
+    {
+        $chat = $this->actingAs($this->owner)->postJson('/api/v1/ai/chats', [
+            'message' => 'Create a shared space', 'defer_processing' => true,
+        ])->assertStatus(202)->json('data.id');
+        $tool = $this->app->make(\App\Ai\Tools\Write\ProposeWorkspaceChangeTool::class);
+        $tool->handle(
+            ['operation' => 'create_workspace', 'name' => 'Weekend plans'],
+            \Whilesmart\Agents\ValueObjects\ToolContext::forUser($this->owner, 'en', ['chat_session_id' => $chat])
+        );
+        $action = \App\Models\AgentProposedAction::where('action_type', 'workspace.change')->latest('id')->firstOrFail();
+        $this->assertArrayNotHasKey('kind', $action->payload);
+        $this->assertSame('Create shared space: Weekend plans', $action->summary);
+        $this->postJson('/api/v1/ai/chats/' . $chat . '/actions/' . $action->id . '/confirm')->assertOk();
+        $workspace = \App\Models\Workspace::where('name', 'Weekend plans')->firstOrFail();
+        $this->assertArrayNotHasKey('kind', $workspace->metadata ?? []);
     }
 
     public function test_workspace_assistant_writes_only_on_confirmation_and_pins_the_workspace(): void

@@ -13,6 +13,7 @@ use App\Services\WorkspaceFinance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class WorkspaceFinanceController extends ApiController
 {
@@ -285,9 +286,10 @@ class WorkspaceFinanceController extends ApiController
             if ($model::where('workspace_id', $workspace->id)->whereIn('id', $ids)->count() !== count($ids)) {
                 $this->finance->deny('Choose labels belonging to this workspace.');
             }
-            DB::table("workspace_transaction_{$kind}s")->where('workspace_id', $workspace->id)->where('transaction_id', $transaction->id)->delete();
+            DB::table('workspace_transaction_' . Str::plural($kind))->where('workspace_id', $workspace->id)
+                ->where('transaction_id', $transaction->id)->delete();
             foreach ($ids as $id) {
-                DB::table("workspace_transaction_{$kind}s")->insert(['workspace_id' => $workspace->id, 'transaction_id' => $transaction->id,
+                DB::table('workspace_transaction_' . Str::plural($kind))->insert(['workspace_id' => $workspace->id, 'transaction_id' => $transaction->id,
                     "{$kind}_id" => $id]);
             }
         }

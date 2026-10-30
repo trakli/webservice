@@ -25,7 +25,7 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
 
     public function description(): string
     {
-        return 'Propose creating a family/group, a shared budget, or a transaction in a workspace-owned wallet. Requires' .
+        return 'Propose creating a shared group, a shared budget, or a transaction in a workspace-owned wallet. Requires' .
             ' confirmation. Always identify the workspace explicitly before proposing a shared financial change.';
     }
 
@@ -39,7 +39,6 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
                 required: false
             ),
             ParameterSpec::string('name', 'Workspace or budget name.', required: false),
-            ParameterSpec::enum('kind', 'Workspace kind.', ['family', 'group'], required: false),
             ParameterSpec::number('amount', 'Budget limit or transaction amount.', required: false),
             ParameterSpec::string('currency', 'Three-letter uppercase budget currency.', required: false),
             ParameterSpec::enum('period_type', 'Budget period.', ['weekly', 'monthly', 'yearly', 'custom'], required: false),
@@ -63,7 +62,6 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
         $data = Validator::make($arguments, ['operation' => 'required|in:create_workspace,create_budget,record_transaction',
             'workspace' => 'required_unless:operation,create_workspace|string',
             'name' => 'required_if:operation,create_workspace,create_budget|string|max:255',
-            'kind' => 'required_if:operation,create_workspace|in:family,group',
             'amount' => 'required_if:operation,create_budget,record_transaction|numeric|gt:0',
             'currency' => 'required_if:operation,create_budget|string|regex:/^[A-Z]{3}$/',
             'period_type' => 'required_if:operation,create_budget|in:weekly,monthly,yearly,custom',
@@ -88,7 +86,7 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
     protected function summarize(array $payload, ToolContext $context): string
     {
         return match ($payload['operation']) {
-            'create_workspace' => 'Create ' . $payload['kind'] . ' space: ' . $payload['name'],
+            'create_workspace' => 'Create shared space: ' . $payload['name'],
             'create_budget' => 'Create shared budget: ' . $payload['name'] . ' (' . $payload['workspace'] . ')',
             default => 'Record ' . $payload['type'] . ' of ' . $payload['amount'] . ' in ' . $payload['workspace'],
         };

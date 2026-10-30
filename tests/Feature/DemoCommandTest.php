@@ -67,7 +67,7 @@ class DemoCommandTest extends TestCase
         }
     }
 
-    public function test_shared_space_owner_sees_a_seeded_family_space(): void
+    public function test_shared_space_owner_sees_a_seeded_shared_space(): void
     {
         $credentials = $this->createDemo('shared-space');
         $token = $this->postJson('/api/v1/login', [
@@ -78,7 +78,7 @@ class DemoCommandTest extends TestCase
 
         $this->getJson('/api/v1/workspaces')->assertOk()->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.slug', $credentials['workspace'])
-            ->assertJsonPath('data.data.0.kind', 'family')
+            ->assertJsonMissingPath('data.data.0.kind')
             ->assertJsonPath('data.data.0.role', 'owner')
             ->assertJsonPath('data.data.0.member_count', 2);
         $base = '/api/v1/workspaces/' . $credentials['workspace'];
