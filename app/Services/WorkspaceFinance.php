@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -105,32 +107,53 @@ class WorkspaceFinance
 
     public function presentTransaction(Workspace $workspace, Transaction $transaction, User $user): array
     {
-        $wallet = $transaction->wallet;
-        $walletVisible = $this->wallets($workspace)->whereKey($wallet->id)->exists();
-        $creatorId = $transaction->user_id ?? $transaction->created_by_user_id;
-        $creator = User::find($creatorId);
-        $native = (int) $wallet->workspace_id === $workspace->id;
-        $editable = $native && ($creatorId === $user->id || in_array($this->role($workspace, $user), ['owner', 'admin'], true));
-        $data = [
-            'id' => $transaction->id, 'amount' => (float) $transaction->amount,
-            'type' => \App\Events\TransactionRecorded::normalizeType($transaction->type),
-            'datetime' => $transaction->datetime?->toIso8601String(), 'description' => $transaction->description,
-            'currency' => $wallet->currency, 'wallet_id' => $walletVisible ? $wallet->id : null,
-            'wallet_name' => $walletVisible ? $wallet->name : null,
-            'contributor' => $creator ? trim($creator->first_name . ' ' . $creator->last_name) : 'Former member',
-            'source' => $native ? 'workspace' : ($walletVisible ? 'shared_wallet' : 'shared_transaction'),
-            'can_edit' => $editable && $this->eligible($workspace),
-            'can_unshare' => ! $native && DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)
-                ->where('transaction_id', $transaction->id)->exists() && ($transaction->user_id === $user->id || in_array($this
-                ->role($workspace, $user), ['owner', 'admin'], true)),
-            'is_refund' => $transaction->refund()->exists(),
-        ];
+        return $this->presentTransactions($workspace, new EloquentCollection([$transaction]), $user)->first();
+    }
+
+    public function presentTransactions(Workspace $workspace, EloquentCollection $transactions, User $user): Collection
+    {
+        if ($transactions->isEmpty()) {
+            return collect();
+        }
+        $transactions->loadMissing('wallet');
+        $ids = $transactions->modelKeys();
+        $visibleWallets = $this->wallets($workspace)->whereIn('wallets.id', $transactions->pluck('wallet_id'))
+            ->pluck('wallets.id')->flip();
+        $creators = User::whereIn('id', $transactions->map(fn ($item) => $item->user_id ?? $item->created_by_user_id))
+            ->get()->keyBy('id');
+        $admin = in_array($this->role($workspace, $user), ['owner', 'admin'], true);
+        $eligible = $this->eligible($workspace);
+        $shares = DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)
+            ->whereIn('transaction_id', $ids)->pluck('transaction_id')->flip();
+        $refunds = DB::table('refunds')->whereIn('refund_transaction_id', $ids)->pluck('refund_transaction_id')->flip();
+        $labels = [];
         foreach (['category', 'group'] as $kind) {
-            $data["{$kind}_ids"] = DB::table('workspace_transaction_' . Str::plural($kind))
-                ->where('workspace_id', $workspace->id)->where('transaction_id', $transaction->id)->pluck("{$kind}_id")->all();
+            $labels[$kind] = DB::table('workspace_transaction_' . Str::plural($kind))->where('workspace_id', $workspace->id)
+                ->whereIn('transaction_id', $ids)->get()->groupBy('transaction_id')
+                ->map(fn ($links) => $links->pluck("{$kind}_id")->all());
         }
 
-        return $data;
+        return $transactions->map(function ($transaction) use ($workspace, $user, $visibleWallets, $creators, $admin, $eligible, $shares, $refunds, $labels) {
+            $wallet = $transaction->wallet;
+            $visible = $visibleWallets->has($wallet->id);
+            $creatorId = $transaction->user_id ?? $transaction->created_by_user_id;
+            $creator = $creators->get($creatorId);
+            $native = (int) $wallet->workspace_id === $workspace->id;
+            return [
+                'id' => $transaction->id, 'amount' => (float) $transaction->amount,
+                'type' => \App\Events\TransactionRecorded::normalizeType($transaction->type),
+                'datetime' => $transaction->datetime?->toIso8601String(), 'description' => $transaction->description,
+                'currency' => $wallet->currency, 'wallet_id' => $visible ? $wallet->id : null,
+                'wallet_name' => $visible ? $wallet->name : null,
+                'contributor' => $creator ? trim($creator->first_name . ' ' . $creator->last_name) : 'Former member',
+                'source' => $native ? 'workspace' : ($visible ? 'shared_wallet' : 'shared_transaction'),
+                'can_edit' => $native && ($creatorId === $user->id || $admin) && $eligible,
+                'can_unshare' => ! $native && $shares->has($transaction->id) && ($transaction->user_id === $user->id || $admin),
+                'is_refund' => $refunds->has($transaction->id),
+                'category_ids' => $labels['category']->get($transaction->id, []),
+                'group_ids' => $labels['group']->get($transaction->id, []),
+            ];
+        });
     }
 
     public function refresh(Workspace $workspace): void

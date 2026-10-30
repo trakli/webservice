@@ -62,11 +62,7 @@ class WorkspaceBudgetController extends ApiController
         $items = $this->finance->budgetTransactions($budget)->whereBetween('datetime', [$start, $end])->whereNull('transfer_id')
             ->latest('datetime')->paginate(25);
 
-        return $this->success(['data' => collect($items->items())->map(fn ($transaction) => $this->finance->presentTransaction(
-            $workspace,
-            $transaction,
-            $request->user()
-        )),
+        return $this->success(['data' => $this->finance->presentTransactions($workspace, $items->getCollection(), $request->user()),
             'current_page' => $items->currentPage(), 'last_page' => $items->lastPage(), 'per_page' => 25, 'total' => $items->total()]);
     }
 

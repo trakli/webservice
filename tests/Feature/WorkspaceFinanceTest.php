@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use Whilesmart\Entitlements\Contracts\Entitlements;
 
@@ -39,6 +40,50 @@ class WorkspaceFinanceTest extends TestCase
         $workspace = \App\Models\Workspace::findOrFail($response->json('data.id'));
         $this->assertArrayNotHasKey('kind', $workspace->metadata ?? []);
         $this->getJson('/api/v1/workspaces/' . $workspace->slug)->assertOk()->assertJsonMissingPath('data.kind');
+    }
+
+    private function measuredGet(string $path): array
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        try {
+            $response = $this->getJson($path)->assertOk();
+            return [$response, count(DB::getQueryLog())];
+        } finally {
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
+    }
+
+    public function test_workspace_finance_queries_do_not_grow_with_each_transaction(): void
+    {
+        $wallet = $this->actingAs($this->owner)->postJson($this->base . '/wallets', [
+            'name' => 'Shared cash', 'type' => 'cash', 'currency' => 'USD',
+        ])->assertCreated()->json('data.id');
+        $input = ['wallet_id' => $wallet, 'amount' => 1, 'type' => 'expense', 'datetime' => now()->toIso8601String()];
+        $this->postJson($this->base . '/transactions', $input)->assertCreated();
+        [, $listQueries] = $this->measuredGet($this->base . '/transactions');
+        [, $overviewQueries] = $this->measuredGet($this->base . '/finance');
+        for ($count = 1; $count < 25; $count++) {
+            $this->postJson($this->base . '/transactions', $input)->assertCreated();
+        }
+        $this->postJson($this->base . '/transactions', array_replace($input, ['type' => 'income', 'amount' => 5]))->assertCreated();
+        [$entries, $largerListQueries] = $this->measuredGet($this->base . '/transactions');
+        [$overview, $largerOverviewQueries] = $this->measuredGet($this->base . '/finance');
+        $entries->assertJsonPath('data.total', 26)->assertJsonCount(25, 'data.data');
+        $overview->assertJsonPath('data.totals.0.income', 5)->assertJsonPath('data.totals.0.expenses', 25);
+        $this->assertLessThanOrEqual($listQueries + 3, $largerListQueries);
+        $this->assertLessThanOrEqual($overviewQueries + 3, $largerOverviewQueries);
+    }
+
+    public function test_workspace_assistant_returns_the_same_error_for_missing_and_inaccessible_spaces(): void
+    {
+        $tool = $this->app->make(\App\Ai\Tools\Read\ListWorkspaceFinancesTool::class);
+        $missing = $tool->handle(['workspace' => 'missing-space'], \Whilesmart\Agents\ValueObjects\ToolContext::forUser($this->owner));
+        $outsider = User::factory()->create();
+        $inaccessible = $tool->handle(['workspace' => basename($this->base)], \Whilesmart\Agents\ValueObjects\ToolContext::forUser($outsider));
+        $this->assertSame(['error' => 'Shared space not found or no longer accessible.'], $missing);
+        $this->assertSame($missing, $inaccessible);
     }
 
     private function personalWallet(User $user, string $name = 'Private account'): int
