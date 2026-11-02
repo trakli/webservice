@@ -13,6 +13,8 @@ use App\Services\WorkspaceFinance;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Whilesmart\Shareables\Models\Audience;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class WorkspaceFinanceController extends ApiController
@@ -107,10 +109,7 @@ class WorkspaceFinanceController extends ApiController
         $this->finance->authorize($workspace, $request->user(), write: true);
         $data = $request->validate(['wallet_id' => 'required|integer', 'confirmed' => 'required|accepted']);
         $wallet = $request->user()->wallets()->findOrFail($data['wallet_id']);
-        DB::table('workspace_wallet_shares')->updateOrInsert(
-            ['workspace_id' => $workspace->id, 'wallet_id' => $wallet->id],
-            ['user_id' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]
-        );
+        $this->finance->grant($workspace, $wallet, $request->user());
         $this->finance->refresh($workspace);
 
         return $this->success($this->presentWallet($request, $workspace, $wallet), 'Wallet shared', 201);
@@ -118,17 +117,19 @@ class WorkspaceFinanceController extends ApiController
 
     public function unshareWallet(Request $request, Workspace $workspace, int $walletId): JsonResponse
     {
-        $share = DB::table('workspace_wallet_shares')->where('workspace_id', $workspace->id)->where('wallet_id', $walletId)->first();
+        $wallet = Wallet::withTrashed()->findOrFail($walletId);
+        $share = $this->finance->grants($workspace, $wallet)->first();
         if (! $share) {
             $this->finance->deny('Wallet share not found.', 404);
         }
-        if ($share->user_id !== $request->user()->id) {
+        if (! ($share->created_by_type === $request->user()->getMorphClass() && $share->created_by_id === $request->user()->id)) {
             $this->finance->authorize($workspace, $request->user(), manage: true);
         }
-        DB::transaction(function () use ($workspace, $walletId) {
-            DB::table('workspace_wallet_shares')->where('workspace_id', $workspace->id)->where('wallet_id', $walletId)->delete();
-            DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)
-                ->whereIn('transaction_id', Transaction::withTrashed()->where('wallet_id', $walletId)->select('id'))->delete();
+        DB::transaction(function () use ($workspace, $wallet, $walletId) {
+            $wallet->revokeShare($workspace);
+            Audience::forAudience($workspace)->whereHas('share', fn (Builder $shares) => $shares
+                ->where('shareable_type', (new Transaction())->getMorphClass())
+                ->whereIn('shareable_id', Transaction::withTrashed()->where('wallet_id', $walletId)->select('id')))->delete();
             $this->finance->refresh($workspace);
         });
 
@@ -140,10 +141,7 @@ class WorkspaceFinanceController extends ApiController
         $this->finance->authorize($workspace, $request->user(), write: true);
         $data = $request->validate(['transaction_id' => 'required|integer', 'confirmed' => 'required|accepted']);
         $transaction = $request->user()->transactions()->findOrFail($data['transaction_id']);
-        DB::table('workspace_transaction_shares')->updateOrInsert(
-            ['workspace_id' => $workspace->id, 'transaction_id' => $transaction->id],
-            ['user_id' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]
-        );
+        $this->finance->grant($workspace, $transaction, $request->user());
         $this->finance->refresh($workspace);
 
         return $this->success($this->finance->presentTransaction($workspace, $transaction, $request->user()), 'Transaction shared', 201);
@@ -151,14 +149,15 @@ class WorkspaceFinanceController extends ApiController
 
     public function unshareTransaction(Request $request, Workspace $workspace, int $transactionId): JsonResponse
     {
-        $share = DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)->where('transaction_id', $transactionId)->first();
+        $transaction = Transaction::withTrashed()->findOrFail($transactionId);
+        $share = $this->finance->grants($workspace, $transaction)->first();
         if (! $share) {
             $this->finance->deny('Transaction share not found. Unshare its wallet to revoke full-wallet access.', 404);
         }
-        if ($share->user_id !== $request->user()->id) {
+        if (! ($share->created_by_type === $request->user()->getMorphClass() && $share->created_by_id === $request->user()->id)) {
             $this->finance->authorize($workspace, $request->user(), manage: true);
         }
-        DB::table('workspace_transaction_shares')->where('id', $share->id)->delete();
+        $transaction->revokeShare($workspace);
         $this->finance->refresh($workspace);
 
         return $this->success(null, 'Transaction share revoked');

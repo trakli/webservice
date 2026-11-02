@@ -4,13 +4,24 @@ namespace App\Models;
 
 use RuntimeException;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Contracts\Auth\Authenticatable;
+use App\Services\WorkspaceFinance;
+use Whilesmart\Shareables\Contracts\ShareAudience;
+use Whilesmart\Shareables\Traits\ReceivesShares;
 use Whilesmart\Agents\Contracts\HasAgentResource;
 use Whilesmart\Agents\Resources\AgentResource;
 use Whilesmart\Agents\Resources\ResourceField;
 use Whilesmart\Workspaces\Models\Workspace as BaseWorkspace;
 
-class Workspace extends BaseWorkspace implements HasAgentResource
+class Workspace extends BaseWorkspace implements HasAgentResource, ShareAudience
 {
+    use ReceivesShares;
+
+    public function admits(?Authenticatable $viewer): bool
+    {
+        return $viewer instanceof User && app(WorkspaceFinance::class)->role($this, $viewer) !== null;
+    }
+
     protected static function booted(): void
     {
         static::deleting(function (Workspace $workspace) {
