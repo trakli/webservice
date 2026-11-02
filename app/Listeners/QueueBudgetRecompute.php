@@ -7,6 +7,11 @@ use App\Events\TransactionRecorded;
 use App\Events\TransactionSnapshot;
 use App\Jobs\RecomputeBudgetProgressJob;
 use App\Models\Budget;
+use App\Models\Workspace;
+use App\Models\Wallet;
+use App\Models\Transaction;
+use Whilesmart\Shareables\Models\Audience;
+use Illuminate\Database\Eloquent\Builder;
 
 class QueueBudgetRecompute
 {
@@ -22,10 +27,14 @@ class QueueBudgetRecompute
             if (! $snapshot) {
                 continue;
             }
-            $workspaceIds = \Illuminate\Support\Facades\DB::table('workspace_wallet_shares')->where('wallet_id', $snapshot->walletId)->pluck('workspace_id')
-                ->merge(\Illuminate\Support\Facades\DB::table('workspace_transaction_shares')->where('transaction_id', $snapshot
-                    ->transactionId)->pluck('workspace_id'))
-                ->merge(\App\Models\Wallet::withTrashed()->whereKey($snapshot->walletId)->where('owner_type', \App\Models\Workspace::class)->pluck('owner_id'));
+            $workspaceIds = Audience::where('audience_type', (new Workspace())->getMorphClass())
+                ->whereHas('share', fn (Builder $shares) => $shares->active()->whereNull('password')
+                    ->where(fn (Builder $resources) => $resources
+                        ->where(fn (Builder $wallet) => $wallet->where('shareable_type', (new Wallet())->getMorphClass())
+                            ->where('shareable_id', $snapshot->walletId))
+                        ->orWhere(fn (Builder $transaction) => $transaction->where('shareable_type', (new Transaction())->getMorphClass())
+                            ->where('shareable_id', $snapshot->transactionId))))->pluck('audience_id')
+                ->merge(Wallet::withTrashed()->whereKey($snapshot->walletId)->where('owner_type', (new Workspace())->getMorphClass())->pluck('owner_id'));
             foreach (
                 Budget::where('owner_type', \App\Models\Workspace::class)->whereIn('owner_id', $workspaceIds)->where('is_active', true)
                 ->pluck('id') as $id

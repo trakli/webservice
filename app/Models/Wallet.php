@@ -6,6 +6,7 @@ use App\Casts\FloatCast;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Iconable;
 use App\Traits\Syncable;
+use Whilesmart\Shareables\Traits\Shareable;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -54,6 +55,7 @@ class Wallet extends Model implements HasAgentResource
     use Sluggable;
     use SoftDeletes;
     use Syncable;
+    use Shareable;
 
     protected $fillable = [
         'name',

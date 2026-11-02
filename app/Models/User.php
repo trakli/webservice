@@ -4,6 +4,10 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Whilesmart\Shareables\Contracts\ShareAudience;
+use Whilesmart\Shareables\Models\Share;
+use Whilesmart\Shareables\Traits\ReceivesShares;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -18,7 +22,7 @@ use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
-class User extends Authenticatable implements HasLocalePreference
+class User extends Authenticatable implements HasLocalePreference, ShareAudience
 {
     use Configurable;
     use HasAgentActions;
@@ -30,6 +34,7 @@ class User extends Authenticatable implements HasLocalePreference
     use HasTokenUsage;
     use Notifiable;
     use SendsOutreach;
+    use ReceivesShares;
 
     /**
      * The attributes that are mass assignable.
@@ -77,9 +82,31 @@ class User extends Authenticatable implements HasLocalePreference
         'tokens_used' => 'integer',
     ];
 
+    public function delete()
+    {
+        return $this->getConnection()->transaction(function () {
+            static::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+            foreach ([Transaction::class, Wallet::class] as $resource) {
+                $resource::withTrashed()->ownedBy($this)->select('id')->lockForUpdate()->get();
+            }
+
+            return parent::delete();
+        });
+    }
+
+    public function admits(?AuthenticatableContract $viewer): bool
+    {
+        return $viewer instanceof self && $this->is($viewer);
+    }
+
     protected static function booted(): void
     {
         static::deleting(function (User $user) {
+            Share::whereHasMorph(
+                'shareable',
+                [Wallet::class, Transaction::class],
+                fn ($resources) => $resources->withTrashed()->ownedBy($user)
+            )->withTrashed()->forceDelete();
             $tables = ['transactions', 'transfers', 'wallets', 'categories', 'groups', 'parties',
                 'reminders', 'file_imports', 'import_sessions'];
             foreach ($tables as $table) {

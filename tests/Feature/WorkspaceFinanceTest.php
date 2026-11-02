@@ -358,4 +358,74 @@ class WorkspaceFinanceTest extends TestCase
             ->assertJsonPath('data.budgets.0.targets.0.name', 'Unshared wallet')
             ->assertJsonMissing(['name' => 'Private savings name']);
     }
+    public function test_repeated_sharing_reuses_one_active_package_grant(): void
+    {
+        $wallet = $this->personalWallet($this->member);
+        $transaction = $this->personalTransaction($this->member, $wallet, 'Groceries', 12);
+        foreach (['wallets' => $wallet, 'transactions' => $transaction] as $kind => $id) {
+            $key = $kind === 'wallets' ? 'wallet_id' : 'transaction_id';
+            $this->postJson($this->base . '/shares/' . $kind, [$key => $id, 'confirmed' => true])->assertCreated();
+            $this->postJson($this->base . '/shares/' . $kind, [$key => $id, 'confirmed' => true])->assertCreated();
+        }
+        $this->assertDatabaseCount('shares', 2);
+        $this->assertDatabaseCount('share_audiences', 2);
+        $this->assertSame(2, \Whilesmart\Shareables\Models\Share::active()->count());
+    }
+
+    public function test_leaving_one_workspace_keeps_personal_shares_to_another_workspace(): void
+    {
+        $wallet = $this->personalWallet($this->member);
+        $this->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
+        $other = $this->postJson('/api/v1/workspaces', ['name' => 'Friends'])
+            ->assertCreated()->json('data.slug');
+        $otherBase = '/api/v1/workspaces/' . $other;
+        $this->postJson($otherBase . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
+        $this->postJson($this->base . '/leave')->assertOk();
+        $this->getJson($otherBase . '/finance')->assertOk()->assertJsonPath('data.wallets.0.id', $wallet);
+        $this->actingAs($this->owner)->getJson($this->base . '/finance')->assertOk()->assertJsonCount(0, 'data.wallets');
+    }
+
+    public function test_expired_package_grants_hide_the_wallet_and_resharing_creates_a_valid_grant(): void
+    {
+        $wallet = $this->personalWallet($this->member);
+        $this->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
+        $share = \Whilesmart\Shareables\Models\Share::firstOrFail();
+        $share->forceFill(['expires_at' => now()->subSecond()])->save();
+        $this->actingAs($this->owner)->getJson($this->base . '/finance')->assertOk()->assertJsonCount(0, 'data.wallets');
+        $this->actingAs($this->member)->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
+        $this->actingAs($this->owner)->getJson($this->base . '/finance')->assertOk()->assertJsonPath('data.wallets.0.id', $wallet);
+        $this->assertSame(1, \Whilesmart\Shareables\Models\Share::active()->count());
+    }
+
+    public function test_account_deletion_removes_personal_package_grants_and_their_audiences(): void
+    {
+        $wallet = $this->personalWallet($this->member);
+        $this->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertCreated();
+        $this->deleteJson('/api/v1/account', ['confirm_delete' => true])->assertOk();
+        $this->assertDatabaseCount('shares', 0);
+        $this->assertDatabaseCount('share_audiences', 0);
+        $this->actingAs($this->owner)->getJson($this->base . '/finance')->assertOk()->assertJsonCount(0, 'data.wallets');
+    }
+
+    public function test_a_share_request_cannot_recreate_a_grant_after_the_member_leaves(): void
+    {
+        $wallet = $this->personalWallet($this->member);
+        $finance = new class () extends \App\Services\WorkspaceFinance {
+            public ?\Closure $afterAuthorization = null;
+
+            public function authorize(\App\Models\Workspace $workspace, User $user, bool $manage = false, bool $write = false): void
+            {
+                parent::authorize($workspace, $user, $manage, $write);
+                $callback = $this->afterAuthorization;
+                $this->afterAuthorization = null;
+                $callback?->__invoke();
+            }
+        };
+        $finance->afterAuthorization = fn () => $this->postJson($this->base . '/leave')->assertOk();
+        $this->app->instance(\App\Services\WorkspaceFinance::class, $finance);
+        $this->postJson($this->base . '/shares/wallets', ['wallet_id' => $wallet, 'confirmed' => true])->assertForbidden();
+        $this->assertDatabaseCount('share_audiences', 0);
+        $this->actingAs($this->owner)->getJson($this->base . '/finance')->assertOk()->assertJsonCount(0, 'data.wallets');
+    }
+
 }

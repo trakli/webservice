@@ -14,6 +14,9 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Whilesmart\Entitlements\Contracts\Entitlements;
+use Whilesmart\Shareables\Models\Share;
+use Whilesmart\Shareables\Models\Audience;
+use Illuminate\Database\Eloquent\Model;
 
 class WorkspaceFinance
 {
@@ -58,11 +61,7 @@ class WorkspaceFinance
     {
         return Wallet::query()->where(function (Builder $query) use ($workspace) {
             $query->ownedBy($workspace)
-                ->orWhereExists(function ($shares) use ($workspace) {
-                    $shares->selectRaw('1')->from('workspace_wallet_shares')
-                        ->where('workspace_id', $workspace->id)
-                        ->whereColumn('wallet_id', 'wallets.id');
-                });
+                ->orWhere(fn (Builder $shared) => $shared->sharedWith($workspace, 'read'));
         });
     }
 
@@ -70,11 +69,7 @@ class WorkspaceFinance
     {
         return Transaction::query()->where(function (Builder $query) use ($workspace) {
             $query->whereIn('wallet_id', $this->wallets($workspace)->select('wallets.id'))
-                ->orWhereExists(function ($shares) use ($workspace) {
-                    $shares->selectRaw('1')->from('workspace_transaction_shares')
-                        ->where('workspace_id', $workspace->id)
-                        ->whereColumn('transaction_id', 'transactions.id');
-                });
+                ->orWhere(fn (Builder $shared) => $shared->sharedWith($workspace, 'read'));
         })->whereHas('wallet');
     }
 
@@ -123,8 +118,8 @@ class WorkspaceFinance
             ->get()->keyBy('id');
         $admin = in_array($this->role($workspace, $user), ['owner', 'admin'], true);
         $eligible = $this->eligible($workspace);
-        $shares = DB::table('workspace_transaction_shares')->where('workspace_id', $workspace->id)
-            ->whereIn('transaction_id', $ids)->pluck('transaction_id')->flip();
+        $shares = $this->grants($workspace)->active()->whereNull('password')
+            ->where('shareable_type', (new Transaction())->getMorphClass())->whereIn('shareable_id', $ids)->pluck('shareable_id')->flip();
         $refunds = DB::table('refunds')->whereIn('refund_transaction_id', $ids)->pluck('refund_transaction_id')->flip();
         $labels = [];
         foreach (['category', 'group'] as $kind) {
@@ -163,11 +158,40 @@ class WorkspaceFinance
         }
     }
 
+    public function grants(Workspace $workspace, ?Model $resource = null): Builder
+    {
+        $query = Share::query()->forAudience($workspace, 'read');
+        if ($resource !== null) {
+            $query->forResource($resource);
+        }
+
+        return $query;
+    }
+
+    public function grant(Workspace $workspace, Model $resource, User $user): Share
+    {
+        return $resource->getConnection()->transaction(function () use ($workspace, $resource, $user) {
+            $workspace = Workspace::whereKey($workspace->getKey())->lockForUpdate()->firstOrFail();
+            $user = User::whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $membership = $user->roleAssignments()->where('context_type', $workspace->getMorphClass())
+                ->where('context_id', $workspace->id)
+                ->whereHas('role', fn (Builder $roles) => $roles->whereIn('slug', ['owner', 'admin', 'member']))
+                ->lockForUpdate()->first();
+            if ($membership === null) {
+                $this->deny('You do not have permission to access this workspace.', 403);
+            }
+            $this->authorize($workspace, $user, write: true);
+            $resource->newQuery()->whereKey($resource->getKey())->lockForUpdate()->firstOrFail();
+            $existing = $this->grants($workspace, $resource)->active()->whereNull('password')->byCreator($user)->first();
+
+            return $existing ?? $resource->share($workspace, 'read', createdBy: $user);
+        });
+    }
+
     public function revokeMember(Workspace $workspace, int $userId): void
     {
-        foreach (['wallet', 'transaction'] as $resource) {
-            DB::table("workspace_{$resource}_shares")->where('workspace_id', $workspace->id)->where('user_id', $userId)->delete();
-        }
+        Audience::forAudience($workspace)->whereHas('share', fn (Builder $shares) => $shares
+            ->where('created_by_type', (new User())->getMorphClass())->where('created_by_id', $userId))->delete();
         $this->refresh($workspace);
     }
 

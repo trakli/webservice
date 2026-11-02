@@ -48,6 +48,7 @@ class WorkspaceController extends BaseController
     public function destroy(BaseWorkspace $workspace): JsonResponse
     {
         return DB::transaction(function () use ($workspace) {
+            $workspace = Workspace::whereKey($workspace->getKey())->lockForUpdate()->firstOrFail();
             $response = parent::destroy($workspace);
             if ($response->isSuccessful()) {
                 $workspace->budgets()->update(['is_active' => false]);
@@ -59,6 +60,7 @@ class WorkspaceController extends BaseController
     public function removeMember(BaseWorkspace $workspace, string $userId): JsonResponse
     {
         return DB::transaction(function () use ($workspace, $userId) {
+            $workspace = Workspace::whereKey($workspace->getKey())->lockForUpdate()->firstOrFail();
             $response = parent::removeMember($workspace, $userId);
             if ($response->isSuccessful()) {
                 app(WorkspaceFinance::class)->revokeMember($workspace, (int) $userId);
@@ -70,6 +72,7 @@ class WorkspaceController extends BaseController
     public function leave(BaseWorkspace $workspace): JsonResponse
     {
         return DB::transaction(function () use ($workspace) {
+            $workspace = Workspace::whereKey($workspace->getKey())->lockForUpdate()->firstOrFail();
             $response = parent::leave($workspace);
             if ($response->isSuccessful()) {
                 app(WorkspaceFinance::class)->revokeMember($workspace, (int) auth()->id());

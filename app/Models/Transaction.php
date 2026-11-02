@@ -6,6 +6,7 @@ use App\Traits\Groupable;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Refundable;
 use App\Traits\Syncable;
+use Whilesmart\Shareables\Traits\Shareable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -95,6 +96,7 @@ class Transaction extends Model implements HasAgentResource
     use Refundable;
     use SoftDeletes;
     use Syncable;
+    use Shareable;
 
     protected static function boot()
     {

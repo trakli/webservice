@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "829bb23d3da550013cfac1e283ef7ebd",
+    "content-hash": "0b48e304baade58cbfceb6f51ae23a01",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -12047,6 +12047,115 @@
             "time": "2026-08-17T17:13:50+00:00"
         },
         {
+            "name": "whilesmart/eloquent-shareables",
+            "version": "dev-feat/polymorphic-audiences",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/whilesmartphp/eloquent-shareables.git",
+                "reference": "bb0eb3bc852dff472a35fc9d89cd2c20b52189fc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/whilesmartphp/eloquent-shareables/zipball/bb0eb3bc852dff472a35fc9d89cd2c20b52189fc",
+                "reference": "bb0eb3bc852dff472a35fc9d89cd2c20b52189fc",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^12.0",
+                "php": "^8.4"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.22",
+                "nunomaduro/collision": "^8.8",
+                "orchestra/testbench": "^10.4",
+                "phpmd/phpmd": "@stable",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^4.0",
+                "zircote/swagger-php": "^5.1"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Whilesmart\\Shareables\\ShareablesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Whilesmart\\Shareables\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Workbench\\App\\": "workbench/app/",
+                    "Whilesmart\\Shareables\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "pint": [
+                    "./vendor/bin/pint --preset psr12"
+                ],
+                "pint:test": [
+                    "./vendor/bin/pint --preset psr12 --test"
+                ],
+                "post-autoload-dump": [
+                    "@clear",
+                    "@prepare"
+                ],
+                "clear": [
+                    "@php vendor/bin/testbench package:purge-skeleton --ansi"
+                ],
+                "prepare": [
+                    "@php vendor/bin/testbench package:discover --ansi"
+                ],
+                "build": [
+                    "@php vendor/bin/testbench workbench:build --ansi"
+                ],
+                "serve": [
+                    "Composer\\Config::disableProcessTimeout",
+                    "@build",
+                    "@php vendor/bin/testbench serve --ansi"
+                ],
+                "lint": [
+                    "@php vendor/bin/pint --preset psr12 --ansi"
+                ],
+                "phpmd": [
+                    "vendor/bin/phpmd src text phpmd.xml"
+                ],
+                "phpstan": [
+                    "phpstan analyse src workbench/app/Models --memory-limit=2048M --level=5"
+                ],
+                "phpcs": [
+                    "phpcbf src"
+                ],
+                "phpcs:test": [
+                    "phpcs src"
+                ],
+                "test": [
+                    "vendor/bin/testbench package:test --coverage"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "WhileSmart",
+                    "email": "engineering@whilesmart.com"
+                }
+            ],
+            "description": "Manage shareables",
+            "support": {
+                "source": "https://github.com/whilesmartphp/eloquent-shareables/tree/feat/polymorphic-audiences",
+                "issues": "https://github.com/whilesmartphp/eloquent-shareables/issues"
+            },
+            "time": "2026-11-02T17:47:38+00:00"
+        },
+        {
             "name": "whilesmart/eloquent-workspaces",
             "version": "1.4.0",
             "source": {
@@ -15763,7 +15872,8 @@
         "phpmd/phpmd": 0,
         "smartpings/php-sdk": 20,
         "whilesmart/eloquent-outreach": 20,
-        "whilesmart/eloquent-roles": 20
+        "whilesmart/eloquent-roles": 20,
+        "whilesmart/eloquent-shareables": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

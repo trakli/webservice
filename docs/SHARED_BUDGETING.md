@@ -31,14 +31,14 @@ User deletion removes that user's finance records. Workspace-owned records survi
 
 | Table | What one row means | Uniqueness |
 | --- | --- | --- |
-| `workspace_wallet_shares` | A personal wallet is shared with a workspace, including its visible transactions | Workspace and wallet |
-| `workspace_transaction_shares` | One personal transaction is shared with a workspace | Workspace and transaction |
+| `shares` (Shareables package) | A wallet or transaction has a sharing link, its creator and validity constraints | Token |
+| `share_audiences` (Shareables package) | A sharing link grants an ability to a typed recipient such as a workspace | Share and recipient |
 | `workspace_transaction_categories` | A transaction has a category in a particular workspace | Workspace, transaction, and category |
 | `workspace_transaction_groups` | A transaction has a spending-group label in a particular workspace | Workspace, transaction, and spending group |
 
-The two sharing tables retain the sharing user's identity so leaving or removal can revoke that person's grants. Their foreign keys remove links when the referenced resources are physically deleted.
+The Shareables package records the creator separately from typed recipients. Leaving or removal deletes that person's audience grants for the affected workspace. Other workspace recipients retain access. Links with no audiences grant nobody access. Soft deletion revokes links. Permanent resource deletion removes links, and foreign keys cascade to audience rows.
 
-Wallet and transaction grants stay separate because they grant different access. Sharing one grocery purchase must not reveal the wallet name, balance, or other purchases. Sharing the wallet includes its transactions without copying them. If both grants expose a transaction, the workspace still counts that transaction once.
+Wallet and transaction grants identify different resource types because they grant different access. Sharing one grocery purchase must not reveal the wallet name, balance, or other purchases. Sharing the wallet includes its transactions without copying them. If both grants expose a transaction, the workspace still counts that transaction once.
 
 Classification links stay separate from personal classification. The same personal purchase can have a personal category and different workspace categories. The workspace must not mutate the person's labels or reveal its own labels through personal transaction responses. A classification link grants no access by itself: financial queries first select transactions visible to the workspace.
 
@@ -70,8 +70,8 @@ Rollback restores user-only columns and constraints only when every finance reco
 
 ## Package boundaries
 
-The feature already uses the shared workspace, roles, and entitlements packages. Finance-specific visibility, classification, and recomputation stay in Trakli for this release.
+The feature uses the shared workspace, roles, entitlements and Shareables packages. Finance-specific visibility, classification, and recomputation stay in Trakli for this release.
 
-The owner relation and owner-scoped queries can move into a shared package without changing owner identities. Sharing and contextual classification remain separate contracts. A future personal-finance or accounting backend can reuse a package for ownership-aware sharing and visibility. Such a package should own grants, revocation, and scoped queries. Each application should provide its resource models, membership rules, and financial calculations. This is a potential extraction boundary, not a prerequisite for shipping shared budgeting.
+The owner relation and owner-scoped queries can move into a shared package without changing owner identities. Sharing and contextual classification remain separate contracts. The Shareables package owns grants, typed audiences, validity and scoped resource queries. A future personal-finance or accounting backend can reuse these contracts. Each application should provide its resource models, membership rules, and financial calculations. Workspace membership admission and financial visibility rules remain application-specific.
 
 Polymorphic transaction, expense, payment, and account packages require a separate compatibility assessment. Adoption must preserve decimal precision, transfers between currencies, refunds, synchronization identities, permissions, and existing balances. Shared budgeting introduces no dependency on that migration and makes no changes to the live ledger format.
