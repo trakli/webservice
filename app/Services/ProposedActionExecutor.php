@@ -6,7 +6,7 @@ use App\Models\AgentProposedAction;
 use App\Models\Budget;
 use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -219,7 +219,7 @@ class ProposedActionExecutor
      * Create an owned, Syncable resource (wallet, category, party) from the
      * proposal payload, stamping the idempotency key as its client id.
      */
-    private function createOwned(AgentProposedAction $action, HasMany $relation): Model
+    private function createOwned(AgentProposedAction $action, HasOneOrMany $relation): Model
     {
         /** @var Model $model */
         $model = $relation->create($action->payload);

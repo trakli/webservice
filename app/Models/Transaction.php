@@ -91,6 +91,7 @@ class Transaction extends Model implements HasAgentResource
     use Groupable;
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Refundable;
     use SoftDeletes;
     use Syncable;
@@ -102,6 +103,13 @@ class Transaction extends Model implements HasAgentResource
         static::saving(function (Transaction $transaction) {
             if (empty($transaction->wallet_id)) {
                 throw new InvalidArgumentException('A transaction must belong to a wallet.');
+            }
+            $wallet = Wallet::withTrashed()->findOrFail($transaction->wallet_id);
+            if (! $transaction->hasSameOwner($wallet)) {
+                throw new InvalidArgumentException('A transaction and its wallet must have the same owner.');
+            }
+            if ($transaction->party_id && ! $transaction->hasSameOwner(Party::withTrashed()->findOrFail($transaction->party_id))) {
+                throw new InvalidArgumentException('A transaction and its counterparty must have the same owner.');
             }
         });
     }
@@ -119,7 +127,6 @@ class Transaction extends Model implements HasAgentResource
         'intent',
         'party_id',
         'wallet_id',
-        'user_id',
         'transfer_id',
         'metadata',
         'updated_at',
@@ -274,7 +281,7 @@ class Transaction extends Model implements HasAgentResource
         }
 
         return static::query()
-            ->where('user_id', $user->id)
+            ->ownedBy($user)
             ->join('model_sync_states', 'transactions.id', '=', 'model_sync_states.syncable_id')
             ->where('model_sync_states.syncable_type', static::class)
             ->where('model_sync_states.client_generated_id', $parts[1])
@@ -299,7 +306,9 @@ class Transaction extends Model implements HasAgentResource
             description: 'Money in and out. An income or expense against one wallet.',
             aliases: ['spending', 'expenses', 'income', 'payments', 'purchases'],
             labelColumn: 'description',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
@@ -319,7 +328,8 @@ class Transaction extends Model implements HasAgentResource
                     'transfers.id',
                     'Set when this row is one leg of a wallet-to-wallet transfer rather than real income or spending',
                 ),
-                ResourceField::internal('user_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::internal('created_by_user_id'),
             ],
             relationships: [

@@ -73,7 +73,7 @@ class ProposeWorkspaceChangeTool extends AbstractWriteTool
         if ($operation !== 'create_workspace') {
             $workspace = Workspace::where('slug', $data['workspace'])->firstOrFail();
             app(WorkspaceFinance::class)->authorize($workspace, $context->user, manage: $operation === 'create_budget', write: true);
-            if ($operation === 'record_transaction' && ! Wallet::where('workspace_id', $workspace->id)->whereKey($data['wallet_id'])->exists()) {
+            if ($operation === 'record_transaction' && ! Wallet::ownedBy($workspace)->whereKey($data['wallet_id'])->exists()) {
                 throw new InvalidArgumentException('Choose a wallet owned by this workspace.');
             }
         } elseif (! app(Entitlements::class)->allows($context->user, 'shared_workspaces')) {

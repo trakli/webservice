@@ -142,9 +142,8 @@ class WalletController extends ApiController
         ]);
 
         $user = $request->user();
-        $validatedData['user_id'] = $user->id;
 
-        $existingWallet = Wallet::where('user_id', $user->id)
+        $existingWallet = Wallet::ownedBy($user)
             ->where('name', $validatedData['name'])
             ->where('currency', $validatedData['currency'])
             ->first();

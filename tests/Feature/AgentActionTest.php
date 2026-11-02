@@ -89,7 +89,7 @@ class AgentActionTest extends TestCase
         $this->assertSame($before + 1, Transaction::count());
         $this->assertEquals(ActionStatus::Executed, $action->fresh()->status);
         $this->assertDatabaseHas('transactions', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'wallet_id' => $this->wallet->id,
             'amount' => 20,
             'type' => 'expense',
@@ -117,7 +117,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(200);
 
         $this->assertDatabaseHas('transactions', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'amount' => 5000,
             'type' => 'income',
             'intent' => 'loan_received',
@@ -211,7 +211,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(200);
 
         $this->assertDatabaseHas('categories', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'name' => 'Groceries',
             'type' => 'expense',
         ]);
@@ -254,7 +254,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(200);
 
         $this->assertDatabaseHas('transactions', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'amount' => 35,
             'description' => 'edited coffee',
         ]);
@@ -277,7 +277,7 @@ class AgentActionTest extends TestCase
             ->assertStatus(200);
 
         $this->assertDatabaseHas('wallets', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'name' => 'Savings',
             'currency' => 'XAF',
         ]);
@@ -317,7 +317,7 @@ class AgentActionTest extends TestCase
 
         // user_id override is dropped; the transaction belongs to the acting user.
         $this->assertDatabaseHas('transactions', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'amount' => 22,
         ]);
     }

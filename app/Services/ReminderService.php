@@ -6,6 +6,7 @@ use App\Enums\NotificationType;
 use App\Enums\ReminderStatus;
 use App\Models\Reminder;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Support\Facades\Log;
 
 class ReminderService
@@ -23,7 +24,7 @@ class ReminderService
             ->where('status', ReminderStatus::ACTIVE)
             ->whereNotNull('next_trigger_at')
             ->where('next_trigger_at', '<=', now())
-            ->with('user')
+            ->with('owner')
             ->get();
 
         foreach ($reminders as $reminder) {
@@ -43,19 +44,24 @@ class ReminderService
 
     protected function processReminder(Reminder $reminder): void
     {
-        $user = $reminder->user;
+        $owner = $reminder->owner;
+        $recipients = $owner instanceof User
+            ? collect([$owner])
+            : ($owner instanceof Workspace && $owner->is_active ? $owner->members()->distinct()->get() : collect());
 
-        $results = $this->notificationService->send(
-            user: $user,
-            type: NotificationType::REMINDER,
-            title: $reminder->title,
-            body: $reminder->description ?? '',
-            data: [
-                'reminder_id' => $reminder->id,
-                'reminder_type' => $reminder->type->value,
-            ],
-            channels: ['inapp', 'push']
-        );
+        foreach ($recipients as $user) {
+            $this->notificationService->send(
+                user: $user,
+                type: NotificationType::REMINDER,
+                title: $reminder->title,
+                body: $reminder->description ?? '',
+                data: [
+                    'reminder_id' => $reminder->id,
+                    'reminder_type' => $reminder->type->value,
+                ],
+                channels: ['inapp', 'push']
+            );
+        }
 
         $reminder->last_triggered_at = now();
         $reminder->calculateNextTrigger();
@@ -66,12 +72,7 @@ class ReminderService
 
         $reminder->save();
 
-        Log::info('Reminder processed', [
-            'reminder_id' => $reminder->id,
-            'user_id' => $user->id,
-            'notification_created' => $results['inapp'] !== null,
-            'push_sent' => $results['push'],
-        ]);
+        Log::info('Reminder processed', ['reminder_id' => $reminder->id, 'recipients' => $recipients->count()]);
     }
 
     public function createReminder(User $user, array $data): Reminder

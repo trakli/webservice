@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Events\TransactionRecorded;
 use App\Events\TransactionSnapshot;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\StatsService;
 use Carbon\CarbonImmutable;
 
@@ -113,6 +114,12 @@ class TransactionObserver
         TransactionRecorded::dispatch($transaction->user_id, $action, $before, $after);
     }
 
+    private function originalUserId(Transaction $transaction): ?int
+    {
+        return $transaction->getOriginal('owner_type') === (new User())->getMorphClass()
+            ? $transaction->getOriginal('owner_id') : null;
+    }
+
     /**
      * Build a snapshot from getOriginal() values so we capture pre-update state.
      * On deletes the original and current are identical, so $useCurrent lets us
@@ -120,7 +127,7 @@ class TransactionObserver
      */
     protected function originalSnapshot(Transaction $transaction, bool $useCurrent = false): ?TransactionSnapshot
     {
-        $userId = $useCurrent ? $transaction->user_id : $transaction->getOriginal('user_id');
+        $userId = $useCurrent ? $transaction->user_id : $this->originalUserId($transaction);
         if (! $userId) {
             return null;
         }

@@ -3,10 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Party;
-use App\Models\Transaction;
 use App\Models\User;
-use App\Models\Wallet;
 use App\Services\TransferService;
 use App\Support\ConfigurationKeys;
 use Carbon\Carbon;
@@ -132,8 +129,8 @@ class ActiveMonthSeeder extends Seeder
                 $datetime = Carbon::now()->subMinutes(30);
             }
 
-            $transaction = Transaction::create([
-                'user_id' => $user->id,
+            $transaction = $user->transactions()->create([
+
                 'wallet_id' => $wallets[$wallet]->id,
                 'party_id' => $party ? $parties[$party]->id : null,
                 'amount' => $amount,
@@ -165,8 +162,8 @@ class ActiveMonthSeeder extends Seeder
 
         $wallets = [];
         foreach ($this->wallets as $name => $wallet) {
-            $wallets[$name] = Wallet::updateOrCreate(
-                ['user_id' => $user->id, 'name' => $name],
+            $wallets[$name] = $user->wallets()->updateOrCreate(
+                ['name' => $name],
                 [
                     'type' => $wallet['type'],
                     'currency' => $wallet['currency'],
@@ -183,10 +180,10 @@ class ActiveMonthSeeder extends Seeder
     {
         $categories = [];
         foreach ($this->categories as $category) {
-            $categories[$category['name']] = Category::where('user_id', $user->id)
+            $categories[$category['name']] = Category::ownedBy($user)
                 ->where('name', $category['name'])
                 ->where('type', $category['type'])
-                ->first() ?? Category::createSeeded($category + ['user_id' => $user->id]);
+                ->first() ?? Category::createSeeded($user, $category);
         }
 
         return $categories;
@@ -196,8 +193,8 @@ class ActiveMonthSeeder extends Seeder
     {
         $parties = [];
         foreach ($this->parties as $party) {
-            $parties[$party['name']] = Party::updateOrCreate(
-                ['user_id' => $user->id, 'name' => $party['name']],
+            $parties[$party['name']] = $user->parties()->updateOrCreate(
+                ['name' => $party['name']],
                 ['type' => $party['type'], 'description' => $party['description']],
             );
         }

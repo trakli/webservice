@@ -49,6 +49,7 @@ class Wallet extends Model implements HasAgentResource
     use \App\Traits\EnforcesCreationLimit;
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Iconable;
     use Sluggable;
     use SoftDeletes;
@@ -58,7 +59,6 @@ class Wallet extends Model implements HasAgentResource
         'name',
         'type',
         'description',
-        'user_id',
         'currency',
         'balance',
         'slug',
@@ -113,7 +113,9 @@ class Wallet extends Model implements HasAgentResource
             description: "The user's accounts: bank accounts, cash, credit cards, mobile money.",
             aliases: ['accounts', 'bank accounts', 'cards'],
             labelColumn: 'name',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
@@ -122,8 +124,8 @@ class Wallet extends Model implements HasAgentResource
                 ResourceField::string('currency', 'Currency code (USD, EUR, XAF, ...)'),
                 ResourceField::enum('type', ['bank', 'cash', 'credit_card', 'mobile'], 'What kind of account it is'),
                 ResourceField::text('description', 'Notes about the wallet'),
-                ResourceField::internal('user_id'),
-                ResourceField::internal('workspace_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::internal('created_by_user_id'),
             ],
             readTool: false,

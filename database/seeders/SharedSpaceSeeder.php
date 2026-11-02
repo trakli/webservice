@@ -46,19 +46,17 @@ class SharedSpaceSeeder
 
         $wallet = new Wallet();
         $wallet->forceFill(['name' => 'Household account', 'type' => 'bank', 'currency' => 'EUR', 'balance' => 1200,
-            'description' => 'Joint account for the house', 'workspace_id' => $workspace->id, 'user_id' => null,
+            'description' => 'Joint account for the house', 'owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id,
             'created_by_user_id' => $owner->id])->save();
 
         $categories = [];
         foreach ($this->categories as $name) {
             $category = new Category();
-            $category->forceFill(['name' => $name, 'type' => 'expense', 'workspace_id' => $workspace->id,
-                'user_id' => null, 'created_by_user_id' => $owner->id])->save();
+            $category->forceFill(['name' => $name, 'type' => 'expense', 'owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id, 'created_by_user_id' => $owner->id])->save();
             $categories[$name] = $category;
         }
         $group = new Group();
-        $group->forceFill(['name' => 'Summer holiday', 'workspace_id' => $workspace->id,
-            'user_id' => null, 'created_by_user_id' => $owner->id])->save();
+        $group->forceFill(['name' => 'Summer holiday', 'owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id, 'created_by_user_id' => $owner->id])->save();
 
         $start = Carbon::today()->subDays(29);
         foreach ($this->entries as [$day, $category, $author, $amount, $description]) {
@@ -67,7 +65,7 @@ class SharedSpaceSeeder
                 $datetime = Carbon::now()->subMinutes(30);
             }
             $transaction = new Transaction();
-            $transaction->forceFill(['user_id' => null, 'created_by_user_id' => ($author === 'owner' ? $owner : $member)->id,
+            $transaction->forceFill(['owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id, 'created_by_user_id' => ($author === 'owner' ? $owner : $member)->id,
                 'wallet_id' => $wallet->id, 'amount' => $amount, 'type' => 'expense', 'description' => $description,
                 'datetime' => $datetime])->save();
             DB::table('workspace_transaction_categories')->insert(['workspace_id' => $workspace->id,

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -259,8 +258,8 @@ class TransactionSeeder extends Seeder
     {
         $amount = rand($amountRange[0] * 100, $amountRange[1] * 100) / 100;
 
-        $transaction = Transaction::create([
-            'user_id' => $user->id,
+        $transaction = $user->transactions()->create([
+
             'party_id' => $party->id,
             'wallet_id' => $wallet->id,
             'amount' => $amount,

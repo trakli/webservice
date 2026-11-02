@@ -122,6 +122,8 @@ return [
             App\Models\RecurringTransactionRule::class,
             App\Models\Refund::class,
             App\Models\Reminder::class,
+            App\Models\FileImport::class,
+            App\Models\ImportSession::class,
             App\Models\Notification::class,
             App\Models\Group::class,
             App\Models\ExchangeRate::class,

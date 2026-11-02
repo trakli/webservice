@@ -140,7 +140,7 @@ class GroupController extends ApiController
         $data = $validator->validated();
         $user = $request->user();
 
-        $existingGroup = Group::where('user_id', $user->id)
+        $existingGroup = Group::ownedBy($user)
             ->where('name', $data['name'])
             ->first();
 

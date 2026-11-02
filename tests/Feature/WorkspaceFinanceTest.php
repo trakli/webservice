@@ -338,9 +338,9 @@ class WorkspaceFinanceTest extends TestCase
         $job = new \App\Jobs\RecomputeBudgetProgressJob($budget);
         $job->handle($this->app->make(\App\Services\BudgetProgressService::class));
         $job->handle($this->app->make(\App\Services\BudgetProgressService::class));
-        $this->assertDatabaseHas('reminders', ['user_id' => $this->owner->id, 'remindable_id' => $budget]);
-        $this->assertDatabaseMissing('reminders', ['user_id' => $this->member->id, 'remindable_id' => $budget]);
-        $this->assertSame(1, \App\Models\Reminder::where('user_id', $this->owner->id)->where('remindable_id', $budget)->where('source', 'threshold')->count());
+        $this->assertDatabaseHas('reminders', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->owner->id, 'remindable_id' => $budget]);
+        $this->assertDatabaseMissing('reminders', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->member->id, 'remindable_id' => $budget]);
+        $this->assertSame(1, \App\Models\Reminder::ownedBy($this->owner)->where('remindable_id', $budget)->where('source', 'threshold')->count());
     }
     public function test_revoked_budget_target_stays_narrow_and_hides_the_personal_wallet_name(): void
     {

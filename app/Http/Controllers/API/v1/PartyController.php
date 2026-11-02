@@ -145,7 +145,6 @@ class PartyController extends ApiController
         ]);
 
         $user = $request->user();
-        $validatedData['user_id'] = $user->id;
 
         $existingParty = $user->parties()->where('name', $validatedData['name'])->first();
         if ($existingParty) {

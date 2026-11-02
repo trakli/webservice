@@ -103,8 +103,8 @@ class WorkspaceBudgetController extends ApiController
             'targets' => 'sometimes|array', 'targets.*.type' => 'required|in:category,group,wallet', 'targets.*.id' => 'required|integer']);
         foreach ($data['targets'] ?? [] as $target) {
             $query = match ($target['type']) {
-                'category' => Category::where('workspace_id', $workspace->id),
-                'group' => Group::where('workspace_id', $workspace->id),
+                'category' => Category::ownedBy($workspace),
+                'group' => Group::ownedBy($workspace),
                 'wallet' => $this->finance->wallets($workspace),
             };
             if (! $query->whereKey($target['id'])->exists()) {

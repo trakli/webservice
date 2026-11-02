@@ -251,7 +251,7 @@ class BudgetProgressService
     ): float {
         $query = $this->workspaceBudget
             ? app(WorkspaceFinance::class)->budgetTransactions($this->workspaceBudget)
-            : Transaction::query()->whereIn('user_id', $userIds);
+            : Transaction::query()->where('transactions.owner_type', User::class)->whereIn('transactions.owner_id', $userIds);
         $query->whereNull('transfer_id')
             ->where('type', $type)
             ->whereBetween('datetime', [$periodStart, $periodEnd]);

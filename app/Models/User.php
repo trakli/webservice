@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\Holdings\Models\Holding;
 use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
@@ -76,54 +77,66 @@ class User extends Authenticatable implements HasLocalePreference
         'tokens_used' => 'integer',
     ];
 
-    public function categories(): HasMany
+    protected static function booted(): void
     {
-        return $this->hasMany(Category::class);
+        static::deleting(function (User $user) {
+            $tables = ['transactions', 'transfers', 'wallets', 'categories', 'groups', 'parties',
+                'reminders', 'file_imports', 'import_sessions'];
+            foreach ($tables as $table) {
+                \Illuminate\Support\Facades\DB::table($table)
+                    ->where('owner_type', $user->getMorphClass())->where('owner_id', $user->getKey())->delete();
+            }
+        });
     }
 
-    public function groups(): HasMany
+    public function categories(): MorphMany
     {
-        return $this->hasMany(Group::class);
+        return $this->morphMany(Category::class, 'owner');
     }
 
-    public function parties(): HasMany
+    public function groups(): MorphMany
     {
-        return $this->hasMany(Party::class);
+        return $this->morphMany(Group::class, 'owner');
     }
 
-    public function wallets(): HasMany
+    public function parties(): MorphMany
     {
-        return $this->hasMany(Wallet::class);
+        return $this->morphMany(Party::class, 'owner');
     }
 
-    public function holdings(): HasMany
+    public function wallets(): MorphMany
     {
-        return $this->hasMany(Holding::class);
+        return $this->morphMany(Wallet::class, 'owner');
     }
 
-    public function transactions(): HasMany
+    public function holdings(): MorphMany
     {
-        return $this->hasMany(Transaction::class);
+        return $this->morphMany(Holding::class, 'owner');
     }
 
-    public function transfers(): HasMany
+    public function transactions(): MorphMany
     {
-        return $this->hasMany(Transfer::class);
+        return $this->morphMany(Transaction::class, 'owner');
     }
 
-    public function fileImports(): HasMany
+    public function transfers(): MorphMany
     {
-        return $this->hasMany(FileImport::class);
+        return $this->morphMany(Transfer::class, 'owner');
     }
 
-    public function importSessions(): HasMany
+    public function fileImports(): MorphMany
     {
-        return $this->hasMany(ImportSession::class);
+        return $this->morphMany(FileImport::class, 'owner');
     }
 
-    public function reminders(): HasMany
+    public function importSessions(): MorphMany
     {
-        return $this->hasMany(Reminder::class);
+        return $this->morphMany(ImportSession::class, 'owner');
+    }
+
+    public function reminders(): MorphMany
+    {
+        return $this->morphMany(Reminder::class, 'owner');
     }
 
     public function budgets(): MorphMany

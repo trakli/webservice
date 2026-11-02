@@ -42,6 +42,7 @@ class Group extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Iconable;
     use Sluggable;
     use SoftDeletes;
@@ -86,14 +87,16 @@ class Group extends Model implements HasAgentResource
             description: 'Groupings the user files transactions and budgets under, such as a household or a project.',
             aliases: ['group', 'projects', 'households'],
             labelColumn: 'name',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             readable: [
                 ResourceField::key(),
                 ResourceField::string('name', 'Group name'),
                 ResourceField::string('slug', 'URL-safe form of the name'),
                 ResourceField::text('description', 'What the group covers'),
-                ResourceField::internal('user_id'),
-                ResourceField::internal('workspace_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::internal('created_by_user_id'),
                 ResourceField::datetime('created_at'),
             ],

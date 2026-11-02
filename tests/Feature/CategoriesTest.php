@@ -262,7 +262,7 @@ class CategoriesTest extends TestCase
             ->assertJsonPath('data.id', $firstResponse->json('data.id'))
             ->assertJsonPath('data.client_generated_id', $payload['client_id']);
         $this->assertSame(1, Category::query()
-            ->where('user_id', $user->id)
+            ->ownedBy($user)
             ->where('name', $payload['name'])
             ->count());
     }

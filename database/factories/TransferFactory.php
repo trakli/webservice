@@ -18,14 +18,15 @@ class TransferFactory extends Factory
      */
     public function definition(): array
     {
-        $user = auth()->user() ?? User::factory()->create();
-        $fromWallet = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
-        $toWallet = Wallet::factory()->create(['user_id' => $user->id]);
-
         return [
+            'user_id' => auth()->id() ?? User::factory(),
             'amount' => 100,
-            'from_wallet_id' => $fromWallet->id,
-            'to_wallet_id' => $toWallet->id,
+            'from_wallet_id' => fn (array $attributes) => Wallet::factory()->create([
+                'user_id' => $attributes['user_id'], 'balance' => 1000,
+            ])->id,
+            'to_wallet_id' => fn (array $attributes) => Wallet::factory()->create([
+                'user_id' => $attributes['user_id'],
+            ])->id,
         ];
     }
 }

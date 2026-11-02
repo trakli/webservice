@@ -657,7 +657,7 @@ class TransferTest extends TestCase
             'device_id' => $device->id,
         ]);
 
-        $transactionCountBefore = Transaction::where('user_id', $user->id)->count();
+        $transactionCountBefore = Transaction::ownedBy($user)->count();
 
         // Now sync the transfer with client IDs referencing the existing transactions
         $response = $this->actingAs($user)->postJson('/api/v1/transfers', [
@@ -671,7 +671,7 @@ class TransferTest extends TestCase
         $response->assertStatus(201);
 
         // No new transactions should have been created
-        $this->assertEquals($transactionCountBefore, Transaction::where('user_id', $user->id)->count());
+        $this->assertEquals($transactionCountBefore, Transaction::ownedBy($user)->count());
 
         // Existing transactions should now be linked to the transfer
         $transfer = Transfer::first();

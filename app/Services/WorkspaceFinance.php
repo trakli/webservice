@@ -57,7 +57,7 @@ class WorkspaceFinance
     public function wallets(Workspace $workspace): Builder
     {
         return Wallet::query()->where(function (Builder $query) use ($workspace) {
-            $query->where('wallets.workspace_id', $workspace->id)
+            $query->ownedBy($workspace)
                 ->orWhereExists(function ($shares) use ($workspace) {
                     $shares->selectRaw('1')->from('workspace_wallet_shares')
                         ->where('workspace_id', $workspace->id)
@@ -138,7 +138,7 @@ class WorkspaceFinance
             $visible = $visibleWallets->has($wallet->id);
             $creatorId = $transaction->user_id ?? $transaction->created_by_user_id;
             $creator = $creators->get($creatorId);
-            $native = (int) $wallet->workspace_id === $workspace->id;
+            $native = $wallet->isOwnedBy($workspace);
             return [
                 'id' => $transaction->id, 'amount' => (float) $transaction->amount,
                 'type' => \App\Events\TransactionRecorded::normalizeType($transaction->type),

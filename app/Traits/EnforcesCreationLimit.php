@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Category;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Support\CategoryAllowance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -13,8 +14,8 @@ trait EnforcesCreationLimit
 {
     protected function performInsert(Builder $query)
     {
-        if ($this->workspace_id !== null) {
-            app(\App\Services\WorkspaceFinance::class)->requireEligible(\App\Models\Workspace::findOrFail($this->workspace_id));
+        if ($this->owner_type === (new Workspace())->getMorphClass()) {
+            app(\App\Services\WorkspaceFinance::class)->requireEligible(Workspace::findOrFail($this->owner_id));
             return parent::performInsert($query);
         }
 
@@ -25,7 +26,7 @@ trait EnforcesCreationLimit
             $allowance = app(CategoryAllowance::class);
             $count = $this instanceof Category
                 ? $allowance->count($owner)
-                : static::where('user_id', $this->user_id)->count();
+                : static::ownedBy($owner)->count();
             $exempt = $this instanceof Category && $this->isSeeded();
 
             if (! $exempt && $limit !== null && $count >= $limit) {
