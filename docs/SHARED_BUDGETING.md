@@ -56,7 +56,7 @@ Unsharing and leaving remain available when a space cannot accept new financial 
 
 Workspace creation no longer requires or stores a `family` versus `group` discriminator. The API and assistant omit that field, and the UI offers one shared-space form. Older callers may still send `kind`; it is ignored. Historical metadata with that key is inert and needs no data rewrite for this change.
 
-The unmerged finance migration creates `workspace_transaction_categories` with its correct name. There is no corrective rename migration. The ownership migration runs before it, copies each existing `user_id` into `owner_id` with the user type, then replaces the old owner column and indexes. Soft-deleted records are included.
+The ownership migration copies every existing `user_id` into `owner_id`, sets `owner_type` to `App\Models\User`, and replaces the old owner column and indexes. Active and soft-deleted records retain their IDs and financial values. The shared-finance migration then adds creation tracking, sharing grants and workspace classification links.
 
 Deployment requires a maintenance window because old and new API versions use different database columns:
 
@@ -67,8 +67,6 @@ Deployment requires a maintenance window because old and new API versions use di
 5. Compare the same data and access checks before resuming workers and traffic. Keep the backup until the release is accepted.
 
 Rollback restores user-only columns and constraints only when every finance record still belongs to a user. It refuses non-user owners before altering any table. Once shared records exist, restore the complete backup and matching application version instead of discarding shared ownership.
-
-A local database that already ran an earlier version of this unmerged branch needs a separate, backed-up conversion of its workspace records and classification links. Do not run the rewritten migration against that review database or reset it. Production databases on the feature's base branch use the migration path above.
 
 ## Package boundaries
 

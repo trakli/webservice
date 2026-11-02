@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,7 +18,8 @@ class FinanceOwnershipMigrationTest extends TestCase
     #[DataProvider('connections')]
     public function test_existing_finances_survive_migration_and_rollback_without_changing_ids_or_values(bool $useTestDatabase): void
     {
-        Event::fake([MigrationsEnded::class]);
+        $schemaSpec = config('schema.tables');
+        config(['schema.tables' => []]);
         $connection = $useTestDatabase
             ? array_replace(config('database.connections.' . config('database.default')), ['prefix' => 'ownership_'])
             : ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '', 'foreign_key_constraints' => true];
@@ -35,6 +34,7 @@ class FinanceOwnershipMigrationTest extends TestCase
                 $schema->dropIfExists($table);
             }
             DB::purge('finance_migration');
+            config(['schema.tables' => $schemaSpec]);
         }
     }
 
@@ -57,7 +57,10 @@ class FinanceOwnershipMigrationTest extends TestCase
             ->assertSuccessful();
         $database = DB::connection('finance_migration');
         $schema = Schema::connection('finance_migration');
-        $database->table('users')->insert(['id' => 17, 'email' => 'migration@example.test', 'password' => 'unused']);
+        $database->table('users')->insert([
+            ['id' => 17, 'email' => 'first@example.test', 'password' => 'unused'],
+            ['id' => 29, 'email' => 'second@example.test', 'password' => 'unused'],
+        ]);
         $rows = [
             'wallets' => ['name' => 'Cash', 'slug' => 'cash', 'type' => 'cash', 'balance' => '123.4567', 'currency' => 'USD'],
             'categories' => ['name' => 'Food', 'slug' => 'food', 'type' => 'expense'],
@@ -71,20 +74,31 @@ class FinanceOwnershipMigrationTest extends TestCase
         ];
         foreach ($rows as $table => $row) {
             $database->table($table)->insert($row + ['id' => 91, 'user_id' => 17]);
+            foreach (['wallet_id', 'from_wallet_id', 'to_wallet_id'] as $key) {
+                if (array_key_exists($key, $row)) {
+                    $row[$key] = 92;
+                }
+            }
+            if (array_key_exists('deleted_at', $row)) {
+                $row['deleted_at'] = null;
+            }
+            $database->table($table)->insert($row + ['id' => 92, 'user_id' => 29]);
         }
         $before = [];
         foreach (array_keys($rows) as $table) {
-            $before[$table] = (array) $database->table($table)->first();
+            $before[$table] = $database->table($table)->orderBy('id')->get()->map(fn ($row) => (array) $row)->all();
         }
         $migration = ['--path' => 'database/migrations/2026_10_23_000001_make_finance_ownership_polymorphic.php'];
         $this->artisan('migrate', $options + $migration)->assertSuccessful();
-        foreach ($before as $table => $row) {
-            $actual = (array) $database->table($table)->first();
+        foreach ($before as $table => $records) {
             $this->assertFalse($schema->hasColumn($table, 'user_id'));
-            $this->assertSame(User::class, $actual['owner_type']);
-            $this->assertSame(17, $actual['owner_id']);
-            unset($row['user_id'], $actual['owner_type'], $actual['owner_id']);
-            $this->assertSame($row, $actual);
+            foreach ($records as $row) {
+                $actual = (array) $database->table($table)->where('id', $row['id'])->first();
+                $this->assertSame(User::class, $actual['owner_type']);
+                $this->assertSame($row['user_id'], $actual['owner_id']);
+                unset($row['user_id'], $actual['owner_type'], $actual['owner_id']);
+                $this->assertSame($row, $actual);
+            }
         }
         $database->table('import_sessions')->where('id', 91)->update(['owner_type' => \App\Models\Workspace::class]);
         try {
@@ -98,24 +112,15 @@ class FinanceOwnershipMigrationTest extends TestCase
         }
         $database->table('import_sessions')->where('id', 91)->update(['owner_type' => User::class]);
         $this->artisan('migrate:rollback', $options + $migration + ['--step' => 1])->assertSuccessful();
-        foreach ($before as $table => $row) {
-            $actual = (array) $database->table($table)->first();
-            ksort($row);
-            ksort($actual);
-            $this->assertSame($row, $actual);
+        foreach ($before as $table => $records) {
+            foreach ($records as $row) {
+                $actual = (array) $database->table($table)->where('id', $row['id'])->first();
+                ksort($row);
+                ksort($actual);
+                $this->assertSame($row, $actual);
+            }
             $this->assertFalse($schema->hasColumn($table, 'owner_id'));
             $this->assertFalse(collect($schema->getColumns($table))->firstWhere('name', 'user_id')['nullable']);
         }
-        $schema->table('wallets', fn (\Illuminate\Database\Schema\Blueprint $table) => $table->unsignedBigInteger('workspace_id')->nullable());
-        try {
-            $this->artisan('migrate', $options + $migration)->run();
-            $this->fail('An existing shared-review schema requires an explicit conversion.');
-        } catch (\RuntimeException $exception) {
-            $this->assertStringContainsString('Expected the user-only finance schema', $exception->getMessage());
-            foreach (array_keys($rows) as $table) {
-                $this->assertFalse($schema->hasColumn($table, 'owner_id'));
-            }
-        }
-
     }
 }

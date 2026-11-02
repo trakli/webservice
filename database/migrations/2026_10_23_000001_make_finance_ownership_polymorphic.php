@@ -17,12 +17,6 @@ return new class () extends Migration {
     public function up(): void
     {
         foreach (self::TABLES as $name) {
-            if (! Schema::hasColumn($name, 'user_id') || Schema::hasColumn($name, 'owner_id')
-                || Schema::hasColumn($name, 'workspace_id')) {
-                throw new RuntimeException('Expected the user-only finance schema. Convert existing review data from a backup separately.');
-            }
-        }
-        foreach (self::TABLES as $name) {
             Schema::table($name, function (Blueprint $table) {
                 $table->nullableMorphs('owner');
             });
