@@ -72,8 +72,11 @@ semantic_layer:
           type: integer
           description: Set when this row is one leg of a wallet-to-wallet transfer rather than real income or spending
           references: transfers.id
-        user_id:
+        owner_id:
           type: integer
+          hidden: true
+        owner_type:
+          type: string
           hidden: true
         created_by_user_id:
           type: integer
@@ -110,11 +113,11 @@ semantic_layer:
         description:
           type: text
           description: Notes about the wallet
-        user_id:
+        owner_id:
           type: integer
           hidden: true
-        workspace_id:
-          type: integer
+        owner_type:
+          type: string
           hidden: true
         created_by_user_id:
           type: integer
@@ -144,11 +147,11 @@ semantic_layer:
         description:
           type: text
           description: What the category covers
-        user_id:
+        owner_id:
           type: integer
           hidden: true
-        workspace_id:
-          type: integer
+        owner_type:
+          type: string
           hidden: true
         created_by_user_id:
           type: integer
@@ -176,8 +179,11 @@ semantic_layer:
         description:
           type: text
           description: Notes about the party
-        user_id:
+        owner_id:
           type: integer
+          hidden: true
+        owner_type:
+          type: string
           hidden: true
     transfers:
       table: transfers
@@ -206,8 +212,11 @@ semantic_layer:
         datetime:
           type: datetime
           description: When the transfer happened
-        user_id:
+        owner_id:
           type: integer
+          hidden: true
+        owner_type:
+          type: string
           hidden: true
         created_at:
           type: datetime
@@ -390,8 +399,11 @@ semantic_layer:
         priority:
           type: integer
           description: How important it is, higher is more urgent
-        user_id:
+        owner_id:
           type: integer
+          hidden: true
+        owner_type:
+          type: string
           hidden: true
         created_at:
           type: datetime
@@ -445,11 +457,11 @@ semantic_layer:
         description:
           type: text
           description: What the group covers
-        user_id:
+        owner_id:
           type: integer
           hidden: true
-        workspace_id:
-          type: integer
+        owner_type:
+          type: string
           hidden: true
         created_by_user_id:
           type: integer
@@ -549,7 +561,59 @@ semantic_layer:
           type: integer
           hidden: true
         owner_type:
+          type: string
+          hidden: true
+    file_imports:
+      table: file_imports
+      description: CSV statement import progress.
+      label_column: name
+      columns:
+        id:
           type: integer
+          primary: true
+        name:
+          type: string
+          description: Statement name
+        file_type:
+          type: string
+          description: File format
+        progress:
+          type: integer
+          description: Rows processed
+        num_rows:
+          type: integer
+          description: Total rows
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: string
+          hidden: true
+    import_sessions:
+      table: import_sessions
+      description: Document import analysis status.
+      label_column: file_name
+      columns:
+        id:
+          type: integer
+          primary: true
+        file_name:
+          type: string
+          description: Document name
+        file_type:
+          type: string
+          description: File format
+        document_type:
+          type: string
+          description: Document classification
+        status:
+          type: string
+          description: Analysis status
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: string
           hidden: true
   relationships:
   - name: transaction_wallet
@@ -680,8 +744,10 @@ security:
   - categories
   - categorizables
   - exchange_rates
+  - file_imports
   - groups
   - holdings
+  - import_sessions
   - notifications
   - parties
   - recurring_transaction_rules
@@ -693,23 +759,38 @@ security:
   - workspaces
   required_filters:
     transactions:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
       bypass_roles:
       - admin
     wallets:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
       bypass_roles:
       - admin
     categories:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
       bypass_roles:
       - admin
     parties:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
       bypass_roles:
       - admin
     transfers:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
     budgets:
       column: owner_id
       param: user_id
@@ -728,11 +809,17 @@ security:
         column: refund_transaction_id
         references: transactions.id
     reminders:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
     notifications:
       column: user_id
     groups:
-      column: user_id
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
     holdings:
       column: owner_id
       param: user_id
@@ -748,6 +835,16 @@ security:
       column: owner_id
       constants:
         owner_type: App\Models\User
+    file_imports:
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
+    import_sessions:
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
   blocked_columns:
   - users.password
   - users.remember_token
@@ -755,16 +852,16 @@ security:
 prompts:
   examples:
   - question: How much did I spend last month?
-    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND owner_id = :user_id AND owner_type = 'App\\Models\\User' AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
   - question: What are my top 5 expense categories?
-    sql: SELECT c.name, SUM(t.amount) as total FROM transactions t JOIN categorizables cz ON t.id = cz.categorizable_id JOIN categories c ON cz.category_id = c.id WHERE t.type = 'expense' AND t.transfer_id IS NULL AND t.user_id = :user_id AND c.user_id = :user_id GROUP BY c.id ORDER BY total DESC LIMIT 5
+    sql: SELECT c.name, SUM(t.amount) as total FROM transactions t JOIN categorizables cz ON t.id = cz.categorizable_id JOIN categories c ON cz.category_id = c.id WHERE t.type = 'expense' AND t.transfer_id IS NULL AND t.owner_id = :user_id AND t.owner_type = 'App\\Models\\User' AND c.owner_id = :user_id AND c.owner_type = 'App\\Models\\User' GROUP BY c.id ORDER BY total DESC LIMIT 5
   - question: Show my income this year
-    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND transfer_id IS NULL AND user_id = :user_id AND YEAR(datetime) = YEAR(CURRENT_DATE())
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'income' AND transfer_id IS NULL AND owner_id = :user_id AND owner_type = 'App\\Models\\User' AND YEAR(datetime) = YEAR(CURRENT_DATE())
   - question: What is my wallet balance?
-    sql: SELECT name, balance, currency FROM wallets WHERE user_id = :user_id
+    sql: SELECT name, balance, currency FROM wallets WHERE owner_id = :user_id AND owner_type = 'App\\Models\\User'
   - question: Show my recent transfers between wallets
-    sql: SELECT t.amount, t.datetime, t.from_wallet_id, t.to_wallet_id FROM transfers t WHERE t.user_id = :user_id ORDER BY t.datetime DESC LIMIT 20
+    sql: SELECT t.amount, t.datetime, t.from_wallet_id, t.to_wallet_id FROM transfers t WHERE t.owner_id = :user_id AND t.owner_type = 'App\\Models\\User' ORDER BY t.datetime DESC LIMIT 20
   - question: How am I doing on my budgets?
-    sql: SELECT b.name, b.amount, b.currency, b.period_type FROM budgets b WHERE b.owner_id = :user_id AND b.owner_type = 'App\Models\User' AND b.is_active = 1
+    sql: SELECT b.name, b.amount, b.currency, b.period_type FROM budgets b WHERE b.owner_id = :user_id AND b.owner_type = 'App\\Models\\User' AND b.is_active = 1
   - question: How much did I actually spend last month, not counting transfers?
-    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND user_id = :user_id AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
+    sql: SELECT SUM(amount) as total FROM transactions WHERE type = 'expense' AND transfer_id IS NULL AND owner_id = :user_id AND owner_type = 'App\\Models\\User' AND MONTH(datetime) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))

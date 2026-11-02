@@ -272,8 +272,7 @@ class CategoryController extends ApiController
 
         $data = $validator->validated();
         $user = $request->user();
-        $data['user_id'] = $user->id;
-        $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
+        $category_exists = $user->categories()->where('name', $data['name'])->first();
         if ($category_exists) {
             if (!empty($data['client_id'])) {
                 if ($category_exists->client_generated_id !== $data['client_id']) {
@@ -479,7 +478,7 @@ class CategoryController extends ApiController
                         continue;
                     }
 
-                    $category = Category::createSeeded([...$categoryData, 'user_id' => $user->getKey()]);
+                    $category = Category::createSeeded($user, $categoryData);
                     $category->markAsSynced();
                     $created[] = $category;
                 }

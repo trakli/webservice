@@ -1394,6 +1394,6 @@ class TransactionsTest extends TestCase
         $secondId = $secondResponse->json('data.id');
 
         $this->assertEquals($firstId, $secondId);
-        $this->assertEquals(1, Transaction::where('user_id', $this->user->id)->count());
+        $this->assertEquals(1, Transaction::ownedBy($this->user)->count());
     }
 }

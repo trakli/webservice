@@ -194,7 +194,7 @@ class Budget extends Model implements HasAgentResource
                     }
                     $query = $type === 'wallet' && $workspace
                         ? app(\App\Services\WorkspaceFinance::class)->wallets($workspace)
-                        : $target->budgetable_type::query()->where('workspace_id', $this->owner_id);
+                        : $target->budgetable_type::query()->ownedBy($this->owner);
                     $record = $workspace ? $query->find($target->budgetable_id) : null;
                     return ['type' => $type, 'id' => $target->budgetable_id, 'client_generated_id' => null,
                         'name' => $record?->name ?? ($type === 'wallet' ? 'Unshared wallet' : 'Unavailable label')];

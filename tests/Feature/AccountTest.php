@@ -90,8 +90,8 @@ class AccountTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('wallets', ['user_id' => $this->user->id]);
-        $this->assertDatabaseMissing('categories', ['user_id' => $this->user->id]);
+        $this->assertDatabaseMissing('wallets', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id]);
+        $this->assertDatabaseMissing('categories', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id]);
     }
 
     public function test_account_deletion_revokes_tokens()

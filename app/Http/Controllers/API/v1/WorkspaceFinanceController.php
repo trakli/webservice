@@ -35,8 +35,8 @@ class WorkspaceFinanceController extends ApiController
             ]);
 
         return $this->success(['wallets' => $wallets, 'budgets' => $budgets,
-            'categories' => Category::where('workspace_id', $workspace->id)->get(['id', 'name', 'type']),
-            'groups' => Group::where('workspace_id', $workspace->id)->get(['id', 'name']),
+            'categories' => Category::ownedBy($workspace)->get(['id', 'name', 'type']),
+            'groups' => Group::ownedBy($workspace)->get(['id', 'name']),
             'totals' => $totals]);
     }
 
@@ -69,7 +69,7 @@ class WorkspaceFinanceController extends ApiController
         $data = $request->validate($this->walletRules());
         $wallet = DB::transaction(function () use ($request, $workspace, $data) {
             $wallet = new Wallet();
-            $wallet->forceFill($data + ['workspace_id' => $workspace->id, 'user_id' => null,
+            $wallet->forceFill($data + ['owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id,
                 'created_by_user_id' => $request->user()->id])->save();
             return $wallet;
         });
@@ -80,7 +80,7 @@ class WorkspaceFinanceController extends ApiController
     public function updateWallet(Request $request, Workspace $workspace, int $walletId): JsonResponse
     {
         $this->finance->authorize($workspace, $request->user(), manage: true, write: true);
-        $wallet = Wallet::where('workspace_id', $workspace->id)->findOrFail($walletId);
+        $wallet = Wallet::ownedBy($workspace)->findOrFail($walletId);
         $data = $request->validate($this->walletRules(update: true));
         if (isset($data['currency']) && $data['currency'] !== $wallet->currency && $wallet->transactions()->exists()) {
             $this->finance->deny('A wallet with transactions cannot change currency.');
@@ -93,7 +93,7 @@ class WorkspaceFinanceController extends ApiController
     public function deleteWallet(Request $request, Workspace $workspace, int $walletId): JsonResponse
     {
         $this->finance->authorize($workspace, $request->user(), manage: true, write: true);
-        $wallet = Wallet::where('workspace_id', $workspace->id)->findOrFail($walletId);
+        $wallet = Wallet::ownedBy($workspace)->findOrFail($walletId);
         if ($wallet->transactions()->exists()) {
             $this->finance->deny('Remove the wallet transactions before deleting this wallet.');
         }
@@ -168,12 +168,13 @@ class WorkspaceFinanceController extends ApiController
     {
         $this->finance->authorize($workspace, $request->user(), write: true);
         $data = $request->validate($this->transactionRules());
-        $wallet = Wallet::where('workspace_id', $workspace->id)->findOrFail($data['wallet_id']);
+        $wallet = Wallet::ownedBy($workspace)->findOrFail($data['wallet_id']);
         $transaction = DB::transaction(function () use ($request, $workspace, $data, $wallet) {
             Wallet::whereKey($wallet->id)->lockForUpdate()->firstOrFail();
             $transaction = new Transaction();
             $transaction->forceFill(collect($data)->except(['category_ids', 'group_ids', 'is_refund'])->all() + [
-                'user_id' => null, 'created_by_user_id' => $request->user()->id, 'wallet_id' => $wallet->id,
+                'owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id,
+                'created_by_user_id' => $request->user()->id, 'wallet_id' => $wallet->id,
             ])->save();
             $this->setRefund($transaction, $data);
             $this->setLabels($workspace, $transaction, $data);
@@ -190,7 +191,7 @@ class WorkspaceFinanceController extends ApiController
         $transaction = $this->editableTransaction($request, $workspace, $transactionId);
         $data = $request->validate($this->transactionRules(update: true));
         if (isset($data['wallet_id'])) {
-            Wallet::where('workspace_id', $workspace->id)->findOrFail($data['wallet_id']);
+            Wallet::ownedBy($workspace)->findOrFail($data['wallet_id']);
         }
         DB::transaction(function () use ($workspace, $transaction, $data) {
             Wallet::whereIn('id', [$transaction->wallet_id, $data['wallet_id'] ?? $transaction->wallet_id])->orderBy('id')->lockForUpdate()->get();
@@ -240,8 +241,8 @@ class WorkspaceFinanceController extends ApiController
         $data = $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string|max:500',
             'type' => 'sometimes|required|in:income,expense']);
         $label = new $model();
-        $label->forceFill($data + ['type' => 'expense', 'workspace_id' => $workspace->id,
-            'user_id' => null, 'created_by_user_id' => $request->user()->id])->save();
+        $label->forceFill($data + ['type' => 'expense', 'owner_type' => $workspace->getMorphClass(),
+            'owner_id' => $workspace->id, 'created_by_user_id' => $request->user()->id])->save();
 
         return $this->success(['id' => $label->id, 'name' => $label->name, 'type' => $label->type], 'Label created', 201);
     }
@@ -249,7 +250,7 @@ class WorkspaceFinanceController extends ApiController
     private function editableTransaction(Request $request, Workspace $workspace, int $transactionId): Transaction
     {
         $transaction = $this->finance->transactions($workspace)->findOrFail($transactionId);
-        if ((int) $transaction->wallet->workspace_id !== $workspace->id) {
+        if (! $transaction->wallet->isOwnedBy($workspace)) {
             $this->finance->deny('Only the personal owner can change the original transaction.', 403);
         }
         if ($transaction->created_by_user_id !== $request->user()->id) {
@@ -261,7 +262,7 @@ class WorkspaceFinanceController extends ApiController
 
     private function presentWallet(Request $request, Workspace $workspace, Wallet $wallet): array
     {
-        $native = (int) $wallet->workspace_id === $workspace->id;
+        $native = $wallet->isOwnedBy($workspace);
         $admin = in_array($this->finance->role($workspace, $request->user()), ['owner', 'admin'], true);
         return ['id' => $wallet->id, 'name' => $wallet->name, 'type' => $wallet->type,
             'currency' => $wallet->currency, 'balance' => (float) $wallet->balance,
@@ -279,7 +280,7 @@ class WorkspaceFinanceController extends ApiController
                 continue;
             }
             $ids = array_values(array_unique($data[$key]));
-            if ($model::where('workspace_id', $workspace->id)->whereIn('id', $ids)->count() !== count($ids)) {
+            if ($model::ownedBy($workspace)->whereIn('id', $ids)->count() !== count($ids)) {
                 $this->finance->deny('Choose labels belonging to this workspace.');
             }
             DB::table('workspace_transaction_' . Str::plural($kind))->where('workspace_id', $workspace->id)

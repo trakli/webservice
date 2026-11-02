@@ -140,7 +140,7 @@ class TransactionRefundController extends ApiController
         $user = $request->user();
         $query = Refund::query()
             ->whereHas('refundTransaction', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+                $q->ownedBy($user);
             });
 
         try {

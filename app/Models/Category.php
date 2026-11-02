@@ -44,6 +44,7 @@ class Category extends Model implements HasAgentResource
     use \App\Traits\EnforcesCreationLimit;
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Iconable;
     use Sluggable;
     use SoftDeletes;
@@ -62,15 +63,15 @@ class Category extends Model implements HasAgentResource
         'name',
         'description',
         'type',
-        'user_id',
         'slug',
     ];
 
     protected bool $seeded = false;
 
-    public static function createSeeded(array $attributes): self
+    public static function createSeeded(User $owner, array $attributes): self
     {
         $category = new static($attributes);
+        $category->owner()->associate($owner);
         $category->seeded = true;
         $category->save();
 
@@ -106,15 +107,17 @@ class Category extends Model implements HasAgentResource
             description: 'Labels the user classifies transactions under.',
             aliases: ['category', 'tags', 'labels'],
             labelColumn: 'name',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
                 ResourceField::string('name', 'Category name'),
                 ResourceField::enum('type', ['income', 'expense', 'invoice'], 'What the category applies to'),
                 ResourceField::text('description', 'What the category covers'),
-                ResourceField::internal('user_id'),
-                ResourceField::internal('workspace_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::internal('created_by_user_id'),
             ],
             readTool: false,

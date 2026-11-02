@@ -52,7 +52,7 @@ class PaidCreationLimitsTest extends TestCase
     public function test_seeded_categories_are_exempt_and_clients_cannot_claim_exemptions(): void
     {
         $user = User::factory()->create();
-        Category::createSeeded(['name' => 'Default food', 'type' => 'expense', 'user_id' => $user->id]);
+        Category::createSeeded($user, ['name' => 'Default food', 'type' => 'expense']);
         $this->actingAs($user);
 
         for ($index = 0; $index < 5; $index++) {

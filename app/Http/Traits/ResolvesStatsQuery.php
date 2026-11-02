@@ -54,7 +54,7 @@ trait ResolvesStatsQuery
 
         $walletIds = array_filter(array_map('intval', explode(',', $request->input('wallet_ids'))));
 
-        $validWalletIds = Wallet::where('user_id', $user->id)
+        $validWalletIds = Wallet::ownedBy($user)
             ->whereIn('id', $walletIds)
             ->pluck('id')
             ->toArray();

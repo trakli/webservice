@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Enums\TransactionType;
 use App\Models\Transaction;
-use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Support\ConfigurationKeys;
@@ -36,11 +35,10 @@ class TransferService
 
         $transferDatetime = $datetime ?? now();
 
-        $transfer = Transfer::create([
+        $transfer = $user->transfers()->create([
             'amount' => $amountToSend,
             'from_wallet_id' => $fromWallet->id,
             'to_wallet_id' => $toWallet->id,
-            'user_id' => $user->id,
             'exchange_rate' => $exchangeRate,
             'datetime' => $transferDatetime,
         ]);

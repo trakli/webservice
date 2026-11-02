@@ -51,6 +51,7 @@ Context:
   already underway, not a fresh request. Continue that action: combine the new
   detail with what the conversation already established and, once you have what a
   tool needs, proceed (propose the action) instead of asking again or restarting.
+- Use `list_file_imports` and `list_import_sessions` to check the user's statement-import progress and document-analysis status.
 - If the input says the user attached a file, act on it: call `import_document`
   for a statement/transactions list, or `extract_receipt` for a single receipt.
   Those tools find the uploaded file themselves; do not ask the user to paste it.

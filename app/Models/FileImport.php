@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Whilesmart\Agents\Contracts\HasAgentResource;
+use Whilesmart\Agents\Resources\AgentResource;
+use Whilesmart\Agents\Resources\ResourceField;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use OpenApi\Attributes as OA;
@@ -24,11 +27,12 @@ use OpenApi\Attributes as OA;
     ],
     type: 'object'
 )]
-class FileImport extends Model
+class FileImport extends Model implements HasAgentResource
 {
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
 
-    protected $fillable = ['file_path', 'name', 'file_type', 'user_id', 'progress', 'num_rows'];
+    protected $fillable = ['file_path', 'name', 'file_type', 'progress', 'num_rows'];
 
     protected $appends = ['failed_imports_count'];
 
@@ -47,5 +51,28 @@ class FileImport extends Model
     public function failedImports(): HasMany
     {
         return $this->hasMany(FailedImport::class, 'file_import_id');
+    }
+
+    public static function agentResource(): AgentResource
+    {
+        return new AgentResource(
+            name: 'file_imports',
+            model: self::class,
+            table: 'file_imports',
+            description: 'CSV statement import progress.',
+            labelColumn: 'name',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
+            readable: [
+                ResourceField::key(),
+                ResourceField::string('name', 'Statement name'),
+                ResourceField::string('file_type', 'File format'),
+                ResourceField::integer('progress', 'Rows processed'),
+                ResourceField::integer('num_rows', 'Total rows'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
+            ],
+        );
     }
 }

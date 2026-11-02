@@ -56,9 +56,9 @@ class ListWorkspaceFinancesTool extends AbstractTool
             ])->all(),
             'wallets' => $finance->wallets($workspace)->get(['id', 'name', 'currency', 'balance'])->makeHidden(['last_synced_at',
                 'client_generated_id', 'icon', 'stats'])->toArray(),
-            'categories' => \App\Models\Category::where('workspace_id', $workspace->id)->get(['id', 'name'])->setHidden(['last_synced_at',
+            'categories' => \App\Models\Category::ownedBy($workspace)->get(['id', 'name'])->setHidden(['last_synced_at',
                 'client_generated_id', 'icon'])->toArray(),
-            'groups' => \App\Models\Group::where('workspace_id', $workspace->id)->get(['id', 'name'])->setHidden(['last_synced_at',
+            'groups' => \App\Models\Group::ownedBy($workspace)->get(['id', 'name'])->setHidden(['last_synced_at',
                 'client_generated_id', 'icon'])->toArray(),
             'transactions' => $finance->presentTransactions($workspace, $transactions, $user)->all()];
     }

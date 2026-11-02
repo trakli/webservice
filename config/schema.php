@@ -39,8 +39,56 @@ return [
     'bypass_paths' => ['schema/*', 'api/v1/info'],
 
     'tables' => [
+        'import_sessions' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'file_imports' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'transfers' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'parties' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'groups' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
+        'categories' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
+        'wallets' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
         'transactions' => [
             'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
                 'intent' => ['type' => 'string', 'default' => 'regular'],
                 'metadata' => ['type' => 'json', 'nullable' => true],
             ],
@@ -64,6 +112,8 @@ return [
 
         'reminders' => [
             'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
                 'source' => ['type' => 'string', 'nullable' => true],
                 'remindable_type' => ['type' => 'string', 'nullable' => true],
                 'remindable_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],

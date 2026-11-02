@@ -78,7 +78,7 @@ class CreateBudgetAlertReminder
         // Idempotent per (budget, source, period) — a new period naturally
         // re-opens eligibility since we key off the period_start date.
         $exists = Reminder::query()
-            ->where('user_id', $owner->id)
+            ->ownedBy($owner)
             ->where('remindable_type', Budget::class)
             ->where('remindable_id', $budgetId)
             ->where('source', $source)

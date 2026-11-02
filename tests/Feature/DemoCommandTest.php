@@ -100,7 +100,7 @@ class DemoCommandTest extends TestCase
         $this->assertArrayNotHasKey('invitation', $credentials);
         $workspace = \App\Models\Workspace::where('slug', $credentials['workspace'])->firstOrFail();
         $this->assertSame(1, $workspace->members()->distinct()->count('users.id'));
-        $this->assertSame(0, \App\Models\Wallet::where('workspace_id', $workspace->id)->count());
+        $this->assertSame(0, \App\Models\Wallet::where('owner_type', \App\Models\Workspace::class)->where('owner_id', $workspace->id)->count());
         $this->assertSame(0, $workspace->budgets()->count());
     }
 
