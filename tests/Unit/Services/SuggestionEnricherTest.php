@@ -36,7 +36,44 @@ class SuggestionEnricherTest extends TestCase
         $this->assertEmpty($result);
     }
 
-    public function test_enrichment_merges_wallet_category_party_from_llm(): void
+    public function test_object_response_preserves_pins_and_original_extraction_fields(): void
+    {
+        Prism::fake([
+            new TextResponse(
+                steps: collect([]),
+                text: json_encode(['transactions' => [['party' => 'Different', 'note_applied' => true]], 'proposed_rules' => []]),
+                finishReason: FinishReason::Stop,
+                toolCalls: [],
+                toolResults: [],
+                usage: new Usage(0, 0),
+                meta: new Meta('fake', 'fake'),
+                messages: collect([]),
+            ),
+        ]);
+        $original = new TransactionSuggestion(
+            amount: 2000,
+            currency: 'XAF',
+            type: 'expense',
+            party: 'Amanda',
+            partyId: 12,
+            fee: 8,
+            tax: 0,
+            reference: '00000000001',
+            skip: true,
+            matchedRules: [['rule_id' => 1, 'kind' => 'party_alias', 'pattern' => 'AMANDA', 'target_name' => 'Amanda']],
+        );
+        $result = $this->enricher->enrich([$original], $this->user);
+        $this->assertSame('Amanda', $result[0]->party);
+        $this->assertSame(12, $result[0]->partyId);
+        $this->assertSame(8.0, $result[0]->fee);
+        $this->assertSame('00000000001', $result[0]->reference);
+        $this->assertTrue($result[0]->skip);
+        $this->assertFalse($result[0]->noteApplied);
+        $this->assertSame($original->matchedRules, $result[0]->matchedRules);
+        $this->assertSame($original->toArray(), TransactionSuggestion::fromArray($original->toArray())->toArray());
+    }
+
+    public function test_legacy_bare_array_enrichment_merges_wallet_category_party_from_llm(): void
     {
         $this->user->wallets()->create([
             'name' => 'Main Checking',
