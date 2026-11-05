@@ -13,10 +13,13 @@ use App\Jobs\ImportFileJob;
 use App\Services\DocumentProcessorManager;
 use App\Services\DuplicateDetectionService;
 use App\Services\FileImportService;
+use App\Services\ImportRuleValidator;
 use App\Services\SuggestionEnricher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 /**
@@ -332,6 +335,7 @@ class ImportController extends ApiController
             content: new OA\JsonContent(
                 properties: [
                     new OA\Property(property: 'file', type: 'string', format: 'binary'),
+                    new OA\Property(property: 'notes', type: 'string', maxLength: 2000, nullable: true),
                     new OA\Property(property: 'document_type', type: 'string', enum: ['bank_statement', 'receipt', 'invoice', 'pay_stub', 'utility_bill']),
                 ]
             )
@@ -366,6 +370,7 @@ class ImportController extends ApiController
                 'file_name' => $file->getClientOriginalName(),
                 'file_type' => $extension,
                 'document_type' => $request->input('document_type'),
+                'notes' => $request->input('notes'),
                 'processor' => $processorName,
                 'status' => 'analyzing',
                 'suggestions' => [],
@@ -400,6 +405,7 @@ class ImportController extends ApiController
             content: new OA\JsonContent(
                 required: ['session_id', 'accepted'],
                 properties: [
+                    new OA\Property(property: 'save_rules', type: 'array', items: new OA\Items(ref: '#/components/schemas/ImportRuleInput')),
                     new OA\Property(property: 'session_id', type: 'integer'),
                     new OA\Property(
                         property: 'accepted',
@@ -492,6 +498,17 @@ class ImportController extends ApiController
             return $this->failure(__('This import session has already been processed.'), 422);
         }
 
+        $savedRules = [];
+        foreach ($request->input('save_rules', []) as $index => $rule) {
+            try {
+                $savedRules[] = app(ImportRuleValidator::class)->validate($rule, $user);
+            } catch (ValidationException $exception) {
+                throw ValidationException::withMessages(
+                    collect($exception->errors())->mapWithKeys(fn ($errors, $field) => ["save_rules.{$index}.{$field}" => $errors])->all()
+                );
+            }
+        }
+
         $suggestions = $session->suggestions;
         $accepted = $request->input('accepted');
         $autoCreate = [
@@ -522,7 +539,12 @@ class ImportController extends ApiController
             return $this->success($data, __('Import failed. No transactions were created.'), 206);
         }
 
-        $session->update(['status' => 'confirmed']);
+        DB::transaction(function () use ($savedRules, $user, $session) {
+            foreach ($savedRules as $rule) {
+                $user->importRules()->create([...$rule, 'source_session_id' => $session->id]);
+            }
+            $session->update(['status' => 'confirmed']);
+        });
 
         if (! empty($errors)) {
             return $this->success($data, __('Import completed with some errors.'), 206);

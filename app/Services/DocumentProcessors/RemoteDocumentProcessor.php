@@ -67,7 +67,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
     /**
      * @return TransactionSuggestion[]
      */
-    public function process(UploadedFile $file, User $user): array
+    public function process(UploadedFile $file, User $user, ?string $documentType = null, ?string $notes = null): array
     {
         $this->lastContext = null;
 
@@ -93,7 +93,7 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         // code becomes the amount). Read the header semantically instead.
         $mode = config('services.document_processor.response_mapping.mode', 'fields');
         if ($mode === 'text_block' && $rawText !== '') {
-            $structured = (new StatementStructurer())->structure($rawText, owner: $user);
+            $structured = (new StatementStructurer())->structure($rawText, documentType: $documentType, owner: $user, notes: $notes);
             if (! empty($structured)) {
                 return $structured;
             }
@@ -371,6 +371,13 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
      */
     private function extractRawText(array $response): string
     {
+        if (array_is_list($response)) {
+            return implode("\n", array_map(fn (array $document) => $this->extractRawText($document), $response));
+        }
+        if (is_string($response['content'] ?? null)) {
+            return $response['content'];
+        }
+
         $parts = [];
 
         // Try elements (common in OCR responses)

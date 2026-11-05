@@ -2502,6 +2502,11 @@
                                         "type": "string",
                                         "format": "binary"
                                     },
+                                    "notes": {
+                                        "type": "string",
+                                        "maxLength": 2000,
+                                        "nullable": true
+                                    },
                                     "document_type": {
                                         "type": "string",
                                         "enum": [
@@ -2549,6 +2554,12 @@
                                     "accepted"
                                 ],
                                 "properties": {
+                                    "save_rules": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/ImportRuleInput"
+                                        }
+                                    },
                                     "session_id": {
                                         "type": "integer"
                                     },
@@ -2704,6 +2715,158 @@
                     },
                     "404": {
                         "description": "Not found"
+                    }
+                }
+            }
+        },
+        "/import-rules": {
+            "get": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "96bee7290c6efa6186391a80091347f0",
+                "responses": {
+                    "200": {
+                        "description": "Paginated rules in the standard success envelope"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "b795a2d0548651e06b439257373d5f98",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ImportRuleInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Rule created"
+                    },
+                    "422": {
+                        "description": "Invalid rule or target"
+                    }
+                }
+            }
+        },
+        "/import-rules/{id}": {
+            "get": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "fc6de7caaf27e4e2902a86b281a09947",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rule details"
+                    },
+                    "404": {
+                        "description": "Rule not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "a9f8e5a728a05d71f17896af4c6f4641",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ImportRuleInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rule updated"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "dd1c28a84c5bf9250e471f68e1654a45",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rule deleted"
+                    },
+                    "404": {
+                        "description": "Rule not found"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Import rules"
+                ],
+                "operationId": "694af56095ae7416345e6ea91ccdf03f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ImportRuleInput"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Rule updated"
+                    },
+                    "422": {
+                        "description": "Invalid rule or target"
                     }
                 }
             }
@@ -6464,6 +6627,70 @@
                 },
                 "type": "object"
             },
+            "ImportRuleInput": {
+                "description": "Matching rules require a field, mode and pattern. Alias and hint rules require a target of the corresponding type owned by the caller. Instructions require instruction text and no matching fields. Skip and instruction rules have no target.",
+                "required": [
+                    "kind"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "party_alias",
+                            "category_hint",
+                            "wallet_hint",
+                            "skip",
+                            "instruction"
+                        ]
+                    },
+                    "match_field": {
+                        "type": "string",
+                        "enum": [
+                            "description",
+                            "counterparty",
+                            "any"
+                        ],
+                        "nullable": true
+                    },
+                    "match_mode": {
+                        "type": "string",
+                        "enum": [
+                            "contains",
+                            "exact",
+                            "starts_with"
+                        ],
+                        "nullable": true
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "nullable": true
+                    },
+                    "target_type": {
+                        "type": "string",
+                        "enum": [
+                            "party",
+                            "category",
+                            "wallet"
+                        ],
+                        "nullable": true
+                    },
+                    "target_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "instruction": {
+                        "type": "string",
+                        "maxLength": 500,
+                        "nullable": true
+                    },
+                    "active": {
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "type": "object"
+            },
             "Notification": {
                 "properties": {
                     "id": {
@@ -6975,6 +7202,10 @@
         {
             "name": "Files",
             "description": "Endpoints for accessing files"
+        },
+        {
+            "name": "Import rules",
+            "description": "Saved Trakli import instructions and mappings"
         },
         {
             "name": "Integration",

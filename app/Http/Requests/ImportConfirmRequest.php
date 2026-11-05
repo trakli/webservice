@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests;
 
+use App\Services\ImportRuleValidator;
+
 // use Illuminate\Foundation\Http\FormRequest;
 
 class ImportConfirmRequest extends ApiFormRequest
 {
     public function rules(): array
     {
-        return [
+        $rules = [
+            'save_rules' => 'sometimes|array',
+            'save_rules.*' => 'required|array',
             'session_id' => 'required|integer|exists:import_sessions,id',
             'accepted' => 'required|array|min:1',
             'accepted.*.index' => 'required|integer|min:0',
@@ -25,5 +29,10 @@ class ImportConfirmRequest extends ApiFormRequest
             'auto_create_categories' => 'nullable|boolean',
             'link_fees' => 'nullable|boolean',
         ];
+        foreach (ImportRuleValidator::rules() as $field => $rule) {
+            $rules['save_rules.*.' . $field] = $rule;
+        }
+
+        return $rules;
     }
 }

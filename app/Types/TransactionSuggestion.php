@@ -20,6 +20,12 @@ readonly class TransactionSuggestion
         public ?float $tax = null,
         public ?string $account = null,
         public ?string $reference = null,
+        public ?int $partyId = null,
+        public ?int $categoryId = null,
+        public ?int $walletId = null,
+        public bool $skip = false,
+        public array $matchedRules = [],
+        public bool $noteApplied = false,
     ) {
     }
 
@@ -40,6 +46,12 @@ readonly class TransactionSuggestion
             'tax' => $this->tax,
             'account' => $this->account,
             'reference' => $this->reference,
+            'party_id' => $this->partyId,
+            'category_id' => $this->categoryId,
+            'wallet_id' => $this->walletId,
+            'skip' => $this->skip,
+            'matched_rules' => $this->matchedRules,
+            'note_applied' => $this->noteApplied,
         ];
     }
 
@@ -77,6 +89,12 @@ readonly class TransactionSuggestion
             tax: isset($data['tax']) ? (float) $data['tax'] : null,
             account: $data['account'] ?? null,
             reference: $data['reference'] ?? null,
+            partyId: isset($data['party_id']) ? (int) $data['party_id'] : null,
+            categoryId: isset($data['category_id']) ? (int) $data['category_id'] : null,
+            walletId: isset($data['wallet_id']) ? (int) $data['wallet_id'] : null,
+            skip: (bool) ($data['skip'] ?? false),
+            matchedRules: $data['matched_rules'] ?? [],
+            noteApplied: (bool) ($data['note_applied'] ?? false),
         );
     }
 }

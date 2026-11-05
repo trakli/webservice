@@ -8,8 +8,10 @@ use App\Jobs\AnalyzeImportJob;
 use App\Models\ChatMessage;
 use App\Services\DocumentProcessorManager;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Whilesmart\Agents\Enums\ToolPermission;
 use Whilesmart\Agents\Tools\AbstractTool;
+use Whilesmart\Agents\ValueObjects\ParameterSpec;
 use Whilesmart\Agents\ValueObjects\ToolContext;
 
 /**
@@ -36,6 +38,14 @@ class ImportDocumentTool extends AbstractTool
             . 'to import or extract transactions from it.';
     }
 
+    public function parameters(): array
+    {
+        return [
+            ParameterSpec::string('notes', 'Import instructions from the user, at most 2000 characters', false),
+            ParameterSpec::enum('document_type', 'Document classification', ['bank_statement', 'receipt', 'invoice', 'pay_stub', 'utility_bill'], false),
+        ];
+    }
+
     public function permission(): ToolPermission
     {
         // Non-destructive: starts analysis and shows suggestions. The user still
@@ -45,6 +55,10 @@ class ImportDocumentTool extends AbstractTool
 
     public function handle(array $arguments, ToolContext $context): string|array
     {
+        $arguments = Validator::make($arguments, [
+            'notes' => 'nullable|string|max:2000',
+            'document_type' => 'nullable|in:bank_statement,receipt,invoice,pay_stub,utility_bill',
+        ])->validate();
         $user = $context->user;
         $sessionId = $context->get('chat_session_id');
 
@@ -71,6 +85,7 @@ class ImportDocumentTool extends AbstractTool
             'file_name' => basename($path),
             'file_type' => $extension,
             'document_type' => $file->metadata['document_type'] ?? ($arguments['document_type'] ?? null),
+            'notes' => $arguments['notes'] ?? null,
             'processor' => class_basename($processor),
             'status' => 'analyzing',
             'suggestions' => [],

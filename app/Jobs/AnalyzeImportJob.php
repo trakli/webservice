@@ -5,7 +5,9 @@ namespace App\Jobs;
 use App\Contracts\ProvidesExtractionContext;
 use App\Models\ImportSession;
 use App\Services\DocumentProcessorManager;
+use App\Services\DocumentProcessors\RemoteDocumentProcessor;
 use App\Services\DuplicateDetectionService;
+use App\Services\ImportRuleMatcher;
 use App\Services\SuggestionEnricher;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -71,7 +73,9 @@ class AnalyzeImportJob implements ShouldQueue
             $session->update(['status' => 'extracting']);
 
             $processor = $processorManager->getProcessor($this->mimeType, $this->extension);
-            $suggestions = $processor->process($file, $user);
+            $suggestions = $processor instanceof RemoteDocumentProcessor
+                ? $processor->process($file, $user, $session->document_type, $session->notes)
+                : $processor->process($file, $user);
 
             $documentContext = $processor instanceof ProvidesExtractionContext
                 ? $processor->lastExtractionContext()
@@ -90,7 +94,9 @@ class AnalyzeImportJob implements ShouldQueue
             // Stage 2: Enriching
             $session->update(['status' => 'enriching']);
 
-            $suggestions = $enricher->enrich($suggestions, $user, $documentContext);
+            $suggestions = app(ImportRuleMatcher::class)->apply($suggestions, $user);
+            $instructions = $user->importRules()->where('active', true)->where('kind', 'instruction')->orderBy('id')->pluck('instruction')->all();
+            $suggestions = $enricher->enrich($suggestions, $user, $documentContext, $session->notes, $instructions, $session->document_type);
 
             // Stage 3: Checking duplicates
             $session->update(['status' => 'checking']);
@@ -109,6 +115,7 @@ class AnalyzeImportJob implements ShouldQueue
                 'status' => 'ready',
                 'suggestions' => $suggestionsData,
                 'metadata' => [
+                    'proposed_rules' => $enricher->proposedRules,
                     'total_suggestions' => count($suggestions),
                     'duplicates_found' => count(array_filter($duplicates)),
                 ],

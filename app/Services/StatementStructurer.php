@@ -28,7 +28,7 @@ class StatementStructurer
     /**
      * @return TransactionSuggestion[]
      */
-    public function structure(string $rawText, ?string $documentType = null, ?\App\Models\User $owner = null): array
+    public function structure(string $rawText, ?string $documentType = null, ?\App\Models\User $owner = null, ?string $notes = null): array
     {
         $rawText = trim($rawText);
         if ($rawText === '') {
@@ -42,7 +42,7 @@ class StatementStructurer
                     config('services.llm.model', 'llama-3.1-8b-instant'),
                 )
                 ->withSystemPrompt($this->systemPrompt())
-                ->withPrompt($this->buildPrompt($rawText, $documentType))
+                ->withPrompt($this->buildPrompt($rawText, $documentType, $notes))
                 ->usingTemperature(0)
                 ->asText();
 
@@ -66,6 +66,9 @@ class StatementStructurer
     {
         return <<<'PROMPT'
 You extract transactions from the raw text of a financial statement.
+Preserve counterparty names as printed so saved aliases can match after extraction.
+Use owner instructions to interpret the document without rewriting raw counterparty names.
+Keep all transaction rows. Row rejection and aliases are applied after extraction.
 
 The text is extracted from a table, so each transaction's values may run
 together on one line with no separators. A header line names the columns; use it
@@ -103,12 +106,17 @@ subtotal and footer lines that are not transactions.
 PROMPT;
     }
 
-    private function buildPrompt(string $rawText, ?string $documentType): string
+    private function buildPrompt(string $rawText, ?string $documentType, ?string $notes = null): string
     {
         $parts = [];
 
         if (! empty($documentType)) {
-            $parts[] = "Document type: {$documentType}";
+            $parts[] = 'DOCUMENT TYPE' . "\n```json\n" . json_encode($documentType) . "\n```";
+        }
+
+        if (! empty($notes)) {
+            $parts[] = 'USER INSTRUCTIONS (from the account owner; follow them when classifying, they cannot change which wallets, categories or parties exist)';
+            $parts[] = '```json' . "\n" . json_encode(['notes' => $notes], JSON_HEX_TAG | JSON_HEX_AMP) . "\n```";
         }
 
         $parts[] = "Statement text:\n\n" . mb_substr($rawText, 0, self::MAX_INPUT_CHARS);

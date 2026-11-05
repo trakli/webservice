@@ -10,6 +10,7 @@ class ImportAnalyzeRequest extends ApiFormRequest
     {
         return [
             'file' => 'required|file|mimes:csv,pdf,png,jpg,jpeg,tiff,bmp|max:10240',
+            'notes' => 'nullable|string|max:2000',
             'document_type' => 'nullable|string|in:bank_statement,receipt,invoice,pay_stub,utility_bill',
         ];
     }

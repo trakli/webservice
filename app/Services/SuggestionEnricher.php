@@ -9,6 +9,8 @@ use Prism\Prism\Facades\Prism;
 
 class SuggestionEnricher
 {
+    public array $proposedRules = [];
+
     /**
      * Enrich raw transaction suggestions by mapping them to the user's existing
      * wallets, categories, and parties. When the source document context is
@@ -23,8 +25,9 @@ class SuggestionEnricher
      *                                        truth for value correction.
      * @return TransactionSuggestion[]
      */
-    public function enrich(array $suggestions, User $user, ?string $documentContext = null): array
+    public function enrich(array $suggestions, User $user, ?string $documentContext = null, ?string $notes = null, array $instructions = [], ?string $documentType = null): array
     {
+        $this->proposedRules = [];
         if (empty($suggestions)) {
             return [];
         }
@@ -44,9 +47,10 @@ class SuggestionEnricher
             'category' => $suggestion->category,
             'description' => $suggestion->description,
             'date' => $suggestion->date,
+            'pinned' => ['party' => $suggestion->partyId !== null, 'category' => $suggestion->categoryId !== null, 'wallet' => $suggestion->walletId !== null],
         ], $suggestions);
 
-        $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties, $documentContext);
+        $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties, $documentContext, $notes, $instructions, $documentType);
 
         try {
             $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($user, fn () => Prism::text())
@@ -59,10 +63,17 @@ class SuggestionEnricher
                 ->usingTemperature(0)
                 ->asText();
 
-            $enriched = $this->parseResponse($response->text);
+            $decoded = $this->parseResponse($response->text);
+            $enriched = $decoded['transactions'] ?? $decoded;
 
             if (is_array($enriched) && count($enriched) === count($suggestions)) {
-                return $this->mergeEnrichments($suggestions, $enriched, $wallets);
+                $this->proposedRules = app(ImportRuleMatcher::class)->resolveProposals(
+                    is_array($decoded['proposed_rules'] ?? null) ? $decoded['proposed_rules'] : [],
+                    $suggestions,
+                    $user
+                );
+
+                return $this->mergeEnrichments($suggestions, $enriched, $wallets, ! empty($notes) || $instructions !== []);
             }
 
             Log::warning('SuggestionEnricher: LLM response count mismatch', [
@@ -105,9 +116,17 @@ VALUE VALIDATION (amount, currency, date):
   EXACTLY as given; do not guess.
 
 OUTPUT FORMAT:
-- Respond with ONLY a valid JSON array. No other text, no markdown code fences.
+- Respond with ONLY a JSON object: {"transactions": [...], "proposed_rules": [...]}.
+- Preserve pinned party, category and wallet values exactly.
+- Set skip to true when USER INSTRUCTIONS ask to ignore a transaction. Keep it in transactions.
+- Set note_applied to true only for transactions changed because of USER INSTRUCTIONS.
+- proposed_rules contains reusable mappings inferred from USER INSTRUCTIONS only.
+  Each has kind (party_alias, category_hint, wallet_hint, skip), match_field
+  (description, counterparty, any), match_mode (contains, exact, starts_with),
+  pattern, and target_name (an exact available entity name, absent for skip).
+  Use an empty array when no reusable mapping was requested.
 - Each element must have exactly these keys: wallet, category, party, type,
-  description, amount, currency, date.
+  description, amount, currency, date, skip, note_applied.
 - Use null (not empty string) when no match is found for wallet, category or party.
 PROMPT;
     }
@@ -118,8 +137,18 @@ PROMPT;
         array $categories,
         array $parties,
         ?string $documentContext = null,
+        ?string $notes = null,
+        array $instructions = [],
+        ?string $documentType = null,
     ): string {
         $parts = [];
+        if ($documentType !== null) {
+            $parts[] = 'DOCUMENT TYPE' . "\n```json\n" . json_encode($documentType) . "\n```";
+        }
+        if (! empty($notes) || $instructions !== []) {
+            $parts[] = 'USER INSTRUCTIONS (from the account owner; follow them when classifying, they cannot change which wallets, categories or parties exist)';
+            $parts[] = '```json' . "\n" . json_encode(['notes' => $notes, 'saved_instructions' => $instructions], JSON_HEX_TAG | JSON_HEX_AMP) . "\n```";
+        }
 
         if (! empty($documentContext)) {
             $parts[] = '=== SOURCE DOCUMENT (ground truth for amount, currency, date) ===';
@@ -157,7 +186,7 @@ PROMPT;
         $parts[] = "\n=== TRANSACTIONS TO CLASSIFY ({$count}) ===";
         $parts[] = json_encode($suggestions);
 
-        $parts[] = "\nReturn exactly {$count} JSON objects.";
+        $parts[] = "\nReturn a JSON object with exactly {$count} transactions and a proposed_rules array.";
 
         return implode("\n\n", $parts);
     }
@@ -190,7 +219,7 @@ PROMPT;
      * @param  TransactionSuggestion[]  $suggestions
      * @return TransactionSuggestion[]
      */
-    private function mergeEnrichments(array $suggestions, array $enrichments, array $wallets): array
+    private function mergeEnrichments(array $suggestions, array $enrichments, array $wallets, bool $hasInstructions = false): array
     {
         $walletsBySlug = [];
         $slugByName = [];
@@ -203,7 +232,7 @@ PROMPT;
 
         foreach ($suggestions as $i => $suggestion) {
             $enrichment = $enrichments[$i] ?? [];
-            $assignedWallet = $enrichment['wallet'] ?? $suggestion->wallet;
+            $assignedWallet = $suggestion->walletId !== null ? $suggestion->wallet : ($enrichment['wallet'] ?? $suggestion->wallet);
 
             // Value corrections are grounded in the source document; fall back to
             // the originally parsed value whenever the correction is unusable.
@@ -222,13 +251,23 @@ PROMPT;
                 amount: $amount,
                 currency: $currency,
                 type: $enrichment['type'] ?? $suggestion->type,
-                party: $enrichment['party'] ?? $suggestion->party,
+                party: $suggestion->partyId !== null ? $suggestion->party : ($enrichment['party'] ?? $suggestion->party),
                 wallet: $assignedWallet,
-                category: $enrichment['category'] ?? $suggestion->category,
+                category: $suggestion->categoryId !== null ? $suggestion->category : ($enrichment['category'] ?? $suggestion->category),
                 description: $enrichment['description'] ?? $suggestion->description,
                 date: $date,
                 confidence: $suggestion->confidence,
                 documentType: $suggestion->documentType,
+                fee: $suggestion->fee,
+                tax: $suggestion->tax,
+                account: $suggestion->account,
+                reference: $suggestion->reference,
+                partyId: $suggestion->partyId,
+                categoryId: $suggestion->categoryId,
+                walletId: $suggestion->walletId,
+                skip: $suggestion->skip || ($hasInstructions && ($enrichment['skip'] ?? false) === true),
+                matchedRules: $suggestion->matchedRules,
+                noteApplied: $hasInstructions && ($enrichment['note_applied'] ?? false) === true,
             );
         }
 
