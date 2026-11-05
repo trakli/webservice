@@ -606,9 +606,54 @@ semantic_layer:
         document_type:
           type: string
           description: Document classification
+        notes:
+          type: text
+          description: Instructions from the account owner
         status:
           type: string
           description: Analysis status
+        owner_id:
+          type: integer
+          hidden: true
+        owner_type:
+          type: string
+          hidden: true
+    import_rules:
+      table: import_rules
+      description: 'Saved statement aliases, classification hints, skipped rows and import instructions.'
+      label_column: pattern
+      columns:
+        id:
+          type: integer
+          primary: true
+        kind:
+          type: enum
+          values: [party_alias, category_hint, wallet_hint, skip, instruction]
+        match_field:
+          type: enum
+          values: [description, counterparty, any]
+        match_mode:
+          type: enum
+          values: [contains, exact, starts_with]
+        pattern:
+          type: string
+        target_type:
+          type: enum
+          values: [party, category, wallet]
+        target_id:
+          type: integer
+          description: 'Target ID interpreted through target_type: party, category or wallet'
+        instruction:
+          type: text
+        active:
+          type: boolean
+        hits:
+          type: integer
+        last_used_at:
+          type: datetime
+        source_session_id:
+          type: integer
+          references: import_sessions.id
         owner_id:
           type: integer
           hidden: true
@@ -748,6 +793,7 @@ security:
   - groups
   - holdings
   - import_sessions
+  - import_rules
   - notifications
   - parties
   - recurring_transaction_rules
@@ -758,6 +804,11 @@ security:
   - wallets
   - workspaces
   required_filters:
+    import_rules:
+      column: owner_id
+      param: user_id
+      constants:
+        owner_type: App\Models\User
     transactions:
       column: owner_id
       param: user_id

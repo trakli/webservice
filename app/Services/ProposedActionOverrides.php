@@ -37,6 +37,8 @@ class ProposedActionOverrides
             'wallet.create' => ['name', 'type', 'currency', 'description'],
             'category.create' => ['name', 'type', 'description'],
             'party.create' => ['name', 'type', 'description'],
+            'import_rule.create' => array_keys(ImportRuleValidator::rules()),
+            'import_rule.toggle' => ['active'],
             'group.create' => ['name', 'description'],
             'reminder.create' => ['title', 'description', 'trigger_at', 'due_at', 'priority'],
             'workspace.change' => ['name', 'amount', 'currency', 'period_type', 'start_date', 'end_date', 'description', 'datetime', 'targets', 'is_refund'],
@@ -78,6 +80,8 @@ class ProposedActionOverrides
         }
 
         match ($actionType) {
+            'import_rule.create' => app(ImportRuleValidator::class)->validate($payload, $user),
+            'import_rule.toggle' => \Illuminate\Support\Facades\Validator::make($payload, ['active' => 'required|boolean'])->validate(),
             'transfer.create' => $this->checkTransfer($user, $payload),
             'budget.create' => $this->checkBudget($user, $payload),
             'recurring_rule.create' => $this->checkRecurringRule($payload),

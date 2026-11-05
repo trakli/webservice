@@ -2,8 +2,10 @@
 
 namespace App\Ai\Tools\Write;
 
+use App\Services\ImportRuleValidator;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Whilesmart\Agents\Resources\AgentResource;
 use Whilesmart\Agents\Resources\ResourceField;
@@ -80,6 +82,13 @@ class CreateResourceTool extends AbstractWriteTool
         }
 
         $this->validate($payload);
+        if ($this->resource->name === 'import_rules') {
+            try {
+                $payload = app(ImportRuleValidator::class)->validate($payload, $context->user);
+            } catch (ValidationException $exception) {
+                throw new InvalidArgumentException(implode(' ', $exception->validator->errors()->all()));
+            }
+        }
 
         return $payload;
     }

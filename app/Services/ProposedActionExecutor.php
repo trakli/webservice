@@ -35,6 +35,8 @@ class ProposedActionExecutor
             'wallet.create' => $this->createOwned($action, $action->owner->wallets()),
             'category.create' => $this->createOwned($action, $action->owner->categories()),
             'party.create' => $this->createOwned($action, $action->owner->parties()),
+            'import_rule.create' => $action->owner->importRules()->create(app(ImportRuleValidator::class)->validate($action->payload, $action->owner)),
+            'import_rule.toggle' => $this->toggleImportRule($action),
             'group.create' => $this->createOwned($action, $action->owner->groups()),
             'reminder.create' => $this->createOwned($action, $action->owner->reminders()),
             'budget.create' => $this->createBudget($action),
@@ -43,6 +45,14 @@ class ProposedActionExecutor
             'refund.create' => $this->createRefund($action),
             default => throw new RuntimeException("Unsupported action type: {$action->action_type}"),
         });
+    }
+
+    private function toggleImportRule(AgentProposedAction $action): Model
+    {
+        $rule = $action->owner->importRules()->findOrFail($action->payload['rule_id']);
+        $rule->update(['active' => $action->payload['active']]);
+
+        return $rule;
     }
 
     private function changeWorkspace(AgentProposedAction $action): Model

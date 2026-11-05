@@ -43,6 +43,7 @@ return [
             'columns' => [
                 'owner_type' => ['type' => 'string'],
                 'owner_id' => ['type' => 'unsignedBigInteger'],
+                'notes' => ['type' => 'text', 'nullable' => true],
             ],
         ],
         'file_imports' => [

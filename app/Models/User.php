@@ -3,23 +3,23 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
-use Whilesmart\Shareables\Contracts\ShareAudience;
-use Whilesmart\Shareables\Models\Share;
-use Whilesmart\Shareables\Traits\ReceivesShares;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Whilesmart\Holdings\Models\Holding;
 use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
+use Whilesmart\Holdings\Models\Holding;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
+use Whilesmart\Shareables\Contracts\ShareAudience;
+use Whilesmart\Shareables\Models\Share;
+use Whilesmart\Shareables\Traits\ReceivesShares;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
 class User extends Authenticatable implements HasLocalePreference, ShareAudience
@@ -154,6 +154,11 @@ class User extends Authenticatable implements HasLocalePreference, ShareAudience
     public function fileImports(): MorphMany
     {
         return $this->morphMany(FileImport::class, 'owner');
+    }
+
+    public function importRules(): MorphMany
+    {
+        return $this->morphMany(ImportRule::class, 'owner');
     }
 
     public function importSessions(): MorphMany

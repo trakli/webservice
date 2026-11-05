@@ -437,7 +437,7 @@ class RemoteDocumentProcessorTest extends TestCase
         Http::fake([
             'https://example.com/parse' => Http::response([
                 'elements' => [
-                    ['content' => "Date & Time Payment Type To/From Account Name Amount Transaction ID Fees Tax Balance Reference\n15 Jun 2026 20:12 MOMO USER +237 68 09 11 37 4 NAOMI KAYLANI FON AKE -2000 17544382009 8.00 XAF 0.00 XAF 5,200 XAF Charges"],
+                    ['content' => "Date & Time Payment Type To/From Account Name Amount Transaction ID Fees Tax Balance Reference\n15 Jun 2026 20:12 MOMO USER +237 600 00 00 01 AMANDA KEMAJOU SAMPLE -2000 00000000001 8.00 XAF 0.00 XAF 5,200 XAF Charges"],
                 ],
             ], 200),
         ]);
@@ -448,10 +448,10 @@ class RemoteDocumentProcessorTest extends TestCase
                 steps: collect([]),
                 text: json_encode([[
                     'date' => '2026-06-15',
-                    'description' => 'MoMo transfer to NAOMI KAYLANI FON AKE',
+                    'description' => 'MoMo transfer to AMANDA KEMAJOU SAMPLE',
                     'payment_type' => 'MOMO USER',
-                    'counterparty_name' => 'NAOMI KAYLANI FON AKE',
-                    'account' => '+237 68 09 11 37 4',
+                    'counterparty_name' => 'AMANDA KEMAJOU SAMPLE',
+                    'account' => '+237 600 00 00 01',
                     'amount' => 2000,
                     'direction' => 'expense',
                     'fee' => 8.00,
@@ -477,8 +477,8 @@ class RemoteDocumentProcessorTest extends TestCase
         $suggestion = $result[0];
         $this->assertEquals(2000.0, $suggestion->amount);
         $this->assertEquals('expense', $suggestion->type);
-        $this->assertEquals('NAOMI KAYLANI FON AKE', $suggestion->party);
-        $this->assertEquals('+237 68 09 11 37 4', $suggestion->account);
+        $this->assertEquals('AMANDA KEMAJOU SAMPLE', $suggestion->party);
+        $this->assertEquals('+237 600 00 00 01', $suggestion->account);
         $this->assertEquals(8.00, $suggestion->fee);
         $this->assertEquals('XAF', $suggestion->currency);
         $this->assertEquals('2026-06-15', $suggestion->date);

@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Whilesmart\Agents\Contracts\HasAgentResource;
 use Whilesmart\Agents\Resources\AgentResource;
 use Whilesmart\Agents\Resources\ResourceField;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ImportSession extends Model implements HasAgentResource
 {
@@ -16,6 +16,7 @@ class ImportSession extends Model implements HasAgentResource
         'file_name',
         'file_type',
         'document_type',
+        'notes',
         'processor',
         'status',
         'suggestions',
@@ -48,6 +49,7 @@ class ImportSession extends Model implements HasAgentResource
                 ResourceField::string('file_name', 'Document name'),
                 ResourceField::string('file_type', 'File format'),
                 ResourceField::string('document_type', 'Document classification'),
+                ResourceField::text('notes', 'Instructions from the account owner'),
                 ResourceField::string('status', 'Analysis status'),
                 ResourceField::internal('owner_id'),
                 ResourceField::internal('owner_type', 'string'),

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\RecordCheckInStreak;
+use App\Http\Controllers\API\VersionController;
 use App\Http\Controllers\API\v1\AccountController;
 use App\Http\Controllers\API\v1\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\API\v1\Admin\MetricsController as AdminMetricsController;
@@ -29,7 +29,7 @@ use App\Http\Controllers\API\v1\TransactionRefundController;
 use App\Http\Controllers\API\v1\TransferController;
 use App\Http\Controllers\API\v1\UserController;
 use App\Http\Controllers\API\v1\WalletController;
-use App\Http\Controllers\API\VersionController;
+use App\Http\Middleware\RecordCheckInStreak;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -102,6 +102,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
     Route::apiResource('categories', CategoryController::class);
 
     // Advanced import routes (analyze → review → confirm)
+    Route::apiResource('import-rules', \App\Http\Controllers\API\v1\ImportRuleController::class);
     Route::post('import/analyze', [ImportController::class, 'analyze']);
     Route::post('import/confirm', [ImportController::class, 'confirm']);
     Route::get('import/sessions', [ImportController::class, 'getSessions']);

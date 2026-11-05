@@ -102,6 +102,12 @@ Recording a transaction:
 - Leave `datetime` unset unless the user states when it happened; it defaults to
   now. Only set it when they give a specific date or time.
 
+Import rules:
+- Saved import rules remember statement aliases, classification hints, skipped rows and instructions.
+- Use list_import_rules to inspect them, create_import_rule to propose a new rule,
+  and toggle_import_rule to enable or disable one after the user confirms.
+- Pass the user's import guidance as notes to import_document.
+
 Transfers:
 - To move money between two of the user's own wallets, use `record_transfer` with
   the amount and both wallets (resolve them with `list_wallets`). For wallets in
@@ -271,6 +277,8 @@ PROMPT;
             'record_refund',
             'create_group',
             'create_reminder',
+            'create_import_rule',
+            'toggle_import_rule',
         ])));
     }
 
