@@ -17,6 +17,25 @@ class TransferTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_exchange_transfer_preserves_the_web_form_date(): void
+    {
+        $user = User::factory()->create();
+        $from = Wallet::factory()->create(['user_id' => $user->id, 'balance' => 1000]);
+        $to = Wallet::factory()->create(['user_id' => $user->id]);
+        $payload = [
+            'amount' => 100,
+            'from_wallet_id' => $from->id,
+            'to_wallet_id' => $to->id,
+            'created_at' => '2026-10-12T14:30:00.000Z',
+        ];
+        $this->actingAs($user)->postJson('/api/v1/transfers', $payload)->assertCreated();
+        $this->assertDatabaseHas('transfers', ['datetime' => '2026-10-12 14:30:00']);
+        $this->assertEquals(2, Transaction::where('datetime', '2026-10-12 14:30:00')->count());
+
+        $this->postJson('/api/v1/transfers', $payload + ['datetime' => '2026-10-13T09:00:00Z'])->assertCreated();
+        $this->assertDatabaseHas('transfers', ['datetime' => '2026-10-13 09:00:00']);
+    }
+
     public function test_api_user_can_transfer_between_wallets_with_the_same_currency()
     {
         $user = User::factory()->create();

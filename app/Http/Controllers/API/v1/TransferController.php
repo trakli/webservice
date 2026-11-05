@@ -231,7 +231,8 @@ class TransferController extends ApiController
             return $this->failure(__('The amount received rounds to zero at this exchange rate'), 422);
         }
 
-        $datetime = isset($data['datetime']) ? format_iso8601_to_sql($data['datetime']) : null;
+        $dateInput = $data['datetime'] ?? $data['created_at'] ?? null;
+        $datetime = $dateInput !== null ? format_iso8601_to_sql($dateInput) : null;
 
         $fullClientId = $data['client_id'] ?? null;
         $deviceToken = null;
