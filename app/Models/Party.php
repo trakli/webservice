@@ -16,6 +16,13 @@ use Whilesmart\Agents\Resources\ResourceField;
 #[OA\Schema(
     schema: 'Party',
     properties: [
+        new OA\Property(property: 'balances', type: 'array', items: new OA\Items(type: 'object', properties: [
+            new OA\Property(property: 'currency', type: 'string'),
+            new OA\Property(property: 'they_owe_me', type: 'number'),
+            new OA\Property(property: 'i_owe_them', type: 'number'),
+            new OA\Property(property: 'net', type: 'number'),
+        ])),
+        new OA\Property(property: 'open_debts', type: 'array', items: new OA\Items(type: 'integer')),
         new OA\Property(property: 'id', description: 'ID of the party', type: 'integer'),
         new OA\Property(property: 'type', description: 'Type of the party', type: 'string'),
         new OA\Property(property: 'name', description: 'Name of the party', type: 'string'),

@@ -108,6 +108,13 @@ Import rules:
   and toggle_import_rule to enable or disable one after the user confirms.
 - Pass the user's import guidance as notes to import_document.
 
+Party debts:
+- Use record_transaction with party_id or party_name for lending, borrowing and paying back.
+- loan_given is expense (they owe the user); loan_collected is income (they pay back).
+- loan_received/debt_owed are income (the user owes them); loan_repayment/debt_settled are expense.
+- owed_amount on opening debts sets only the part owed. Omit it when the whole amount is owed.
+- Use list_debt_settlements to see which payments have settled which debts.
+
 Transfers:
 - To move money between two of the user's own wallets, use `record_transfer` with
   the amount and both wallets (resolve them with `list_wallets`). For wallets in

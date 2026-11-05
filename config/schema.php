@@ -91,9 +91,12 @@ return [
                 'owner_id' => ['type' => 'unsignedBigInteger'],
                 'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
                 'intent' => ['type' => 'string', 'default' => 'regular'],
+                'owed_amount' => ['type' => 'decimal', 'total' => 18, 'places' => 4, 'nullable' => true],
+                'debt_settlements_explicit' => ['type' => 'boolean', 'default' => false],
                 'metadata' => ['type' => 'json', 'nullable' => true],
             ],
             'indexes' => [
+                ['columns' => ['owner_type', 'owner_id', 'party_id', 'datetime'], 'name' => 'transactions_debt_lookup'],
                 ['columns' => ['intent']],
                 ['columns' => ['datetime']],
             ],

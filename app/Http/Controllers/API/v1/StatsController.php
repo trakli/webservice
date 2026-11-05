@@ -86,6 +86,13 @@ class StatsController extends ApiController
                                 description: 'Currency used for all amounts',
                                 type: 'string'
                             ),
+                            new OA\Property(property: 'position', type: 'object', properties: [
+                                new OA\Property(property: 'loan_given', type: 'number'),
+                                new OA\Property(property: 'loan_collected', type: 'number'),
+                                new OA\Property(property: 'receivables', type: 'number'),
+                                new OA\Property(property: 'liabilities', type: 'number'),
+                                new OA\Property(property: 'total_net_worth', type: 'number'),
+                            ]),
                             new OA\Property(property: 'overview', properties: [
                                 new OA\Property(property: 'total_balance', type: 'number', format: 'float'),
                                 new OA\Property(property: 'net_worth', type: 'number', format: 'float'),

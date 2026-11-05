@@ -40,12 +40,14 @@ class RecordTransactionTool extends AbstractWriteTool
             ParameterSpec::enum(
                 'intent',
                 'What the money movement really is. Default "regular" for ordinary earnings or spending. '
+                . 'Use loan_given (expense) to lend, loan_collected (income) to collect, and require a party for all debt intents. '
                 . 'Use loan_received/debt_owed (income) or loan_repayment/debt_settled (expense) for borrowing, '
                 . 'investment_buy (expense) / investment_return (income) for investments, and gift (income) for gifts. '
                 . 'Only set this when the user clearly indicates it.',
                 TransactionIntent::values(),
                 required: false
             ),
+            ParameterSpec::number('owed_amount', 'For opening debts only: amount owed if less than the full transaction.', required: false),
             ParameterSpec::number('wallet_id', 'The id of the wallet (preferred; get it from list_wallets).', required: false),
             ParameterSpec::string('wallet_name', 'The exact wallet name, if you do not have its id.', required: false),
             ParameterSpec::string('description', 'Free text describing the purchase, e.g. "coffee". This is NOT a category.', required: false),
@@ -79,8 +81,22 @@ class RecordTransactionTool extends AbstractWriteTool
         $categoryIds = $this->resolveCategoryIds($user, (array) ($arguments['category_names'] ?? []));
         $partyId = $this->resolvePartyId($user, $arguments);
 
+        if (TransactionIntent::tryFrom($intent ?? 'regular')?->isLoanOrDebt() && ! $partyId) {
+            throw new InvalidArgumentException('A party is required for lending, borrowing and paying back.');
+        }
+
+        try {
+            app(\App\Services\DebtService::class)->validate(new \App\Models\Transaction([
+                'amount' => $amount, 'type' => $type, 'intent' => $intent ?? 'regular',
+                'party_id' => $partyId, 'owed_amount' => $arguments['owed_amount'] ?? null,
+            ]));
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            throw new InvalidArgumentException($e->getMessage());
+        }
+
         return array_filter([
             'amount' => $amount,
+            'owed_amount' => $arguments['owed_amount'] ?? null,
             'type' => $type,
             'intent' => $intent,
             'wallet_id' => $walletId,
@@ -131,6 +147,7 @@ class RecordTransactionTool extends AbstractWriteTool
                 'options' => TransactionIntent::values(),
             ],
             ['key' => 'amount', 'label' => 'Amount', 'type' => 'number', 'value' => $payload['amount'] ?? 0, 'display' => (string) ($payload['amount'] ?? '')],
+            ['key' => 'owed_amount', 'label' => 'Amount owed', 'type' => 'number', 'value' => $payload['owed_amount'] ?? null, 'display' => (string) ($payload['owed_amount'] ?? $payload['amount'])],
             ['key' => 'wallet_id', 'label' => 'Wallet', 'type' => 'wallet', 'value' => $walletId, 'display' => $walletName ?? ('#' . $walletId)],
             ['key' => 'party_id', 'label' => 'Party', 'type' => 'party', 'value' => $partyId, 'display' => $partyName ?? ($partyId ? '#' . $partyId : '')],
             [

@@ -33,6 +33,22 @@ use Whilesmart\UserDevices\Models\Device;
             enum: ['income', 'expense']
         ),
         new OA\Property(property: 'amount', description: 'Amount of the transaction', type: 'number', format: 'float'),
+        new OA\Property(property: 'owed_amount', type: 'number', nullable: true),
+        new OA\Property(property: 'debt', type: 'object', properties: [
+            new OA\Property(property: 'owed', type: 'number'),
+            new OA\Property(property: 'paid', type: 'number'),
+            new OA\Property(property: 'remaining', type: 'number'),
+            new OA\Property(property: 'currency', type: 'string'),
+            new OA\Property(property: 'status', type: 'string', enum: ['open', 'settled']),
+        ]),
+        new OA\Property(property: 'settles', type: 'array', items: new OA\Items(type: 'object', properties: [
+            new OA\Property(property: 'debt_transaction_id', type: 'integer'),
+            new OA\Property(property: 'amount_applied', type: 'number'),
+            new OA\Property(property: 'currency', type: 'string'),
+            new OA\Property(property: 'rate', type: 'number'),
+            new OA\Property(property: 'rate_source', type: 'string', enum: ['paid', 'market']),
+        ])),
+        new OA\Property(property: 'unapplied', type: 'number'),
         new OA\Property(property: 'description', description: 'Description of the transaction', type: 'string'),
         new OA\Property(
             property: 'datetime',
@@ -98,11 +114,30 @@ class Transaction extends Model implements HasAgentResource
     use Syncable;
     use Shareable;
 
+    private ?array $requestedSettles = null;
+
+    public function setSettlesAttribute(array $value): void
+    {
+        $this->requestedSettles = $value;
+        $this->attributes['debt_settlements_explicit'] = true;
+    }
+
+    public function toArray(): array
+    {
+        return array_merge(parent::toArray(), app(\App\Services\DebtService::class)->fields($this));
+    }
+
     protected static function boot()
     {
         parent::boot();
 
         static::saving(function (Transaction $transaction) {
+            $partyIds = array_filter([$transaction->party_id, $transaction->getOriginal('party_id')]);
+            if ($partyIds) {
+                Party::whereIn('id', $partyIds)->orderBy('id')->lockForUpdate()->get();
+            }
+            app(\App\Services\DebtService::class)->validate($transaction);
+            app(\App\Services\DebtService::class)->validateExisting($transaction);
             if (empty($transaction->wallet_id)) {
                 throw new InvalidArgumentException('A transaction must belong to a wallet.');
             }
@@ -111,8 +146,53 @@ class Transaction extends Model implements HasAgentResource
                 throw new InvalidArgumentException('A transaction and its wallet must have the same owner.');
             }
             if ($transaction->party_id && ! $transaction->hasSameOwner(Party::withTrashed()->findOrFail($transaction->party_id))) {
-                throw new InvalidArgumentException('A transaction and its counterparty must have the same owner.');
+                throw new \Symfony\Component\HttpKernel\Exception\HttpException(422, 'A transaction and its party must have the same owner.');
             }
+        });
+        static::saved(function (Transaction $transaction) {
+            if (! \App\Enums\TransactionIntent::tryFrom($transaction->intent ?? 'regular')?->isLoanOrDebt()
+                && ! \App\Enums\TransactionIntent::tryFrom($transaction->getOriginal('intent') ?? 'regular')?->isLoanOrDebt()
+                && $transaction->requestedSettles === null) {
+                return;
+            }
+            $transaction->unsetRelation('wallet');
+            $service = app(\App\Services\DebtService::class);
+            if ($transaction->wasChanged(['party_id', 'intent', 'wallet_id'])) {
+                \Illuminate\Support\Facades\DB::table('debt_settlements')->where('is_explicit', false)
+                    ->where(fn ($q) => $q->where('payment_transaction_id', $transaction->id)->orWhere('debt_transaction_id', $transaction->id))->delete();
+            }
+            $old = new Transaction();
+            $old->forceFill([
+                'owner_type' => $transaction->owner_type, 'owner_id' => $transaction->owner_id,
+                'party_id' => $transaction->getOriginal('party_id'),
+            ]);
+            if ($transaction->wasChanged(['party_id', 'intent', 'wallet_id'])) {
+                if ($transaction->debt_settlements_explicit && $transaction->requestedSettles === null) {
+                    $links = \Illuminate\Support\Facades\DB::table('debt_settlements')
+                        ->where('payment_transaction_id', $transaction->id)->get(['debt_transaction_id', 'amount_applied'])
+                        ->map(fn ($item) => (array) $item)->all();
+                    if ($links) {
+                        $service->explicit($transaction, $links);
+                    }
+                }
+                if ($old->party_id !== $transaction->party_id) {
+                    $service->recompute($old);
+                }
+            }
+            if ($transaction->requestedSettles !== null) {
+                $service->explicit($transaction, $transaction->requestedSettles);
+                $transaction->requestedSettles = null;
+            } elseif ($transaction->debt_settlements_explicit && $transaction->wasChanged('amount')) {
+                $links = \Illuminate\Support\Facades\DB::table('debt_settlements')->where('payment_transaction_id', $transaction->id)
+                    ->get(['debt_transaction_id', 'amount_applied'])->map(fn ($item) => (array) $item)->all();
+                $service->explicit($transaction, $links);
+            }
+            $service->recompute($transaction);
+        });
+        static::deleted(function (Transaction $transaction) {
+            \Illuminate\Support\Facades\DB::table('debt_settlements')
+                ->where('debt_transaction_id', $transaction->id)->orWhere('payment_transaction_id', $transaction->id)->delete();
+            app(\App\Services\DebtService::class)->recompute($transaction);
         });
     }
 
@@ -123,6 +203,7 @@ class Transaction extends Model implements HasAgentResource
      */
     protected $fillable = [
         'amount',
+        'owed_amount',
         'datetime',
         'description',
         'type',
@@ -145,6 +226,8 @@ class Transaction extends Model implements HasAgentResource
         // Matches the column scale; 2 would round sub-cent amounts
         // (crypto transfer legs) in every response.
         'amount' => 'decimal:4',
+        'owed_amount' => 'decimal:4',
+        'debt_settlements_explicit' => 'boolean',
         'metadata' => 'array',
     ];
 
@@ -152,7 +235,7 @@ class Transaction extends Model implements HasAgentResource
         'intent' => 'regular',
     ];
 
-    protected $hidden = ['transfer', 'groups', 'recurringTransactionRule', 'refund'];
+    protected $hidden = ['debt_settlements_explicit', 'transfer', 'groups', 'recurringTransactionRule', 'refund'];
 
     protected $appends = [
         'wallet',
@@ -292,11 +375,17 @@ class Transaction extends Model implements HasAgentResource
             ->first();
     }
 
+    public function save(array $options = [])
+    {
+        return \Illuminate\Support\Facades\DB::transaction(fn () => parent::save($options));
+    }
+
     public function delete()
     {
-        $this->recurringTransactionRule()->delete();
-
-        return parent::delete();
+        return \Illuminate\Support\Facades\DB::transaction(function () {
+            $this->recurringTransactionRule()->delete();
+            return parent::delete();
+        });
     }
 
     public static function agentResource(): AgentResource
@@ -314,11 +403,12 @@ class Transaction extends Model implements HasAgentResource
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
+                ResourceField::decimal('owed_amount', 'Amount owed on an opening debt; null means the full amount'),
                 ResourceField::decimal('amount', "Amount in the wallet's currency"),
                 ResourceField::enum('type', ['income', 'expense'], 'Whether money came in or went out'),
                 ResourceField::string(
                     'intent',
-                    'What the movement is: regular, loan_received, loan_repayment, debt_owed, '
+                    'What the movement is: regular, loan_given, loan_collected, loan_received, loan_repayment, debt_owed, '
                         . 'debt_settled, investment_buy, investment_return, gift',
                 ),
                 ResourceField::datetime('datetime', 'When the transaction happened'),

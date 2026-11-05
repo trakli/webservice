@@ -24,6 +24,8 @@ class RecordTransactionTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
+            'intent' => $schema->string()->enum(\App\Enums\TransactionIntent::values())->description('loan_given to lend, loan_received to borrow, loan_collected to collect, loan_repayment to repay. Debt intents require party_id.'),
+            'owed_amount' => $schema->number()->description('Part of an opening transaction that is owed; omit for the full amount.'),
             'amount' => $schema->number()->description('Positive transaction amount.')->required(),
             'type' => $schema->string()->description('"income" or "expense".')->required(),
             'wallet_id' => $schema->integer()->description('Wallet id (get it from list-wallets). Provide this or wallet_name.'),
@@ -41,6 +43,8 @@ class RecordTransactionTool extends Tool
         }
 
         $validated = $request->validate([
+            'intent' => 'sometimes|in:' . implode(',', \App\Enums\TransactionIntent::values()),
+            'owed_amount' => 'nullable|numeric|gt:0',
             'amount' => 'required|numeric|gt:0',
             'type' => 'required|in:income,expense',
             'wallet_id' => 'required_without:wallet_name|integer',
@@ -61,6 +65,8 @@ class RecordTransactionTool extends Tool
         }
 
         $data = [
+            'intent' => $validated['intent'] ?? 'regular',
+            'owed_amount' => $validated['owed_amount'] ?? null,
             'amount' => $validated['amount'],
             'type' => $validated['type'],
             'wallet_id' => $walletId,

@@ -52,6 +52,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
         Route::get('/user', [UserController::class, 'show']);
         Route::delete('/account', [AccountController::class, 'destroy']);
         Route::apiResource('groups', GroupController::class);
+        Route::get('parties/{party}/debts', [PartyController::class, 'debts']);
         Route::apiResource('parties', PartyController::class);
         Route::apiResource('wallets', WalletController::class);
         Route::apiResource('transfers', TransferController::class);
@@ -65,6 +66,9 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
     });
     Route::prefix('workspaces/{workspace}')->middleware(\App\Http\Middleware\WorkspaceAccess::class)->group(function () {
         $controller = \App\Http\Controllers\API\v1\WorkspaceFinanceController::class;
+        Route::post('parties', [PartyController::class, 'storeWorkspace']);
+        Route::get('parties/{party}', [PartyController::class, 'showWorkspace']);
+        Route::get('parties/{party}/debts', [PartyController::class, 'workspaceDebts']);
         Route::get('finance', [$controller, 'overview']);
         Route::get('transactions', [$controller, 'transactions']);
         Route::post('transactions', [$controller, 'storeTransaction']);

@@ -103,11 +103,13 @@ class AgentActionTest extends TestCase
 
     public function test_record_transaction_carries_intent_through_confirm(): void
     {
+        $party = $this->actingAs($this->user)->postJson('/api/v1/parties', ['name' => 'Ama'])->assertCreated()->json('data.id');
         $action = $this->propose([
             'amount' => 5000,
             'type' => 'income',
             'wallet_name' => 'Cash',
             'intent' => 'loan_received',
+            'party_id' => $party,
         ]);
 
         $this->assertEquals('loan_received', $action->payload['intent']);
@@ -122,6 +124,21 @@ class AgentActionTest extends TestCase
             'type' => 'income',
             'intent' => 'loan_received',
         ]);
+    }
+
+    public function test_lending_confirmation_validates_the_owed_amount_and_party(): void
+    {
+        $party = $this->actingAs($this->user)->postJson('/api/v1/parties', ['name' => 'Ama'])->assertCreated()->json('data.id');
+        $action = $this->propose([
+            'amount' => 30, 'type' => 'expense', 'wallet_name' => 'Cash',
+            'intent' => 'loan_given', 'party_id' => $party, 'owed_amount' => 15,
+        ]);
+        $url = "/api/v1/ai/chats/{$this->session->id}/actions/{$action->id}/confirm";
+        $this->postJson($url, ['overrides' => ['owed_amount' => 31]])->assertUnprocessable();
+        $this->postJson($url, ['overrides' => ['intent' => 'unknown']])->assertUnprocessable();
+        $this->postJson($url)->assertOk();
+        $transaction = Transaction::where('party_id', $party)->firstOrFail();
+        $this->getJson('/api/v1/transactions/' . $transaction->id)->assertOk()->assertJsonPath('data.debt.remaining', 15);
     }
 
     public function test_record_transaction_rejects_unknown_intent(): void

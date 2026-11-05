@@ -122,6 +122,7 @@ return [
             App\Models\BudgetPeriodState::class,
             App\Models\RecurringTransactionRule::class,
             App\Models\Refund::class,
+            App\Models\DebtSettlement::class,
             App\Models\Reminder::class,
             App\Models\FileImport::class,
             App\Models\ImportSession::class,

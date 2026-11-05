@@ -217,13 +217,63 @@ class PartyController extends ApiController
     )]
     public function show(int $partyId): JsonResponse
     {
-        $party = Party::find($partyId);
+        $party = auth()->user()->parties()->find($partyId);
 
         if (! $party) {
             return $this->failure(__('Party not found'), 404);
         }
 
-        return $this->success($party);
+        return $this->success(array_merge($party->toArray(), app(\App\Services\DebtService::class)->balances($party)));
+    }
+
+    #[OA\Get(path: '/parties/{party}/debts', tags: ['Party'], parameters: [
+        new OA\Parameter(name: 'party', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        new OA\Parameter(ref: '#/components/parameters/limitParam'),
+    ], responses: [new OA\Response(response: 200, description: 'Paginated opening debts with remaining amounts and settlements')])]
+    public function debts(Request $request, int $party): JsonResponse
+    {
+        $record = $request->user()->parties()->find($party);
+        if (! $record) {
+            return $this->failure(__('Party not found'), 404);
+        }
+        $query = \App\Models\Transaction::where('owner_type', $record->owner_type)->where('owner_id', $record->owner_id)
+            ->where('party_id', $record->id)->whereIn('intent', ['loan_given', 'loan_received', 'debt_owed'])
+            ->with('wallet')->orderBy('datetime')->orderBy('id');
+        return $this->success($this->applyApiQuery($request, $query, false));
+    }
+
+    #[OA\Post(path: '/workspaces/{workspace}/parties', tags: ['Party'], parameters: [new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string'))], responses: [
+        new OA\Response(response: 201, description: 'Workspace party created'),
+    ])]
+    public function storeWorkspace(Request $request, \App\Models\Workspace $workspace): JsonResponse
+    {
+        app(\App\Services\WorkspaceFinance::class)->authorize($workspace, $request->user(), write: true);
+        $data = $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string', 'type' => 'nullable|string']);
+        $party = new Party($data);
+        $party->forceFill(['owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id])->save();
+        return $this->success($party, __('Party created successfully'), 201);
+    }
+
+    #[OA\Get(path: '/workspaces/{workspace}/parties/{party}', tags: ['Party'], parameters: [new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string')), new OA\Parameter(name: 'party', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [
+        new OA\Response(response: 200, description: 'Workspace party balances and open debts'),
+    ])]
+    public function showWorkspace(Request $request, \App\Models\Workspace $workspace, int $party): JsonResponse
+    {
+        app(\App\Services\WorkspaceFinance::class)->authorize($workspace, $request->user());
+        $record = Party::ownedBy($workspace)->findOrFail($party);
+        return $this->success(array_merge($record->toArray(), app(\App\Services\DebtService::class)->balances($record)));
+    }
+
+    #[OA\Get(path: '/workspaces/{workspace}/parties/{party}/debts', tags: ['Party'], parameters: [new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string')), new OA\Parameter(name: 'party', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [
+        new OA\Response(response: 200, description: 'Paginated workspace opening debts'),
+    ])]
+    public function workspaceDebts(Request $request, \App\Models\Workspace $workspace, int $party): JsonResponse
+    {
+        app(\App\Services\WorkspaceFinance::class)->authorize($workspace, $request->user());
+        $record = Party::ownedBy($workspace)->findOrFail($party);
+        return $this->success($this->applyApiQuery($request, \App\Models\Transaction::ownedBy($workspace)
+            ->where('party_id', $record->id)->whereIn('intent', ['loan_given', 'loan_received', 'debt_owed'])
+            ->with('wallet')->orderBy('datetime')->orderBy('id'), false));
     }
 
     #[OA\Put(

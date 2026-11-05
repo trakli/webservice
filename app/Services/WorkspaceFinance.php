@@ -134,7 +134,8 @@ class WorkspaceFinance
             $creatorId = $transaction->user_id ?? $transaction->created_by_user_id;
             $creator = $creators->get($creatorId);
             $native = $wallet->isOwnedBy($workspace);
-            return [
+            return array_merge(app(DebtService::class)->fields($transaction), [
+                'intent' => $transaction->intent, 'party_id' => $transaction->party_id,
                 'id' => $transaction->id, 'amount' => (float) $transaction->amount,
                 'type' => \App\Events\TransactionRecorded::normalizeType($transaction->type),
                 'datetime' => $transaction->datetime?->toIso8601String(), 'description' => $transaction->description,
@@ -147,7 +148,7 @@ class WorkspaceFinance
                 'is_refund' => $refunds->has($transaction->id),
                 'category_ids' => $labels['category']->get($transaction->id, []),
                 'group_ids' => $labels['group']->get($transaction->id, []),
-            ];
+            ]);
         });
     }
 

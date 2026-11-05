@@ -238,13 +238,18 @@ class TransactionController extends ApiController
                             type: 'string',
                             example: '245cb3df-df3a-428b-a908-e5f74b8d58a3:245cb3df-df3a-428b-a908-e5f74b8d58a4'
                         ),
-                        new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'owed_amount', type: 'number', nullable: true),
+                    new OA\Property(property: 'settles', type: 'array', items: new OA\Items(type: 'object', properties: [
+                        new OA\Property(property: 'debt_transaction_id', type: 'integer'),
+                        new OA\Property(property: 'amount_applied', type: 'number'),
+                    ])),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
                         new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                         new OA\Property(
                             property: 'intent',
                             type: 'string',
                             enum: [
-                                'regular', 'loan_received', 'loan_repayment', 'debt_owed',
+                                'regular', 'loan_given', 'loan_collected', 'loan_received', 'loan_repayment', 'debt_owed',
                                 'debt_settled', 'investment_buy', 'investment_return', 'gift',
                             ],
                             default: 'regular'
@@ -522,13 +527,18 @@ class TransactionController extends ApiController
                         description: 'Unique identifier for your local client',
                         type: 'string'
                     ),
+                    new OA\Property(property: 'owed_amount', type: 'number', nullable: true),
+                    new OA\Property(property: 'settles', type: 'array', items: new OA\Items(type: 'object', properties: [
+                        new OA\Property(property: 'debt_transaction_id', type: 'integer'),
+                        new OA\Property(property: 'amount_applied', type: 'number'),
+                    ])),
                     new OA\Property(property: 'amount', type: 'number', format: 'float'),
                     new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense']),
                     new OA\Property(
                         property: 'intent',
                         type: 'string',
                         enum: [
-                            'regular', 'loan_received', 'loan_repayment', 'debt_owed',
+                            'regular', 'loan_given', 'loan_collected', 'loan_received', 'loan_repayment', 'debt_owed',
                             'debt_settled', 'investment_buy', 'investment_return', 'gift',
                         ],
                         default: 'regular'
@@ -669,7 +679,12 @@ class TransactionController extends ApiController
                 $request
             ) {
 
-                $transaction->update(array_filter($validatedData, fn ($value) => $value !== null));
+                $settles = $validatedData['settles'] ?? null;
+                unset($validatedData['settles']);
+                if ($settles !== null) {
+                    $transaction->settles = $settles;
+                }
+                $transaction->update(array_filter($validatedData, fn ($value, $key) => $value !== null || in_array($key, ['owed_amount', 'party_id'], true), ARRAY_FILTER_USE_BOTH));
                 $transaction->markAsSynced();
 
                 if (isset($validatedData['categories'])) {
@@ -791,7 +806,7 @@ class TransactionController extends ApiController
             return $this->failure($e->getMessage(), $e->getStatusCode());
         }
 
-        $transaction->delete();
+        DB::transaction(fn () => $transaction->delete());
 
         return $this->success(['message' => __('Transaction deleted successfully')]);
     }

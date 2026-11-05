@@ -5,6 +5,8 @@ namespace App\Enums;
 enum TransactionIntent: string
 {
     case REGULAR = 'regular';
+    case LOAN_GIVEN = 'loan_given';
+    case LOAN_COLLECTED = 'loan_collected';
     case LOAN_RECEIVED = 'loan_received';
     case LOAN_REPAYMENT = 'loan_repayment';
     case DEBT_OWED = 'debt_owed';
@@ -26,7 +28,7 @@ enum TransactionIntent: string
     {
         return match ($this) {
             self::REGULAR => 'regular',
-            self::LOAN_RECEIVED, self::LOAN_REPAYMENT => 'loan',
+            self::LOAN_GIVEN, self::LOAN_COLLECTED, self::LOAN_RECEIVED, self::LOAN_REPAYMENT => 'loan',
             self::DEBT_OWED, self::DEBT_SETTLED => 'debt',
             self::INVESTMENT_BUY, self::INVESTMENT_RETURN => 'investment',
             self::GIFT => 'gift',
@@ -35,15 +37,30 @@ enum TransactionIntent: string
     }
 
     /**
-     * +1 when the movement raises net worth (money or asset in), -1 when it
-     * lowers it (money or asset out).
+     * +1 when the movement raises cash, -1 when it
+     * lowers cash.
      */
     public function sign(): int
     {
         return match ($this) {
-            self::LOAN_REPAYMENT, self::DEBT_SETTLED, self::INVESTMENT_BUY, self::FEE => -1,
+            self::LOAN_GIVEN, self::LOAN_REPAYMENT, self::DEBT_SETTLED, self::INVESTMENT_BUY, self::FEE => -1,
             default => 1,
         };
+    }
+
+    public function isOpening(): bool
+    {
+        return in_array($this, [self::LOAN_GIVEN, self::LOAN_RECEIVED, self::DEBT_OWED], true);
+    }
+
+    public function isPayment(): bool
+    {
+        return in_array($this, [self::LOAN_COLLECTED, self::LOAN_REPAYMENT, self::DEBT_SETTLED], true);
+    }
+
+    public function openingIntents(): array
+    {
+        return $this === self::LOAN_COLLECTED ? ['loan_given'] : ['loan_received', 'debt_owed'];
     }
 
     public function isRegular(): bool

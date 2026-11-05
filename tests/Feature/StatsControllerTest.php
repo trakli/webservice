@@ -168,6 +168,7 @@ class StatsControllerTest extends TestCase
     {
         $wallet = Wallet::factory()->create(['user_id' => $this->user->id, 'balance' => 1000]);
 
+        $party = $this->actingAs($this->user)->postJson('/api/v1/parties', ['name' => 'Ama'])->assertCreated()->json('data.id');
         $cases = [
             ['income', 'regular', 5000],
             ['expense', 'regular', 500],
@@ -179,14 +180,14 @@ class StatsControllerTest extends TestCase
         ];
 
         foreach ($cases as [$type, $intent, $amount]) {
-            Transaction::factory()->create([
-                'user_id' => $this->user->id,
+            $this->postJson('/api/v1/transactions', [
+                'party_id' => $party,
                 'wallet_id' => $wallet->id,
                 'type' => $type,
                 'intent' => $intent,
                 'amount' => $amount,
-                'datetime' => Carbon::now()->subHours(2),
-            ]);
+                'datetime' => Carbon::now()->subHours(2)->toIso8601String(),
+            ])->assertCreated();
         }
 
         $response = $this->withHeaders([

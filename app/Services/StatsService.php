@@ -214,18 +214,35 @@ class StatsService
 
         $cashBalance = $this->getTotalBalance();
         $holdingsValue = $this->getHoldingsValue();
+        $receivables = 0.0;
+        $liabilities = 0.0;
+        foreach (Transaction::ownedBy($this->user)->whereIn('intent', ['loan_given', 'loan_received', 'debt_owed'])
+            ->when($this->walletIds, fn ($q) => $q->whereIn('wallet_id', $this->walletIds))
+            ->with('wallet')->lazyById(200) as $debt) {
+            $remaining = $this->convertCurrency((float) app(DebtService::class)->remaining($debt), $debt->wallet->currency);
+            if ($debt->intent === 'loan_given') {
+                $receivables += $remaining;
+            } else {
+                $liabilities += $remaining;
+            }
+        }
 
         return [
             'earned_income' => $earnedIncome,
             'cash_balance' => $cashBalance,
             'holdings_value' => $holdingsValue,
-            'total_net_worth' => $cashBalance + $holdingsValue,
+            'receivables' => $receivables,
+            'liabilities' => $liabilities,
+            'total_net_worth' => $cashBalance + $holdingsValue + $receivables - $liabilities,
             'discretionary_spend' => $discretionarySpend,
+            'loan_given' => $byIntent[TransactionIntent::LOAN_GIVEN->value],
+            'loan_collected' => $byIntent[TransactionIntent::LOAN_COLLECTED->value],
             'loan_received' => $loanReceived,
             'loan_repayment' => $loanRepayment,
             'debt_owed' => $debtOwed,
             'debt_settled' => $debtSettled,
-            'loans_debt_net' => ($loanReceived + $debtOwed) - ($loanRepayment + $debtSettled),
+            'loans_debt_net' => ($loanReceived + $debtOwed + $byIntent['loan_collected'])
+                - ($loanRepayment + $debtSettled + $byIntent['loan_given']),
             'investment_principal' => $investmentPrincipal,
             'investment_returns' => $investmentReturns,
             'gifts_received' => $giftsReceived,

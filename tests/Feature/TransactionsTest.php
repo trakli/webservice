@@ -49,6 +49,7 @@ class TransactionsTest extends TestCase
             'amount' => 5000,
             'wallet_id' => $this->wallet->id,
             'intent' => 'loan_received',
+            'party_id' => $this->party->id,
             'datetime' => '2025-04-30T15:17:54.120Z',
         ]);
 

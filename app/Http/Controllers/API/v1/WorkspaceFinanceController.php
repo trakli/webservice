@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Whilesmart\Shareables\Models\Audience;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
+use OpenApi\Attributes as OA;
 
 class WorkspaceFinanceController extends ApiController
 {
@@ -163,6 +164,23 @@ class WorkspaceFinanceController extends ApiController
         return $this->success(null, 'Transaction share revoked');
     }
 
+    #[OA\Post(
+        path: '/workspaces/{workspace}/transactions',
+        tags: ['Transactions'],
+        parameters: [
+            new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'intent', type: 'string', enum: ['regular', 'loan_given', 'loan_collected', 'loan_received', 'loan_repayment', 'debt_owed', 'debt_settled', 'investment_buy', 'investment_return', 'gift', 'fee']),
+            new OA\Property(property: 'party_id', type: 'integer'),
+            new OA\Property(property: 'owed_amount', type: 'number', nullable: true),
+            new OA\Property(property: 'settles', type: 'array', items: new OA\Items(type: 'object', properties: [
+                new OA\Property(property: 'debt_transaction_id', type: 'integer'),
+                new OA\Property(property: 'amount_applied', type: 'number'),
+            ])),
+        ])),
+        responses: [new OA\Response(response: 201, description: 'Workspace transaction')]
+    )]
     public function storeTransaction(Request $request, Workspace $workspace): JsonResponse
     {
         $this->finance->authorize($workspace, $request->user(), write: true);
@@ -171,6 +189,11 @@ class WorkspaceFinanceController extends ApiController
         $transaction = DB::transaction(function () use ($request, $workspace, $data, $wallet) {
             Wallet::whereKey($wallet->id)->lockForUpdate()->firstOrFail();
             $transaction = new Transaction();
+            $settles = $data['settles'] ?? null;
+            unset($data['settles']);
+            if ($settles !== null) {
+                $transaction->settles = $settles;
+            }
             $transaction->forceFill(collect($data)->except(['category_ids', 'group_ids', 'is_refund'])->all() + [
                 'owner_type' => $workspace->getMorphClass(), 'owner_id' => $workspace->id,
                 'created_by_user_id' => $request->user()->id, 'wallet_id' => $wallet->id,
@@ -184,6 +207,24 @@ class WorkspaceFinanceController extends ApiController
         return $this->success($this->finance->presentTransaction($workspace, $transaction, $request->user()), 'Transaction recorded', 201);
     }
 
+    #[OA\Put(
+        path: '/workspaces/{workspace}/transactions/{transactionId}',
+        tags: ['Transactions'],
+        parameters: [
+            new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'transactionId', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'intent', type: 'string', enum: ['regular', 'loan_given', 'loan_collected', 'loan_received', 'loan_repayment', 'debt_owed', 'debt_settled', 'investment_buy', 'investment_return', 'gift', 'fee']),
+            new OA\Property(property: 'party_id', type: 'integer'),
+            new OA\Property(property: 'owed_amount', type: 'number', nullable: true),
+            new OA\Property(property: 'settles', type: 'array', items: new OA\Items(type: 'object', properties: [
+                new OA\Property(property: 'debt_transaction_id', type: 'integer'),
+                new OA\Property(property: 'amount_applied', type: 'number'),
+            ])),
+        ])),
+        responses: [new OA\Response(response: 200, description: 'Workspace transaction')]
+    )]
     public function updateTransaction(Request $request, Workspace $workspace, int $transactionId): JsonResponse
     {
         $this->finance->authorize($workspace, $request->user(), write: true);
@@ -194,6 +235,11 @@ class WorkspaceFinanceController extends ApiController
         }
         DB::transaction(function () use ($workspace, $transaction, $data) {
             Wallet::whereIn('id', [$transaction->wallet_id, $data['wallet_id'] ?? $transaction->wallet_id])->orderBy('id')->lockForUpdate()->get();
+            $settles = $data['settles'] ?? null;
+            unset($data['settles']);
+            if ($settles !== null) {
+                $transaction->settles = $settles;
+            }
             $transaction->fill(collect($data)->except(['category_ids', 'group_ids', 'is_refund'])->all())->save();
             $transaction->markAsSynced();
             $this->setRefund($transaction, $data);
@@ -204,6 +250,15 @@ class WorkspaceFinanceController extends ApiController
         return $this->success($this->finance->presentTransaction($workspace, $transaction, $request->user()), 'Transaction updated');
     }
 
+    #[OA\Delete(
+        path: '/workspaces/{workspace}/transactions/{transactionId}',
+        tags: ['Transactions'],
+        parameters: [
+            new OA\Parameter(name: 'workspace', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'transactionId', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Transaction deleted and debts recomputed')]
+    )]
     public function deleteTransaction(Request $request, Workspace $workspace, int $transactionId): JsonResponse
     {
         $this->finance->authorize($workspace, $request->user(), write: true);
@@ -320,6 +375,10 @@ class WorkspaceFinanceController extends ApiController
         return ['amount' => "$required|numeric|min:0.0001", 'wallet_id' => "$required|integer",
             'type' => "$required|in:income,expense", 'datetime' => "$required|date", 'description' => 'nullable|string|max:2000',
             'category_ids' => 'sometimes|array', 'category_ids.*' => 'integer',
-            'group_ids' => 'sometimes|array', 'group_ids.*' => 'integer', 'is_refund' => 'sometimes|boolean'];
+            'group_ids' => 'sometimes|array', 'group_ids.*' => 'integer', 'is_refund' => 'sometimes|boolean',
+            'intent' => 'sometimes|in:' . implode(',', \App\Enums\TransactionIntent::values()),
+            'party_id' => 'nullable|integer|exists:parties,id', 'owed_amount' => 'nullable|numeric|gt:0',
+            'settles' => 'sometimes|array', 'settles.*.debt_transaction_id' => 'required|integer|distinct',
+            'settles.*.amount_applied' => 'required|numeric|gt:0'];
     }
 }

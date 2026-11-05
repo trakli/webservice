@@ -14,6 +14,21 @@ class ExchangeRateService
 
     protected int $cacheMinutes = 60;
 
+    public function getRateAt(string $baseCurrency, string $targetCurrency, \DateTimeInterface $date): ?float
+    {
+        if ($baseCurrency === $targetCurrency) {
+            return 1.0;
+        }
+        $rate = ExchangeRate::where('base_currency', $baseCurrency)->where('target_currency', $targetCurrency)
+            ->where('fetched_at', '<=', $date)->orderByDesc('fetched_at')->first();
+        if ($rate) {
+            return (float) $rate->rate;
+        }
+        $reverse = ExchangeRate::where('base_currency', $targetCurrency)->where('target_currency', $baseCurrency)
+            ->where('fetched_at', '<=', $date)->orderByDesc('fetched_at')->first();
+        return $reverse && (float) $reverse->rate > 0 ? 1 / (float) $reverse->rate : null;
+    }
+
     public function getRate(string $baseCurrency, string $targetCurrency, ?User $user = null): ?float
     {
         $baseCurrency = strtoupper($baseCurrency);

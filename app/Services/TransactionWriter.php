@@ -61,8 +61,14 @@ class TransactionWriter
      */
     public function createCore(User $user, array $data, array $categories = []): Transaction
     {
+        $settles = $data['settles'] ?? null;
+        unset($data['settles']);
         /** @var Transaction $transaction */
-        $transaction = $user->transactions()->create($data);
+        $transaction = $user->transactions()->make($data);
+        if ($settles !== null) {
+            $transaction->settles = $settles;
+        }
+        $transaction->save();
 
         if (isset($data['client_id'])) {
             $transaction->setClientGeneratedId($data['client_id'], $user);

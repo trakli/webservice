@@ -27,7 +27,7 @@ class GetStatsTool extends AbstractTool
     {
         return 'Get pre-computed financial analytics for the user: balances, income, expenses, '
             . 'savings rate, top categories, parties, cash flow, and financial position '
-            . '(net worth, earned income vs discretionary spend, loans/debt, investments). '
+            . '(net worth, earned income vs discretionary spend, loans/debt including lent, collected, receivables and liabilities, investments). '
             . 'Choose a section. Returns authoritative numbers; never invent figures.';
     }
 

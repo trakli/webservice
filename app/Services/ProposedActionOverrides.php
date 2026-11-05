@@ -31,7 +31,7 @@ class ProposedActionOverrides
     public function allowedKeys(string $actionType): array
     {
         return match ($actionType) {
-            'transaction.create' => ['amount', 'type', 'wallet_id', 'party_id', 'description', 'datetime', 'categories'],
+            'transaction.create' => ['intent', 'owed_amount', 'amount', 'type', 'wallet_id', 'party_id', 'description', 'datetime', 'categories'],
             'transaction.categorize' => ['categories'],
             'transfer.create' => ['amount', 'from_wallet_id', 'to_wallet_id', 'exchange_rate', 'datetime'],
             'wallet.create' => ['name', 'type', 'currency', 'description'],
@@ -104,6 +104,13 @@ class ProposedActionOverrides
         if (isset($payload['type']) && ! in_array($payload['type'], ['income', 'expense'], true)) {
             $this->reject('Type must be income or expense.');
         }
+        if (isset($payload['intent']) && ! in_array($payload['intent'], \App\Enums\TransactionIntent::values(), true)) {
+            $this->reject('Unknown transaction intent.');
+        }
+        if (isset($payload['amount'], $payload['type'])) {
+            app(DebtService::class)->validate(new \App\Models\Transaction($payload));
+        }
+
     }
 
     /**

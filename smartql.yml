@@ -42,6 +42,9 @@ semantic_layer:
         id:
           type: integer
           primary: true
+        owed_amount:
+          type: decimal
+          description: Amount owed on an opening debt; null means the full amount
         amount:
           type: decimal
           description: Amount in the wallet's currency
@@ -53,7 +56,7 @@ semantic_layer:
           - expense
         intent:
           type: string
-          description: 'What the movement is: regular, loan_received, loan_repayment, debt_owed, debt_settled, investment_buy, investment_return, gift'
+          description: 'What the movement is: regular, loan_given, loan_collected, loan_received, loan_repayment, debt_owed, debt_settled, investment_buy, investment_return, gift'
         datetime:
           type: datetime
           description: When the transaction happened
@@ -363,6 +366,36 @@ semantic_layer:
         created_at:
           type: datetime
           description: When the refund was recorded
+    debt_settlements:
+      table: debt_settlements
+      description: Amounts paid back against opening party debts, in the debt currency.
+      columns:
+        id:
+          type: integer
+          primary: true
+        debt_transaction_id:
+          type: integer
+          description: Opening debt
+          references: transactions.id
+        payment_transaction_id:
+          type: integer
+          description: Paying-back transaction
+          references: transactions.id
+        amount_applied:
+          type: decimal
+          description: Amount paid back in the debt currency
+        rate:
+          type: decimal
+          description: Payment currency units per debt currency unit
+        rate_source:
+          type: enum
+          description: Whether the rate comes from market data or actual payment
+          values:
+          - market
+          - paid
+        created_at:
+          type: datetime
+          description: When the settlement was recorded
     reminders:
       table: reminders
       description: Things the user asked to be reminded about, such as a bill due date.
@@ -661,6 +694,16 @@ semantic_layer:
           type: string
           hidden: true
   relationships:
+  - name: settlement_debt
+    type: many_to_one
+    from: debt_settlements
+    to: transactions
+    foreign_key: debt_transaction_id
+  - name: settlement_payment
+    type: many_to_one
+    from: debt_settlements
+    to: transactions
+    foreign_key: payment_transaction_id
   - name: transaction_wallet
     type: many_to_one
     from: transactions
@@ -784,6 +827,7 @@ security:
   max_join_depth: 4
   permission_key: role
   allowed_tables:
+  - debt_settlements
   - budget_period_states
   - budgets
   - categories
@@ -804,6 +848,10 @@ security:
   - wallets
   - workspaces
   required_filters:
+    debt_settlements:
+      through:
+        column: debt_transaction_id
+        references: transactions.id
     import_rules:
       column: owner_id
       param: user_id

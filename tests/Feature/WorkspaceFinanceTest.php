@@ -32,6 +32,50 @@ class WorkspaceFinanceTest extends TestCase
         $this->actingAs($this->member)->postJson('/api/v1/workspaces/invitations/' . $token . '/accept')->assertOk();
     }
 
+    public function test_workspace_debts_are_settled_and_private(): void
+    {
+        $wallet = $this->actingAs($this->owner)->postJson($this->base . '/wallets', [
+            'name' => 'Shared cash', 'type' => 'cash', 'currency' => 'XAF',
+        ])->assertCreated()->json('data.id');
+        $party = $this->postJson($this->base . '/parties', ['name' => 'Ama'])->assertCreated()->json('data.id');
+        $debt = $this->postJson($this->base . '/transactions', [
+            'wallet_id' => $wallet, 'party_id' => $party, 'intent' => 'loan_given',
+            'amount' => 20000, 'type' => 'expense', 'datetime' => '2026-10-01T12:00:00Z',
+        ])->assertCreated()->assertJsonPath('data.debt.remaining', 20000)->json('data.id');
+        $this->actingAs($this->member)->postJson($this->base . '/transactions', [
+            'wallet_id' => $wallet, 'party_id' => $party, 'intent' => 'loan_collected',
+            'amount' => 15000, 'type' => 'income', 'datetime' => '2026-10-02T12:00:00Z',
+        ])->assertCreated()->assertJsonPath('data.unapplied', 0);
+        $this->getJson($this->base . '/parties/' . $party)->assertOk()->assertJsonPath('data.balances.0.they_owe_me', 5000);
+        $this->getJson($this->base . '/parties/' . $party . '/debts')->assertOk()->assertJsonPath('data.data.0.debt.remaining', 5000);
+        $outsider = User::factory()->create();
+        $this->actingAs($outsider)->getJson($this->base . '/parties/' . $party . '/debts')->assertForbidden();
+        $this->getJson('/api/v1/parties/' . $party)->assertNotFound();
+        $this->getJson('/api/v1/transactions/' . $debt)->assertForbidden();
+    }
+
+    public function test_workspace_explicit_settles_can_be_created_replaced_and_cleared(): void
+    {
+        $wallet = $this->actingAs($this->owner)->postJson($this->base . '/wallets', [
+            'name' => 'Shared cash', 'type' => 'cash', 'currency' => 'XAF',
+        ])->assertCreated()->json('data.id');
+        $party = $this->postJson($this->base . '/parties', ['name' => 'Ama'])->assertCreated()->json('data.id');
+        $input = ['wallet_id' => $wallet, 'party_id' => $party, 'intent' => 'loan_given',
+            'amount' => 100, 'type' => 'expense', 'datetime' => '2026-10-01T12:00:00Z'];
+        $first = $this->postJson($this->base . '/transactions', $input)->assertCreated()->json('data.id');
+        $second = $this->postJson($this->base . '/transactions', $input)->assertCreated()->json('data.id');
+        $payment = $this->postJson($this->base . '/transactions', array_replace($input, [
+            'intent' => 'loan_collected', 'type' => 'income', 'amount' => 50,
+            'settles' => [['debt_transaction_id' => $second, 'amount_applied' => 50]],
+        ]))->assertCreated()->assertJsonPath('data.settles.0.debt_transaction_id', $second)->json('data.id');
+        $this->putJson($this->base . '/transactions/' . $payment, ['settles' => [
+            ['debt_transaction_id' => $first, 'amount_applied' => 50],
+        ]])->assertOk()->assertJsonPath('data.settles.0.debt_transaction_id', $first);
+        $this->putJson($this->base . '/transactions/' . $payment, ['settles' => []])
+            ->assertOk()->assertJsonCount(0, 'data.settles')->assertJsonPath('data.unapplied', 50);
+        $this->getJson($this->base . '/parties/' . $party)->assertOk()->assertJsonPath('data.balances.0.they_owe_me', 200);
+    }
+
     public function test_marketing_kind_is_not_stored_or_returned_for_a_workspace(): void
     {
         $response = $this->actingAs($this->owner)->postJson('/api/v1/workspaces', [

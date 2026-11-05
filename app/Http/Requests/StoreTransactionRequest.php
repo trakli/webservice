@@ -13,6 +13,10 @@ class StoreTransactionRequest extends ApiFormRequest
     {
         return [
             'client_id' => ['nullable', 'string', new ValidateClientId()],
+            'owed_amount' => 'nullable|numeric|gt:0',
+            'settles' => 'sometimes|array',
+            'settles.*.debt_transaction_id' => 'required|integer|distinct',
+            'settles.*.amount_applied' => 'required|numeric|gt:0',
             'amount' => 'required|numeric|min:0.01',
             'type' => 'required|string|in:income,expense',
             'intent' => 'nullable|string|in:' . implode(',', TransactionIntent::values()),
