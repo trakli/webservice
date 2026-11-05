@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API\v1;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ResolvesStatsQuery;
 use App\Services\StatsService;
+use App\Services\MoneyFlowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -18,6 +19,26 @@ class StatsController extends ApiController
     public function __construct(
         protected StatsService $statsService
     ) {
+    }
+
+    #[OA\Get(path: '/stats/flows', tags: ['Statistics'], parameters: [new OA\Parameter(name: 'from', in: 'query', schema: new OA\Schema(type: 'string', format: 'date')), new OA\Parameter(name: 'to', in: 'query', schema: new OA\Schema(type: 'string', format: 'date'))], responses: [new OA\Response(response: 200, description: 'Money flow nodes and edges')])]
+    public function flows(Request $request, MoneyFlowService $flows): JsonResponse
+    {
+        $request->validate(['from' => 'sometimes|date_format:Y-m-d', 'to' => 'sometimes|date_format:Y-m-d|after_or_equal:from']);
+        $range = new Request([
+            'start_date' => $request->input('from', now()->startOfMonth()->toDateString()),
+            'end_date' => $request->input('to', now()->endOfMonth()->toDateString()),
+        ]);
+        [$from, $to] = $this->resolveDateRange($range);
+        if ($from->gt($to)) {
+            return $this->failure(__('The start date must not follow the end date.'), 422);
+        }
+        $walletIds = $this->resolveWalletIds($request, $request->user());
+        if ($walletIds instanceof JsonResponse) {
+            return $walletIds;
+        }
+        $currency = $request->user()->getConfigValue('default-currency') ?? 'USD';
+        return $this->success($flows->compute($request->user(), $from, $to, $walletIds, $currency));
     }
 
     #[OA\Get(

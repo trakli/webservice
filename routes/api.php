@@ -62,6 +62,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
 
         Route::get('exchange-rates', [ExchangeRateController::class, 'index']);
 
+        Route::get('stats/flows', [StatsController::class, 'flows']);
         Route::get('stats', [StatsController::class, 'index']);
     });
     Route::prefix('workspaces/{workspace}')->middleware(\App\Http\Middleware\WorkspaceAccess::class)->group(function () {
