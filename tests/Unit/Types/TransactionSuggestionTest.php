@@ -39,6 +39,12 @@ class TransactionSuggestionTest extends TestCase
             'tax' => null,
             'account' => null,
             'reference' => null,
+            'party_id' => null,
+            'category_id' => null,
+            'wallet_id' => null,
+            'skip' => false,
+            'matched_rules' => [],
+            'note_applied' => false,
         ], $array);
     }
 
