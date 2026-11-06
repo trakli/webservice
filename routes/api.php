@@ -111,6 +111,7 @@ Route::group(['prefix' => 'v1', 'middleware' => ['auth:sanctum', RecordCheckInSt
     Route::post('import/analyze', [ImportController::class, 'analyze']);
     Route::post('import/confirm', [ImportController::class, 'confirm']);
     Route::get('import/sessions', [ImportController::class, 'getSessions']);
+    Route::patch('import/sessions/{id}/suggestions', [ImportController::class, 'updateSuggestions']);
     Route::get('import/sessions/{id}', [ImportController::class, 'getSession']);
     Route::delete('import/sessions/{id}', [ImportController::class, 'destroySession']);
 

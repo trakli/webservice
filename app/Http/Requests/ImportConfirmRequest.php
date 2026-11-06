@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Services\ImportReviewService;
 use App\Services\ImportRuleValidator;
 
 // use Illuminate\Foundation\Http\FormRequest;
@@ -14,21 +15,19 @@ class ImportConfirmRequest extends ApiFormRequest
             'save_rules' => 'sometimes|array',
             'save_rules.*' => 'required|array',
             'session_id' => 'required|integer|exists:import_sessions,id',
-            'accepted' => 'required|array|min:1',
+            'accepted' => 'required_unless:accept_all_unskipped,true|array|min:1',
+            'accept_all_unskipped' => 'sometimes|boolean',
             'accepted.*.index' => 'required|integer|min:0',
-            'accepted.*.wallet_id' => 'nullable|integer|min:1',
-            'accepted.*.party_id' => 'nullable|integer|min:1',
-            'accepted.*.category_id' => 'nullable|integer|min:1',
-            'accepted.*.amount' => 'nullable|numeric',
-            'accepted.*.type' => 'nullable|string|in:income,expense',
-            'accepted.*.description' => 'nullable|string',
-            'accepted.*.date' => 'nullable|date_format:Y-m-d',
-            'accepted.*.fee' => 'nullable|numeric|min:0',
             'auto_create_wallets' => 'nullable|boolean',
             'auto_create_parties' => 'nullable|boolean',
             'auto_create_categories' => 'nullable|boolean',
             'link_fees' => 'nullable|boolean',
         ];
+        foreach (ImportReviewService::rules() as $field => $rule) {
+            if ($field !== 'skip') {
+                $rules['accepted.*.' . $field] = $rule;
+            }
+        }
         foreach (ImportRuleValidator::rules() as $field => $rule) {
             $rules['save_rules.*.' . $field] = $rule;
         }

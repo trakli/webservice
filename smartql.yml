@@ -645,6 +645,9 @@ semantic_layer:
         status:
           type: string
           description: Analysis status
+        revision:
+          type: integer
+          description: Import review revision
         owner_id:
           type: integer
           hidden: true

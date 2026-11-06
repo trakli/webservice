@@ -24,6 +24,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\Response;
 use Whilesmart\Agents\Registries\ToolRegistry;
@@ -67,6 +68,7 @@ class AiController extends ApiController
                 required: ['message'],
                 properties: [
                     new OA\Property(property: 'message', type: 'string', example: 'How much did I spend last month?'),
+                    new OA\Property(property: 'import_session_id', type: 'integer', nullable: true),
                     new OA\Property(property: 'title', type: 'string', nullable: true),
                     new OA\Property(
                         property: 'format_hint',
@@ -83,6 +85,7 @@ class AiController extends ApiController
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
             'title' => 'nullable|string|max:255',
+            'import_session_id' => ['nullable', 'integer', Rule::exists('import_sessions', 'id')->where(fn ($query) => $query->where('owner_type', $request->user()->getMorphClass())->where('owner_id', $request->user()->id))],
             'format_hint' => 'nullable|string|in:scalar,pair,record,list,pair_list,table,raw',
             'defer_processing' => 'sometimes|boolean',
         ]);
@@ -91,6 +94,7 @@ class AiController extends ApiController
 
         $session = new ChatSession([
             'title' => $validated['title'] ?? null,
+            'import_session_id' => $validated['import_session_id'] ?? null,
         ]);
         $session->owner()->associate($user);
         $session->save();

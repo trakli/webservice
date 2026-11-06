@@ -24,3 +24,7 @@ Broadcast::channel('chat-session.{id}', function ($user, $id) {
         && $session->owner_type === $user->getMorphClass()
         && (int) $session->owner_id === (int) $user->getKey();
 });
+
+Broadcast::channel('import-session.{id}', function ($user, $id) {
+    return \App\Models\ImportSession::ownedBy($user)->whereKey($id)->exists();
+});

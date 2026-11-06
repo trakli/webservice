@@ -13,6 +13,7 @@ use App\Jobs\ImportFileJob;
 use App\Services\DocumentProcessorManager;
 use App\Services\DuplicateDetectionService;
 use App\Services\FileImportService;
+use App\Services\ImportReviewService;
 use App\Services\ImportRuleValidator;
 use App\Services\SuggestionEnricher;
 use Illuminate\Http\JsonResponse;
@@ -403,10 +404,11 @@ class ImportController extends ApiController
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['session_id', 'accepted'],
+                required: ['session_id'],
                 properties: [
                     new OA\Property(property: 'save_rules', type: 'array', items: new OA\Items(ref: '#/components/schemas/ImportRuleInput')),
                     new OA\Property(property: 'session_id', type: 'integer'),
+                    new OA\Property(property: 'accept_all_unskipped', type: 'boolean'),
                     new OA\Property(
                         property: 'accepted',
                         type: 'array',
@@ -511,6 +513,14 @@ class ImportController extends ApiController
 
         $suggestions = $session->suggestions;
         $accepted = $request->input('accepted');
+        if ($accepted === null && $request->boolean('accept_all_unskipped')) {
+            $accepted = [];
+            foreach ($suggestions as $index => $row) {
+                if (! ($row['skip'] ?? false)) {
+                    $accepted[] = ['index' => $index];
+                }
+            }
+        }
         $autoCreate = [
             'wallets' => $request->boolean('auto_create_wallets', false),
             'parties' => $request->boolean('auto_create_parties', false),
@@ -637,6 +647,7 @@ class ImportController extends ApiController
         tags: ['Import'],
         parameters: [
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'since_revision', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Session details'),
@@ -651,7 +662,57 @@ class ImportController extends ApiController
             return $this->failure(__('Import session not found.'), 404);
         }
 
+        $request->validate(['since_revision' => 'sometimes|integer|min:0']);
+        $session->ensureSuggestionIds();
+        if ($request->has('since_revision') && (int) $request->input('since_revision') === $session->revision) {
+            return $this->success(['changed' => false, 'revision' => $session->revision]);
+        }
+
         return $this->success($session);
+    }
+
+    #[OA\Patch(
+        path: '/import/sessions/{id}/suggestions',
+        summary: 'Edit the Trakli import review',
+        tags: ['Import'],
+        parameters: [new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['changes'],
+            properties: [
+                new OA\Property(property: 'revision', type: 'integer'),
+                new OA\Property(property: 'changes', type: 'array', items: new OA\Items(type: 'object', required: ['ids', 'set'], properties: [
+                    new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'string')),
+                    new OA\Property(property: 'set', type: 'object', properties: [
+                        new OA\Property(property: 'amount', type: 'number', nullable: true),
+                        new OA\Property(property: 'fee', type: 'number', minimum: 0, nullable: true),
+                        new OA\Property(property: 'type', type: 'string', enum: ['income', 'expense'], nullable: true),
+                        new OA\Property(property: 'description', type: 'string', nullable: true),
+                        new OA\Property(property: 'date', type: 'string', format: 'date', nullable: true),
+                        new OA\Property(property: 'wallet_id', type: 'integer', nullable: true),
+                        new OA\Property(property: 'party_id', type: 'integer', nullable: true),
+                        new OA\Property(property: 'category_id', type: 'integer', nullable: true),
+                        new OA\Property(property: 'skip', type: 'boolean'),
+                    ]),
+                ])),
+            ]
+        )),
+        responses: [new OA\Response(response: 200, description: 'Updated suggestions and revision'), new OA\Response(response: 422, description: 'Invalid review change')]
+    )]
+    public function updateSuggestions(Request $request, string $id): JsonResponse
+    {
+        $session = $request->user()->importSessions()->findOrFail($id);
+        $data = $request->validate([
+            'revision' => 'sometimes|integer|min:0',
+            'changes' => 'required|array|min:1',
+            'changes.*' => 'required|array:ids,set',
+            'changes.*.ids' => 'required|array|min:1',
+            'changes.*.ids.*' => 'required|string',
+            'changes.*.set' => 'required|array|min:1',
+        ]);
+        $session->ensureSuggestionIds();
+        $session = app(ImportReviewService::class)->update($session, $request->user(), $data['changes'], 'user');
+
+        return $this->success(['suggestions' => $session->suggestions, 'revision' => $session->revision]);
     }
 
     #[OA\Delete(

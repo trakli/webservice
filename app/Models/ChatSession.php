@@ -13,6 +13,7 @@ use OpenApi\Attributes as OA;
     schema: 'ChatSession',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'import_session_id', type: 'integer', nullable: true),
         new OA\Property(property: 'title', type: 'string', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
@@ -23,7 +24,7 @@ class ChatSession extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['owner_type', 'owner_id', 'title'];
+    protected $fillable = ['owner_type', 'owner_id', 'title', 'import_session_id'];
 
     public function owner(): MorphTo
     {

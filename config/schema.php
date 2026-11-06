@@ -44,6 +44,12 @@ return [
                 'owner_type' => ['type' => 'string'],
                 'owner_id' => ['type' => 'unsignedBigInteger'],
                 'notes' => ['type' => 'text', 'nullable' => true],
+                'revision' => ['type' => 'unsignedInteger', 'default' => 0],
+            ],
+        ],
+        'chat_sessions' => [
+            'columns' => [
+                'import_session_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
             ],
         ],
         'file_imports' => [

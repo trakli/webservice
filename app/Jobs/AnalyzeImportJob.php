@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Contracts\ProvidesExtractionContext;
+use App\Events\ImportSessionUpdated;
 use App\Models\ImportSession;
 use App\Services\DocumentProcessorManager;
 use App\Services\DocumentProcessors\RemoteDocumentProcessor;
@@ -91,6 +92,8 @@ class AnalyzeImportJob implements ShouldQueue
                 return;
             }
 
+            $counterparties = array_map(fn ($row) => $row->party, $suggestions);
+
             // Stage 2: Enriching
             $session->update(['status' => 'enriching']);
 
@@ -107,6 +110,7 @@ class AnalyzeImportJob implements ShouldQueue
             $suggestionsData = [];
             foreach ($suggestions as $i => $suggestion) {
                 $entry = $suggestion->toArray();
+                $entry['counterparty'] = $counterparties[$i] ?? null;
                 $entry['duplicate'] = $duplicates[$i]?->toArray();
                 $suggestionsData[] = $entry;
             }
@@ -131,6 +135,8 @@ class AnalyzeImportJob implements ShouldQueue
                 'metadata' => ['error' => 'Analysis failed: ' . $e->getMessage()],
             ]);
         } finally {
+            $session->refresh();
+            ImportSessionUpdated::safely($session->id, $session->revision, array_column($session->suggestions ?? [], 'id'), 'assistant');
             $this->cleanup();
         }
     }
