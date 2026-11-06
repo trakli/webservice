@@ -153,6 +153,30 @@ class ActiveMonthSeeder extends Seeder
             exchangeRate: 1.087,
             datetime: $start->copy()->addDays(2)->setTime(19, 30)->toDateTimeString(),
         );
+
+        $this->debts($user, $wallets, $parties['Amara Okafor'], $start);
+    }
+
+    private function debts(User $user, array $wallets, $flatmate, Carbon $start): void
+    {
+        $debts = [
+            [6, 'expense', 'loan_given', 'Cash', 64, 32, 'Dinner at Trattoria Roma, split in two'],
+            [11, 'income', 'loan_received', 'Dollar Savings', 100, null, 'Sent to my Wise account, to repay in euros'],
+            [19, 'income', 'loan_collected', 'Cash', 12, null, 'Part of the dinner'],
+        ];
+
+        foreach ($debts as [$day, $type, $intent, $wallet, $amount, $owed, $description]) {
+            $user->transactions()->create([
+                'wallet_id' => $wallets[$wallet]->id,
+                'party_id' => $flatmate->id,
+                'amount' => $amount,
+                'owed_amount' => $owed,
+                'type' => $type,
+                'intent' => $intent,
+                'description' => $description,
+                'datetime' => $start->copy()->addDays($day)->setTime(20, 15),
+            ]);
+        }
     }
 
     private function wallets(User $user): array
