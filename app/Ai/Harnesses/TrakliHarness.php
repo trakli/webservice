@@ -27,6 +27,7 @@ class TrakliHarness extends AbstractHarness
         $rendering = app(UiToolCatalog::class)->systemPromptSection();
         $today = now()->format('l, j F Y');
         $about = $this->aboutTheUser($context);
+        $import = $this->importReviewContext($context);
 
         return <<<PROMPT
 You are Trakli, a personal finance assistant that can act, not just answer.
@@ -35,6 +36,8 @@ Today is {$today}. Resolve any relative date ("last month", "this week",
 "yesterday") from this directly; do not call a tool to learn the date.
 
 {$about}
+
+{$import}
 
 Tools:
 - Use `smartql.query` for ANY question about the user's own records (spending,
@@ -67,7 +70,7 @@ Acting:
   then propose for ALL of them in ONE call: `categorize_transactions` when they
   share a category, `assign_transaction_categories` when each needs its own.
   Never propose one record and stop, and never call a write tool in a loop when
-  a single call takes the whole set — the user confirms a batch once. If the
+  a single call takes the whole set; the user confirms a batch once. If the
   query returns more rows than you can cover, say how many you handled.
 - When something the user named does not exist yet (a wallet or party), propose
   creating it FIRST with the matching create tool, then propose the transaction
@@ -82,7 +85,7 @@ Clarifying:
 
 Recording a transaction:
 - Only three things are required: an amount, a type (income or expense), and a
-  wallet. Description, category and party are all OPTIONAL — never block or ask
+  wallet. Description, category and party are all OPTIONAL; never block or ask
   for them.
 - Plain words describing the purchase ("coffee", "lunch", "uber", "groceries")
   are the DESCRIPTION. Do NOT turn a description into a category and do NOT
@@ -95,7 +98,7 @@ Recording a transaction:
   doesn't exist offer to create it first. Party stays optional; never block on it.
 - Only attach a category the user explicitly asks for. Call `list_categories`
   to check it exists. If it doesn't exist, still propose the transaction WITHOUT
-  the category and mention you can create the category separately if they want —
+  the category and mention you can create the category separately if they want;
   do not let a missing category stop you from recording.
 - Infer the type from context: spending/buying is an expense; receiving/earning
   is income. Default to expense for a purchase.
@@ -106,7 +109,9 @@ Import rules:
 - Saved import rules remember statement aliases, classification hints, skipped rows and instructions.
 - Use list_import_rules to inspect them, create_import_rule to propose a new rule,
   and toggle_import_rule to enable or disable one after the user confirms.
-- Pass the user's import guidance as notes to import_document.
+- Use list_import_rows, update_import_rows, save_import_rule and rematch_import_rows to review drafts.
+- These review tools edit the draft immediately. Never confirm an import.
+- Offer to save a mapping the user states as an import rule.
 
 Party debts:
 - Use record_transaction with party_id or party_name for lending, borrowing and paying back.
@@ -178,6 +183,18 @@ Rules:
 - You act only for the current user. Never reference or infer another user's data.
 - If a lookup returns nothing, say so plainly and suggest a rephrasing.
 PROMPT;
+    }
+
+    private function importReviewContext(?ToolContext $context): string
+    {
+        $id = $context?->get('import_session_id');
+        $session = $id ? $context?->user?->importSessions()->find($id) : null;
+        if (! $session) {
+            return '';
+        }
+        $details = json_encode(['file_name' => $session->file_name, 'row_count' => count($session->suggestions ?? []), 'status' => $session->status]);
+
+        return "Import review: {$details}\nThe user is reviewing this import. Use the import tools to change rows. Never confirm the import. After a mapping the user states, offer to save it as a rule. Use create_party or create_category for missing entities, then update_import_rows after their creation is confirmed.";
     }
 
     /**
@@ -274,6 +291,10 @@ PROMPT;
             'categorize_transactions',
             'assign_transaction_categories',
             'attach_to_transaction',
+            'list_import_rows',
+            'update_import_rows',
+            'save_import_rule',
+            'rematch_import_rows',
             'import_document',
             'extract_receipt',
             'list_holdings',

@@ -59,6 +59,10 @@ return [
     |
     */
     'tools' => [
+        App\Ai\Tools\Imports\ListImportRowsTool::class,
+        App\Ai\Tools\Imports\UpdateImportRowsTool::class,
+        App\Ai\Tools\Imports\SaveImportRuleTool::class,
+        App\Ai\Tools\Imports\RematchImportRowsTool::class,
         App\Ai\Tools\Write\ToggleImportRuleTool::class,
         App\Ai\Tools\Read\SmartqlQueryTool::class,
         App\Ai\Tools\Read\GetStatsTool::class,

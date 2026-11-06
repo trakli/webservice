@@ -59,7 +59,7 @@ class ProcessChatMessageJob implements ShouldQueue
         // Otherwise classify with the recent conversation so a follow-up that
         // continues an in-progress action (e.g. answering "which wallet?") isn't
         // judged in isolation and misrouted.
-        $route = $userMessage->files()->exists()
+        $route = $userMessage->session->import_session_id !== null || $userMessage->files()->exists()
             ? AiRouter::ROUTE_AGENT
             : $router->classify(
                 $userMessage->content,

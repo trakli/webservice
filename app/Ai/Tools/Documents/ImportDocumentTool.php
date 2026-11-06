@@ -41,7 +41,7 @@ class ImportDocumentTool extends AbstractTool
     public function parameters(): array
     {
         return [
-            ParameterSpec::string('notes', 'Import instructions from the user, at most 2000 characters', false),
+            ParameterSpec::string('notes', 'Optional notes, at most 2000 characters', false),
             ParameterSpec::enum('document_type', 'Document classification', ['bank_statement', 'receipt', 'invoice', 'pay_stub', 'utility_bill'], false),
         ];
     }

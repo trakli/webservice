@@ -39,6 +39,7 @@ class AgentRunner
             $userMessage->language ?? app()->getLocale(),
             [
                 'chat_session_id' => $userMessage->chat_session_id,
+                'import_session_id' => $userMessage->session->import_session_id,
                 'chat_message_id' => $assistantMessage?->id,
             ],
         );
