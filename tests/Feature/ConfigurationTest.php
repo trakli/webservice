@@ -61,6 +61,39 @@ class ConfigurationTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_dashboard_view_is_remembered_the_way_the_web_app_saves_it()
+    {
+        $this->actingAs($this->user)->putJson('/api/v1/configurations/dashboard-view', [
+            'type' => 'string',
+            'value' => 'map',
+        ])->assertStatus(404);
+
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => 'dashboard-view',
+            'type' => 'string',
+            'value' => 'map',
+        ])->assertStatus(201);
+
+        $this->actingAs($this->user)->putJson('/api/v1/configurations/dashboard-view', [
+            'type' => 'string',
+            'value' => 'overview',
+        ])->assertStatus(200);
+
+        $this->assertEquals(
+            'overview',
+            $this->user->fresh()->getConfigValue(\App\Support\ConfigurationKeys::DASHBOARD_VIEW)
+        );
+    }
+
+    public function test_dashboard_view_rejects_unknown_views()
+    {
+        $this->actingAs($this->user)->postJson('/api/v1/configurations', [
+            'key' => 'dashboard-view',
+            'type' => 'string',
+            'value' => 'canvas',
+        ])->assertStatus(422);
+    }
+
     public function test_api_user_can_not_create_config_with_unallowed_key()
     {
         $response = $this->actingAs($this->user)->postJson('/api/v1/configurations', [

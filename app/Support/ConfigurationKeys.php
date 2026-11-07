@@ -31,6 +31,8 @@ class ConfigurationKeys
 
     public const LANDING_EXPERIENCE = 'landing-experience';
 
+    public const DASHBOARD_VIEW = 'dashboard-view';
+
     public const NAMES = [
         self::DEFAULT_WALLET,
         self::DEFAULT_CURRENCY,
@@ -55,6 +57,7 @@ class ConfigurationKeys
         self::TRANSACTION_INTENTS_ENABLED,
         self::ASSET_TRACKING_ENABLED,
         self::LANDING_EXPERIENCE,
+        self::DASHBOARD_VIEW,
     ];
 
     public const RULES = [
@@ -81,5 +84,6 @@ class ConfigurationKeys
         self::TRANSACTION_INTENTS_ENABLED => 'boolean',
         self::ASSET_TRACKING_ENABLED => 'boolean',
         self::LANDING_EXPERIENCE => 'string|in:chat,dashboard',
+        self::DASHBOARD_VIEW => 'string|in:overview,map',
     ];
 }
