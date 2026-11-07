@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use Database\Seeders\ActiveMonthSeeder;
 use Database\Seeders\SharedSpaceSeeder;
+use Database\Seeders\ShowcaseSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,11 +13,11 @@ use Whilesmart\UserAuthentication\Events\UserRegisteredEvent;
 
 class DemoCommand extends Command
 {
-    protected $signature = 'demo {scenario : Screenshot account to create (onboarding|active-month|shared-space)}';
+    protected $signature = 'demo {scenario : Screenshot account to create (onboarding|active-month|shared-space|showcase)}';
 
     protected $description = 'Create a dedicated screenshot account with generated credentials';
 
-    private const SCENARIOS = ['onboarding', 'active-month', 'shared-space'];
+    private const SCENARIOS = ['onboarding', 'active-month', 'shared-space', 'showcase'];
 
     public function handle(): int
     {
@@ -41,12 +42,14 @@ class DemoCommand extends Command
                 $scenario === 'onboarding' ? 'Morgan' : 'Fischer',
                 $password
             );
-            if ($scenario !== 'onboarding') {
+            if ($scenario === 'showcase') {
+                (new ShowcaseSeeder())->run($user);
+            } elseif ($scenario !== 'onboarding') {
                 (new ActiveMonthSeeder())->run($user);
             }
             $output = ['username' => $user->email, 'password' => $password];
 
-            if ($scenario === 'shared-space') {
+            if (in_array($scenario, ['shared-space', 'showcase'], true)) {
                 $member = $this->account($scenario, 'Amara', 'Okafor', Str::password(24, symbols: false));
                 $invitee = 'demo+' . $scenario . '-invitee-' . Str::uuid() . '@trakli.test';
                 $seeder = new SharedSpaceSeeder();
