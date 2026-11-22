@@ -38,7 +38,8 @@ class GenerateChatTitleJob implements ShouldQueue
         }
 
         $this->session->update([
-            'title' => $router->generateTitle($this->firstQuestion) ?? Str::limit($this->firstQuestion, 60),
+            'title' => $router->generateTitle($this->firstQuestion, $this->session->owner)
+                ?? Str::limit($this->firstQuestion, 60),
         ]);
     }
 }

@@ -20,6 +20,15 @@ class AiServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        $this->app->singleton(\App\Ai\Billing\ModelCallGate::class);
+        \Illuminate\Support\Facades\Http::globalRequestMiddleware(
+            fn ($request) => app(\App\Ai\Billing\ModelCallGate::class)->beforeProviderRequest($request)
+        );
+        \Illuminate\Support\Facades\Http::globalResponseMiddleware(
+            fn ($response) => app(\App\Ai\Billing\ModelCallGate::class)->afterProviderResponse($response)
+        );
+        $this->app->singleton(\Prism\Prism\Prism::class, \App\Ai\Billing\MeteredPrism::class);
+        $this->app->bind(\Whilesmart\Agents\Contracts\AgentEngine::class, \App\Ai\Billing\MeteredAgentEngine::class);
         // Deferred until every provider has booted, so both the resource
         // registry and the hand-written tools are in place.
         $this->app->booted(function (): void {

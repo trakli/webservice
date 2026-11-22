@@ -1,6 +1,6 @@
 {
     "name": "trakli/webservice",
-    "version": "2.0.0-beta.2",
+    "version": "2.0.0-beta.3",
     "type": "project",
     "description": "Trakli Webservice",
     "keywords": [
@@ -10,11 +10,12 @@
     ],
     "license": "proprietary",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "barryvdh/laravel-dompdf": "^3.1",
-        "cviebrock/eloquent-sluggable": "^11.0",
+        "cviebrock/eloquent-sluggable": "^12.0",
         "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^11.45.1",
+        "laravel/cashier": "^16.6",
+        "laravel/framework": "^12",
         "laravel/mcp": "^0.8",
         "laravel/reverb": "^1.10",
         "laravel/sanctum": "^4.0",
@@ -24,16 +25,21 @@
         "rlanvin/php-rrule": "^2.6",
         "smartpings/php-sdk": "dev-main",
         "whilesmart/eloquent-activities": "^1.0",
+        "whilesmart/eloquent-admin": "^0.3",
         "whilesmart/eloquent-agent-actions": "^1.0",
         "whilesmart/eloquent-agent-metrics": "^1.0",
         "whilesmart/eloquent-agents": "^1.0",
-        "whilesmart/eloquent-engagement": "dev-dev",
+        "whilesmart/eloquent-engagement": "^1.1",
         "whilesmart/eloquent-entitlements": "^2.0",
+        "whilesmart/eloquent-feedback": "^0.1",
         "whilesmart/eloquent-holdings": "^1.2",
         "whilesmart/eloquent-model-configuration": "^1.0.9",
         "whilesmart/eloquent-outreach": "dev-dev",
         "whilesmart/eloquent-roles": "dev-dev",
-        "whilesmart/laravel-plugin-engine": "^1.0.0",
+        "whilesmart/eloquent-schema-conformance": "^1.0",
+        "whilesmart/eloquent-shareables": "dev-feat/polymorphic-audiences",
+        "whilesmart/eloquent-workspaces": "^1.4",
+        "whilesmart/laravel-plugin-engine": "^1.2.1",
         "whilesmart/laravel-user-authentication": "^1.0",
         "whilesmart/laravel-user-devices": "^1.0.0",
         "wikimedia/composer-merge-plugin": "^2.1",
@@ -48,7 +54,7 @@
         "nunomaduro/collision": "^8.1",
         "phpmd/phpmd": "@stable",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^10.1",
+        "phpunit/phpunit": "^11",
         "spatie/laravel-ignition": "^2.0",
         "squizlabs/php_codesniffer": "^4.0"
     },
@@ -108,7 +114,8 @@
         "merge-plugin": {
             "include": [
                 "plugins/*/composer.json"
-            ]
+            ],
+            "merge-dev": false
         }
     },
     "config": {
@@ -127,8 +134,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "repositories": [{
-        "name": "eloquent-agents",
         "type": "vcs",
-        "url": "https://github.com/whilesmartphp/eloquent-agents"
+        "url": "https://github.com/whilesmartphp/eloquent-shareables"
     }]
 }

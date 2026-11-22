@@ -243,6 +243,30 @@ class CategoriesTest extends TestCase
         $this->assertDatabaseHas('categories', ['id' => $response->json('data.id')]);
     }
 
+    public function test_api_user_can_replay_category_creation_with_client_id()
+    {
+        $user = User::factory()->create();
+        $payload = [
+            'type' => 'income',
+            'name' => 'Whilesmart ',
+            'description' => '',
+            'client_id' => 'ad8c8606-8241-315f-3556-561500000000:0da6cf2f-9293-49c8-9337-2082c60df180',
+        ];
+
+        $firstResponse = $this->actingAs($user)->postJson('/api/v1/categories', $payload);
+        $firstResponse->assertStatus(201);
+
+        $replayResponse = $this->actingAs($user)->postJson('/api/v1/categories', $payload);
+
+        $replayResponse->assertStatus(200)
+            ->assertJsonPath('data.id', $firstResponse->json('data.id'))
+            ->assertJsonPath('data.client_generated_id', $payload['client_id']);
+        $this->assertSame(1, Category::query()
+            ->ownedBy($user)
+            ->where('name', $payload['name'])
+            ->count());
+    }
+
     public function test_api_user_can_get_their_categories()
     {
         $user = User::factory()->create();
@@ -396,20 +420,21 @@ class CategoriesTest extends TestCase
         $user = User::factory()->create();
 
         // Create first category
-        $this->actingAs($user)->postJson('/api/v1/categories', [
+        $first = $this->actingAs($user)->postJson('/api/v1/categories', [
             'type' => 'expense',
             'name' => 'Test Category',
             'description' => 'description',
         ]);
 
-        // Attempt to create duplicate
+        // Attempt to create duplicate returns the existing category
         $response = $this->actingAs($user)->postJson('/api/v1/categories', [
             'type' => 'expense',
             'name' => 'Test Category',
             'description' => 'description',
         ]);
 
-        $response->assertStatus(400);
+        $response->assertStatus(200)
+            ->assertJsonPath('data.id', $first->json('data.id'));
     }
 
     public function test_api_user_can_update_their_expense_categories_with_client_id()

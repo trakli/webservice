@@ -285,7 +285,7 @@ class StatsService
     private function baseJoinedQuery(): Builder
     {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
-            ->where('transactions.user_id', $this->user->id)
+            ->ownedBy($this->user)
             ->nonTransfer()
             ->whereBetween('transactions.datetime', [$this->startDate, $this->endDate])
             ->select('transactions.*', 'wallets.currency');
@@ -303,7 +303,7 @@ class StatsService
     private function baseEagerQuery(array $relations = ['wallet']): Builder
     {
         $query = Transaction::with($relations)
-            ->where('user_id', $this->user->id)
+            ->ownedBy($this->user)
             ->nonTransfer()
             ->whereBetween('datetime', [$this->startDate, $this->endDate]);
 
@@ -319,7 +319,7 @@ class StatsService
      */
     private function baseQualifiedQuery(): Builder
     {
-        $query = Transaction::where('transactions.user_id', $this->user->id)
+        $query = Transaction::ownedBy($this->user)
             ->nonTransfer()
             ->whereBetween('transactions.datetime', [$this->startDate, $this->endDate]);
 
@@ -364,7 +364,7 @@ class StatsService
 
     private function getTotalBalance(): float
     {
-        $query = Wallet::where('user_id', $this->user->id);
+        $query = Wallet::ownedBy($this->user);
 
         if (! empty($this->walletIds)) {
             $query->whereIn('id', $this->walletIds);
@@ -462,7 +462,7 @@ class StatsService
     private function getPeriodTotalsForRange(Carbon $startDate, Carbon $endDate): array
     {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
-            ->where('transactions.user_id', $this->user->id)
+            ->ownedBy($this->user)
             ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->select('transactions.amount', 'transactions.type', 'wallets.currency');
@@ -569,7 +569,7 @@ class StatsService
     private function getTrendsForPeriod(Carbon $startDate, Carbon $endDate, string $period): array
     {
         $query = Transaction::join('wallets', 'transactions.wallet_id', '=', 'wallets.id')
-            ->where('transactions.user_id', $this->user->id)
+            ->ownedBy($this->user)
             ->nonTransfer()
             ->whereBetween('transactions.datetime', [$startDate, $endDate])
             ->where('transactions.type', 'expense')

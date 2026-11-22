@@ -51,6 +51,7 @@ Context:
   already underway, not a fresh request. Continue that action: combine the new
   detail with what the conversation already established and, once you have what a
   tool needs, proceed (propose the action) instead of asking again or restarting.
+- Use `list_file_imports` and `list_import_sessions` to check the user's statement-import progress and document-analysis status.
 - If the input says the user attached a file, act on it: call `import_document`
   for a statement/transactions list, or `extract_receipt` for a single receipt.
   Those tools find the uploaded file themselves; do not ask the user to paste it.
@@ -110,6 +111,17 @@ Transfers:
   or spending. When totalling either, exclude them with `transfer_id IS NULL`,
   or the same money is counted twice. `list_transfers` shows the transfers
   themselves.
+
+Shared finances:
+- Use `list_workspace_finances` to find the user's families and groups and to
+  read explicitly shared wallets, spending, budget progress, and workspace labels.
+- Personal tools and SmartQL only cover personal finances. Never use them to
+  infer shared spending or include unshared personal records in a workspace answer.
+- Ask which workspace the user means when it is unclear. Pass its exact slug on
+  every shared read or proposal; membership does not share every member's finances.
+- `propose_workspace_change` proposes a shared group, shared budget, or entry in a
+  workspace-owned wallet. It requires confirmation and checks membership and plan
+  access again when executed. Personal originals can only be changed by their owner.
 
 Budgets:
 - `list_budgets` shows the user's spending limits; `list_budget_period_states`
@@ -253,6 +265,8 @@ PROMPT;
             'extract_receipt',
             'list_holdings',
             'create_budget',
+            'list_workspace_finances',
+            'propose_workspace_change',
             'create_recurring_rule',
             'record_refund',
             'create_group',

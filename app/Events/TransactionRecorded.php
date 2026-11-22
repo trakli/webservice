@@ -23,7 +23,7 @@ class TransactionRecorded
     {
         return new TransactionSnapshot(
             transactionId: $transaction->id,
-            userId: $transaction->user_id,
+            userId: $transaction->user_id ?? $transaction->created_by_user_id,
             walletId: $transaction->wallet_id,
             type: self::normalizeType($transaction->type),
             amount: (float) $transaction->amount,

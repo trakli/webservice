@@ -6,7 +6,7 @@ use App\Models\AgentProposedAction;
 use App\Models\Budget;
 use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -38,10 +38,36 @@ class ProposedActionExecutor
             'group.create' => $this->createOwned($action, $action->owner->groups()),
             'reminder.create' => $this->createOwned($action, $action->owner->reminders()),
             'budget.create' => $this->createBudget($action),
+            'workspace.change' => $this->changeWorkspace($action),
             'recurring_rule.create' => $this->createRecurringRule($action),
             'refund.create' => $this->createRefund($action),
             default => throw new RuntimeException("Unsupported action type: {$action->action_type}"),
         });
+    }
+
+    private function changeWorkspace(AgentProposedAction $action): Model
+    {
+        $payload = $action->payload;
+        $request = \Illuminate\Http\Request::create('/', 'POST', $payload);
+        $request->setUserResolver(fn () => $action->owner);
+        if ($payload['operation'] === 'create_workspace') {
+            $data = $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string|max:500']);
+            if (! app(\Whilesmart\Entitlements\Contracts\Entitlements::class)->allows($action->owner, 'shared_workspaces')) {
+                app(WorkspaceFinance::class)->deny('You cannot create shared workspaces.', 403);
+            }
+            return $action->owner->createWorkspace($data['name'], ['type' => 'team', 'description' => $data['description'] ?? null]);
+        }
+        $workspace = \App\Models\Workspace::where('slug', $payload['workspace'])->firstOrFail();
+        $controller = app(\App\Http\Controllers\API\v1\WorkspaceFinanceController::class);
+        if ($payload['operation'] === 'create_budget') {
+            $response = app(\App\Http\Controllers\API\v1\WorkspaceBudgetController::class)->storeBudget($request, $workspace);
+            return $workspace->budgets()->findOrFail($response->getData(true)['data']['id']);
+        }
+        if ($payload['operation'] === 'record_transaction') {
+            $response = $controller->storeTransaction($request, $workspace);
+            return app(WorkspaceFinance::class)->transactions($workspace)->findOrFail($response->getData(true)['data']['id']);
+        }
+        throw new RuntimeException('Unsupported workspace action.');
     }
 
     /**
@@ -193,7 +219,7 @@ class ProposedActionExecutor
      * Create an owned, Syncable resource (wallet, category, party) from the
      * proposal payload, stamping the idempotency key as its client id.
      */
-    private function createOwned(AgentProposedAction $action, HasMany $relation): Model
+    private function createOwned(AgentProposedAction $action, HasOneOrMany $relation): Model
     {
         /** @var Model $model */
         $model = $relation->create($action->payload);

@@ -57,6 +57,7 @@ use Whilesmart\Agents\Resources\ResourceField;
 class Reminder extends Model implements HasAgentResource
 {
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use SoftDeletes;
     use Syncable;
 
@@ -216,7 +217,9 @@ class Reminder extends Model implements HasAgentResource
             description: 'Things the user asked to be reminded about, such as a bill due date.',
             aliases: ['alerts', 'nudges', 'to-dos'],
             labelColumn: 'title',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             readable: [
                 ResourceField::key(),
                 ResourceField::string('title', 'What the reminder is about'),
@@ -227,7 +230,8 @@ class Reminder extends Model implements HasAgentResource
                 ResourceField::datetime('due_at', 'When the thing being remembered is due'),
                 ResourceField::datetime('next_trigger_at', 'When it fires next'),
                 ResourceField::integer('priority', 'How important it is, higher is more urgent'),
-                ResourceField::internal('user_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::datetime('created_at'),
             ],
             writable: [

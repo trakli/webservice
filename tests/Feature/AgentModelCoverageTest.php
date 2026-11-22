@@ -92,6 +92,30 @@ class AgentModelCoverageTest extends TestCase
         return $result;
     }
 
+    public function test_import_read_tools_exclude_other_users_and_workspace_records(): void
+    {
+        $space = $this->actingAs($this->user)->postJson('/api/v1/workspaces', ['name' => 'Shared budget'])
+            ->assertCreated()->json('data.id');
+        $workspace = \App\Models\Workspace::findOrFail($space);
+        $other = User::factory()->create();
+        foreach ([$this->user, $other, $workspace] as $owner) {
+            $owner->fileImports()->create([
+                'name' => 'Statement', 'file_path' => 'imports/private.csv', 'file_type' => 'csv',
+            ]);
+            $owner->importSessions()->create([
+                'file_name' => 'Statement', 'file_type' => 'csv', 'processor' => 'csv',
+                'status' => 'ready', 'suggestions' => [], 'metadata' => ['path' => 'imports/private.csv'],
+            ]);
+        }
+        foreach (['list_file_imports', 'list_import_sessions'] as $tool) {
+            $rows = $this->read($tool);
+            $this->assertSame(1, $rows['count']);
+            foreach (['user_id', 'owner_id', 'owner_type', 'file_path', 'metadata', 'suggestions'] as $key) {
+                $this->assertArrayNotHasKey($key, $rows['rows'][0]);
+            }
+        }
+    }
+
     private function transaction(array $attributes = []): Transaction
     {
         return Transaction::factory()->create(array_merge([
@@ -338,7 +362,7 @@ class AgentModelCoverageTest extends TestCase
 
         $this->confirm($action)->assertStatus(200);
 
-        $this->assertDatabaseHas('groups', ['user_id' => $this->user->id, 'name' => 'Household']);
+        $this->assertDatabaseHas('groups', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id, 'name' => 'Household']);
     }
 
     public function test_reminder_is_created_through_the_generic_write_tool(): void
@@ -350,7 +374,7 @@ class AgentModelCoverageTest extends TestCase
 
         $this->confirm($action)->assertStatus(200);
 
-        $this->assertDatabaseHas('reminders', ['user_id' => $this->user->id, 'title' => 'Pay rent']);
+        $this->assertDatabaseHas('reminders', ['owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id, 'title' => 'Pay rent']);
     }
 
     /**
@@ -391,8 +415,8 @@ class AgentModelCoverageTest extends TestCase
 
         $this->confirm($action)->assertStatus(200);
 
-        $this->assertDatabaseHas('groups', ['name' => 'Mine', 'user_id' => $this->user->id]);
-        $this->assertDatabaseMissing('groups', ['name' => 'Mine', 'user_id' => $other->id]);
+        $this->assertDatabaseHas('groups', ['name' => 'Mine', 'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id]);
+        $this->assertDatabaseMissing('groups', ['name' => 'Mine', 'owner_type' => \App\Models\User::class, 'owner_id' => $other->id]);
     }
 
     // Generated read tools

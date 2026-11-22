@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Prism\Prism\Facades\Prism;
@@ -15,14 +16,14 @@ class AiRouter
 
     public const ROUTE_AGENT = 'agent';
 
-    public function classify(string $question, string $conversation = ''): string
+    public function classify(string $question, string $conversation = '', ?Model $owner = null): string
     {
         try {
             $prompt = trim($conversation) !== ''
                 ? "Conversation so far:\n{$conversation}\n\nLatest message: {$question}"
                 : $question;
 
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
                 ->using(
                     config('services.llm.provider'),
                     config('services.llm.model'),
@@ -31,6 +32,7 @@ class AiRouter
                 ->withPrompt($prompt)
                 ->usingTemperature(0)
                 ->asText();
+
 
             $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
             $route = match ($label) {
@@ -55,10 +57,13 @@ class AiRouter
         }
     }
 
-    public function answerGeneral(string $question, ?string $dataFailureHint = null): array
-    {
+    public function answerGeneral(
+        string $question,
+        ?string $dataFailureHint = null,
+        ?Model $owner = null,
+    ): array {
         try {
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
                 ->using(
                     config('services.llm.provider'),
                     config('services.llm.model'),
@@ -67,6 +72,7 @@ class AiRouter
                 ->withPrompt($question)
                 ->usingTemperature(0.3)
                 ->asText();
+
 
             return [
                 'success' => true,
@@ -82,10 +88,10 @@ class AiRouter
         }
     }
 
-    public function generateTitle(string $firstQuestion): ?string
+    public function generateTitle(string $firstQuestion, ?Model $owner = null): ?string
     {
         try {
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
                 ->using(
                     config('services.llm.provider'),
                     config('services.llm.model'),
@@ -94,6 +100,7 @@ class AiRouter
                 ->withPrompt($firstQuestion)
                 ->usingTemperature(0.3)
                 ->asText();
+
 
             $title = trim($response->text);
             $title = trim($title, "\"'.,;:!?\n\r\t ");
@@ -142,7 +149,7 @@ Reply "agent" when the user wants to DO or CHANGE something, not just learn:
     set, change, update, rename, delete, remove, categorize, transfer, import.
 
 Also reply "agent" when the user wants RICH or VISUAL output rather than a
-single number or sentence — anything that needs presentation, not just a lookup:
+single number or sentence, anything that needs presentation, not just a lookup:
   - Reports: "write a report about my spending", "a proper report with graphs"
   - Charts / graphs: "show me a chart of my spending", "graph my cash flow"
   - Dashboards / visual breakdowns: "build a dashboard", "visualize my expenses"
@@ -169,7 +176,7 @@ Reply "general" ONLY for:
   - How-to questions about the app itself: "how do I add a wallet"
 
 When uncertain, reply "data". The data layer can report "no matching
-results" — that's fine. Missing a real data question is worse than a
+results", that's fine. Missing a real data question is worse than a
 useless data lookup.
 PROMPT;
     }
@@ -179,7 +186,7 @@ PROMPT;
         $base = 'You are Trakli, a personal finance assistant. Be concise '
             . 'and friendly. Trakli has a live data layer with the user\'s '
             . 'transactions, wallets, categories, parties, transfers and '
-            . 'balances — you do NOT see that data in this conversation, '
+            . 'balances, you do NOT see that data in this conversation, '
             . 'but it exists and is available through Trakli.';
 
         $base .= ' You only help with the user\'s finances and using Trakli. '
@@ -197,14 +204,14 @@ PROMPT;
                 . 'help). Answer it directly. If it is actually about the '
                 . 'user\'s own records, tell the user to retry rephrasing '
                 . 'clearly (for example: "How much did I spend last month?") '
-                . 'so Trakli can query the data layer — do NOT claim you '
+                . 'so Trakli can query the data layer, do NOT claim you '
                 . 'lack access to their data.';
         } else {
             $base .= ' A prior attempt to query the user\'s data failed with: '
                 . $dataFailureHint
                 . '. Apologise briefly, explain the lookup did not work, and '
                 . 'suggest a rephrasing the user could try. Do NOT claim you '
-                . 'lack access to their data in general — only that this '
+                . 'lack access to their data in general, only that this '
                 . 'specific query did not succeed.';
         }
 
@@ -214,7 +221,7 @@ PROMPT;
     private function titleSystemPrompt(): string
     {
         return 'Generate a concise chat title (max 6 words) summarizing the '
-            . 'topic of the given question. Respond with only the title — '
+            . 'topic of the given question. Respond with only the title, '
             . 'no quotes, no trailing punctuation, no explanation.';
     }
 }

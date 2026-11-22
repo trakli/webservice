@@ -5,8 +5,12 @@ namespace App\Console\Commands;
 use App\Console\Commands\Traits\FindsUser;
 use App\Mail\AccountDeletedMail;
 use App\Mail\GenericMail;
+use App\Enums\StreakPeriod;
+use App\Enums\StreakType;
 use App\Mail\InactivityReminderMail;
 use App\Mail\InsightsMail;
+use App\Mail\StreakMilestoneMail;
+use App\Models\Streak;
 use App\Models\User;
 use App\Services\InactivityService;
 use Illuminate\Console\Command;
@@ -18,7 +22,7 @@ class TestMailCommand extends Command
     use FindsUser;
 
     protected $signature = 'mail:test
-        {type : Mail type (account-deleted|inactivity|insights|generic)}
+        {type : Mail type (account-deleted|inactivity|insights|generic|streak)}
         {identifier : User email or ID to send the test mail to}';
 
     protected $description = 'Send a test email of a given type to a user';
@@ -28,6 +32,7 @@ class TestMailCommand extends Command
         'inactivity',
         'insights',
         'generic',
+        'streak',
     ];
 
     public function handle(): void
@@ -50,10 +55,29 @@ class TestMailCommand extends Command
             'inactivity' => $this->buildInactivityMail($user),
             'insights' => $this->buildInsightsMail($user),
             'generic' => new GenericMail('Test Email from Trakli', "Hi {$user->first_name},\n\nThis is a test email."),
+            'streak' => $this->buildStreakMail($user),
         };
 
         Mail::to($user)->send($mailable);
         $this->info("Sent '{$type}' test email to {$user->email}.");
+    }
+
+    private function buildStreakMail(User $user): StreakMilestoneMail
+    {
+        $milestone = 7;
+
+        $streak = new Streak([
+            'owner_type' => User::class,
+            'owner_id' => $user->id,
+            'type' => StreakType::TRANSACTION,
+            'period' => StreakPeriod::DAILY,
+            'current_length' => $milestone,
+            'longest_length' => 12,
+            'started_on' => Carbon::now()->subDays($milestone - 1)->toDateString(),
+            'last_tracked_on' => Carbon::now()->toDateString(),
+        ]);
+
+        return new StreakMilestoneMail($streak, $milestone);
     }
 
     private function buildInactivityMail(User $user): InactivityReminderMail

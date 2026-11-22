@@ -32,6 +32,7 @@ class Party extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Iconable;
     use SoftDeletes;
     use Syncable;
@@ -44,7 +45,6 @@ class Party extends Model implements HasAgentResource
     protected $fillable = [
         'name',
         'description',
-        'user_id',
         'type',
     ];
 
@@ -59,14 +59,17 @@ class Party extends Model implements HasAgentResource
             description: 'The people and businesses on the other side of a transaction.',
             aliases: ['vendors', 'merchants', 'payees', 'payers', 'contacts'],
             labelColumn: 'name',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
                 ResourceField::string('name', 'Party name'),
                 ResourceField::string('type', 'How the party is classified'),
                 ResourceField::text('description', 'Notes about the party'),
-                ResourceField::internal('user_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
             ],
             readTool: false,
         );

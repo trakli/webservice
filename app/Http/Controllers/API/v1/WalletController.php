@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Wallet;
@@ -143,9 +142,8 @@ class WalletController extends ApiController
         ]);
 
         $user = $request->user();
-        $validatedData['user_id'] = $user->id;
 
-        $existingWallet = Wallet::where('user_id', $user->id)
+        $existingWallet = Wallet::ownedBy($user)
             ->where('name', $validatedData['name'])
             ->where('currency', $validatedData['currency'])
             ->first();
@@ -158,11 +156,6 @@ class WalletController extends ApiController
             $existingWallet->refresh();
 
             return $this->success($existingWallet, __('Wallet already exists'), 200);
-        }
-
-        $walletLimit = app(Entitlements::class)->limit($user, 'max_wallets');
-        if ($walletLimit !== null && Wallet::where('user_id', $user->id)->count() >= $walletLimit) {
-            return $this->failure(__('You have reached the maximum number of wallets allowed.'), 403);
         }
 
         try {
@@ -184,6 +177,8 @@ class WalletController extends ApiController
             return $this->success($wallet, __('Wallet created successfully'), 201);
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create wallet'), 500, [$e->getMessage()]);
         }
@@ -332,6 +327,8 @@ class WalletController extends ApiController
             return $this->success($wallet, __('Wallet updated successfully'));
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to update wallet'), 500, [$e->getMessage()]);
         }

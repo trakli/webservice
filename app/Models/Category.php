@@ -41,8 +41,10 @@ use Whilesmart\Agents\Resources\ResourceField;
 )]
 class Category extends Model implements HasAgentResource
 {
+    use \App\Traits\EnforcesCreationLimit;
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use Iconable;
     use Sluggable;
     use SoftDeletes;
@@ -61,9 +63,25 @@ class Category extends Model implements HasAgentResource
         'name',
         'description',
         'type',
-        'user_id',
         'slug',
     ];
+
+    protected bool $seeded = false;
+
+    public static function createSeeded(User $owner, array $attributes): self
+    {
+        $category = new static($attributes);
+        $category->owner()->associate($owner);
+        $category->seeded = true;
+        $category->save();
+
+        return $category;
+    }
+
+    public function isSeeded(): bool
+    {
+        return $this->seeded;
+    }
 
     protected $appends = ['last_synced_at', 'client_generated_id', 'icon'];
 
@@ -75,6 +93,7 @@ class Category extends Model implements HasAgentResource
         return [
             'slug' => [
                 'source' => 'name',
+                'includeTrashed' => true,
             ],
         ];
     }
@@ -88,14 +107,18 @@ class Category extends Model implements HasAgentResource
             description: 'Labels the user classifies transactions under.',
             aliases: ['category', 'tags', 'labels'],
             labelColumn: 'name',
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerBypassRoles: ['admin'],
             readable: [
                 ResourceField::key(),
                 ResourceField::string('name', 'Category name'),
                 ResourceField::enum('type', ['income', 'expense', 'invoice'], 'What the category applies to'),
                 ResourceField::text('description', 'What the category covers'),
-                ResourceField::internal('user_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
+                ResourceField::internal('created_by_user_id'),
             ],
             readTool: false,
         );

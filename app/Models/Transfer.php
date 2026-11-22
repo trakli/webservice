@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use InvalidArgumentException;
 use App\Enums\TransactionType;
 use App\Traits\HasClientCreatedAt;
 use App\Traits\Syncable;
@@ -39,6 +40,7 @@ class Transfer extends Model implements HasAgentResource
 {
     use HasClientCreatedAt;
     use HasFactory;
+    use \App\Traits\HasFinanceOwner;
     use SoftDeletes;
     use Syncable;
 
@@ -50,7 +52,6 @@ class Transfer extends Model implements HasAgentResource
     protected $fillable = [
         'amount',
         'exchange_rate',
-        'user_id',
         'from_wallet_id',
         'to_wallet_id',
         'datetime',
@@ -72,6 +73,13 @@ class Transfer extends Model implements HasAgentResource
 
     protected static function booted(): void
     {
+        static::saving(function (Transfer $transfer) {
+            foreach ([$transfer->from_wallet_id, $transfer->to_wallet_id] as $walletId) {
+                if (! $transfer->hasSameOwner(Wallet::withTrashed()->findOrFail($walletId))) {
+                    throw new InvalidArgumentException('A transfer and both wallets must have the same owner.');
+                }
+            }
+        });
         static::deleting(function (Transfer $transfer) {
             $transfer->transactions->each->delete();
         });
@@ -137,7 +145,9 @@ class Transfer extends Model implements HasAgentResource
             table: 'transfers',
             description: "Money moved between two of the user's own wallets. Not income or expense.",
             aliases: ['moves', 'wallet transfers'],
-            ownerKey: 'user_id',
+            ownerKey: 'owner_id',
+            ownerParam: 'user_id',
+            ownerConstants: ['owner_type' => User::class],
             ownerRelation: 'transfers',
             readable: [
                 ResourceField::key(),
@@ -146,7 +156,8 @@ class Transfer extends Model implements HasAgentResource
                 ResourceField::reference('from_wallet_id', 'wallets.id', 'Wallet the money left'),
                 ResourceField::reference('to_wallet_id', 'wallets.id', 'Wallet the money arrived in'),
                 ResourceField::datetime('datetime', 'When the transfer happened'),
-                ResourceField::internal('user_id'),
+                ResourceField::internal('owner_id'),
+                ResourceField::internal('owner_type', 'string'),
                 ResourceField::datetime('created_at', 'When the transfer was recorded'),
             ],
             relationships: [

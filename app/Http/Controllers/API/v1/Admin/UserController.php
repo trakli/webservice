@@ -20,6 +20,8 @@ class UserController extends ApiController
         tags: ['Admin'],
         parameters: [
             new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'joined_on', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
         ],
         responses: [
@@ -30,8 +32,18 @@ class UserController extends ApiController
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = User::query();
-        $search = $request->input('search');
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'joined_on' => ['nullable', 'date_format:Y-m-d'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ]);
+
+        $query = User::query()
+            ->withSum('tokenUsages as tokens_used', 'total_tokens')
+            ->withMax('tokens as last_seen_at', 'last_used_at')
+            ->withMax('transactions as last_transaction_at', 'datetime')
+            ->latest('created_at');
+        $search = $validated['search'] ?? null;
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -42,7 +54,11 @@ class UserController extends ApiController
             });
         }
 
-        $users = $query->paginate($request->input('per_page', 15));
+        if (isset($validated['joined_on'])) {
+            $query->whereDate('created_at', $validated['joined_on']);
+        }
+
+        $users = $query->paginate($validated['per_page'] ?? 15);
 
         return $this->success($users);
     }
@@ -79,7 +95,7 @@ class UserController extends ApiController
         ];
 
         return $this->success([
-            'user' => $user,
+            'user' => array_merge($user->toArray(), ['tokens_used' => $user->tokensUsed()]),
             'counts' => $counts,
             'preferences' => [
                 'country' => $user->getConfigValue('country'),
@@ -121,8 +137,8 @@ class UserController extends ApiController
         }
 
         $email = $user->email;
-        $name = $user->first_name . ' ' . $user->last_name;
-        $adminName = $request->user()->first_name . ' ' . $request->user()->last_name;
+        $name = sprintf('%s %s', $user->first_name, $user->last_name);
+        $adminName = sprintf('%s %s', $request->user()->first_name, $request->user()->last_name);
         $reason = $request->input('reason', 'No reason provided');
 
         $user->tokens()->delete();

@@ -15,6 +15,10 @@ class UserOwnerAuthorizer implements OwnerAuthorizer
 {
     public function authorize(?Authenticatable $user, string $ownerType, mixed $ownerId): bool
     {
+        if ($user !== null && $ownerType === 'platform') {
+            return method_exists($user, 'hasRole') && $user->hasRole('admin');
+        }
+
         return $user !== null
             && $ownerType === User::class
             && (int) $ownerId === (int) $user->getAuthIdentifier();
@@ -28,6 +32,16 @@ class UserOwnerAuthorizer implements OwnerAuthorizer
     ): Builder {
         if ($user === null) {
             return $query->whereRaw('0 = 1');
+        }
+
+        if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+            return $query->where(function (Builder $nested) use ($user, $ownerTypeColumn, $ownerIdColumn) {
+                $nested->where($ownerTypeColumn, 'platform')
+                    ->orWhere(function (Builder $owned) use ($user, $ownerTypeColumn, $ownerIdColumn) {
+                        $owned->where($ownerTypeColumn, User::class)
+                            ->where($ownerIdColumn, $user->getAuthIdentifier());
+                    });
+            });
         }
 
         return $query->where($ownerTypeColumn, User::class)

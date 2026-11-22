@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-beta.3] - 2026-11-22
+
+### Added
+
+- Shared workspaces for family and group budgets
+- Transaction and check-in streaks with reminders
+- Admin engagement metrics and feedback tools
+- Paid access and monthly AI usage limits
+
+### Changed
+
+- Finance records support workspace ownership and sharing
+- The application requires PHP 8.4 and runs on Laravel 12
+
+### Fixed
+
+- Category creation retries return the existing category
+- Streaming assistant responses retain extended thinking and usage accounting
+
 ## [2.0.0-beta.2] - 2026-08-12
 
 Codename: Ailanthus, second beta.

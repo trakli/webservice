@@ -4,30 +4,37 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
+use Whilesmart\Shareables\Contracts\ShareAudience;
+use Whilesmart\Shareables\Models\Share;
+use Whilesmart\Shareables\Traits\ReceivesShares;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Whilesmart\Holdings\Models\Holding;
+use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\AgentMetrics\Traits\HasTokenUsage;
 use Whilesmart\ModelConfiguration\Traits\Configurable;
 use Whilesmart\Outreach\Traits\SendsOutreach;
 use Whilesmart\Roles\Traits\HasRoles;
-use Whilesmart\AgentActions\Traits\HasAgentActions;
 use Whilesmart\UserDevices\Traits\HasDevices;
 
-class User extends Authenticatable implements HasLocalePreference
+class User extends Authenticatable implements HasLocalePreference, ShareAudience
 {
     use Configurable;
     use HasAgentActions;
     use HasApiTokens;
-    use HasTokenUsage;
     use HasDevices;
     use HasFactory;
     use HasRoles;
+    use \Whilesmart\Workspaces\Traits\HasWorkspaces;
+    use HasTokenUsage;
     use Notifiable;
     use SendsOutreach;
+    use ReceivesShares;
 
     /**
      * The attributes that are mass assignable.
@@ -72,56 +79,91 @@ class User extends Authenticatable implements HasLocalePreference
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'tokens_used' => 'integer',
     ];
 
-    public function categories(): HasMany
+    public function delete()
     {
-        return $this->hasMany(Category::class);
+        return $this->getConnection()->transaction(function () {
+            static::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+            foreach ([Transaction::class, Wallet::class] as $resource) {
+                $resource::withTrashed()->ownedBy($this)->select('id')->lockForUpdate()->get();
+            }
+
+            return parent::delete();
+        });
     }
 
-    public function groups(): HasMany
+    public function admits(?AuthenticatableContract $viewer): bool
     {
-        return $this->hasMany(Group::class);
+        return $viewer instanceof self && $this->is($viewer);
     }
 
-    public function parties(): HasMany
+    protected static function booted(): void
     {
-        return $this->hasMany(Party::class);
+        static::deleting(function (User $user) {
+            Share::whereHasMorph(
+                'shareable',
+                [Wallet::class, Transaction::class],
+                fn ($resources) => $resources->withTrashed()->ownedBy($user)
+            )->withTrashed()->forceDelete();
+            $tables = ['transactions', 'transfers', 'wallets', 'categories', 'groups', 'parties',
+                'reminders', 'file_imports', 'import_sessions'];
+            foreach ($tables as $table) {
+                \Illuminate\Support\Facades\DB::table($table)
+                    ->where('owner_type', $user->getMorphClass())->where('owner_id', $user->getKey())->delete();
+            }
+        });
     }
 
-    public function wallets(): HasMany
+    public function categories(): MorphMany
     {
-        return $this->hasMany(Wallet::class);
+        return $this->morphMany(Category::class, 'owner');
     }
 
-    public function holdings(): HasMany
+    public function groups(): MorphMany
     {
-        return $this->hasMany(Holding::class);
+        return $this->morphMany(Group::class, 'owner');
     }
 
-    public function transactions(): HasMany
+    public function parties(): MorphMany
     {
-        return $this->hasMany(Transaction::class);
+        return $this->morphMany(Party::class, 'owner');
     }
 
-    public function transfers(): HasMany
+    public function wallets(): MorphMany
     {
-        return $this->hasMany(Transfer::class);
+        return $this->morphMany(Wallet::class, 'owner');
     }
 
-    public function fileImports(): HasMany
+    public function holdings(): MorphMany
     {
-        return $this->hasMany(FileImport::class);
+        return $this->morphMany(Holding::class, 'owner');
     }
 
-    public function importSessions(): HasMany
+    public function transactions(): MorphMany
     {
-        return $this->hasMany(ImportSession::class);
+        return $this->morphMany(Transaction::class, 'owner');
     }
 
-    public function reminders(): HasMany
+    public function transfers(): MorphMany
     {
-        return $this->hasMany(Reminder::class);
+        return $this->morphMany(Transfer::class, 'owner');
+    }
+
+    public function fileImports(): MorphMany
+    {
+        return $this->morphMany(FileImport::class, 'owner');
+    }
+
+    public function importSessions(): MorphMany
+    {
+        return $this->morphMany(ImportSession::class, 'owner');
+    }
+
+    public function reminders(): MorphMany
+    {
+        return $this->morphMany(Reminder::class, 'owner');
     }
 
     public function budgets(): MorphMany

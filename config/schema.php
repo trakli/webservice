@@ -5,9 +5,8 @@
  *
  * Each feature declares the table state it expects after all its migrations
  * have run. The `schema:verify` command compares this against the live DB;
- * `schema:conform` applies missing additive changes in place. The app can
- * refuse to boot when non-conformant — see `App\Providers\AppServiceProvider`
- * and the SCHEMA_CONFORMANCE_ENFORCE env flag.
+ * `schema:conform` applies missing additive changes in place. The package can
+ * refuse requests while the schema is non-conformant.
  *
  * Column specs use Laravel Blueprint method names. Modifiers are expressed
  * as a keyed array: ['type' => 'string', 'nullable' => true, 'length' => 255].
@@ -33,9 +32,63 @@ return [
      */
     'enforce' => env('SCHEMA_CONFORMANCE_ENFORCE', true),
 
+    'auto_conform' => env('SCHEMA_CONFORMANCE_AUTO_CONFORM', true),
+
+    'cache_ttl' => (int) env('SCHEMA_CONFORMANCE_CACHE_TTL', 60),
+
+    'bypass_paths' => ['schema/*', 'api/v1/info'],
+
     'tables' => [
+        'import_sessions' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'file_imports' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'transfers' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'parties' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+            ],
+        ],
+        'groups' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
+        'categories' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
+        'wallets' => [
+            'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
+            ],
+        ],
         'transactions' => [
             'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
+                'created_by_user_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],
                 'intent' => ['type' => 'string', 'default' => 'regular'],
                 'metadata' => ['type' => 'json', 'nullable' => true],
             ],
@@ -59,6 +112,8 @@ return [
 
         'reminders' => [
             'columns' => [
+                'owner_type' => ['type' => 'string'],
+                'owner_id' => ['type' => 'unsignedBigInteger'],
                 'source' => ['type' => 'string', 'nullable' => true],
                 'remindable_type' => ['type' => 'string', 'nullable' => true],
                 'remindable_id' => ['type' => 'unsignedBigInteger', 'nullable' => true],

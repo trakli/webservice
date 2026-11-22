@@ -10,6 +10,7 @@ use App\Models\Budget;
 use App\Models\Category;
 use App\Models\Group;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Wallet;
 use App\Rules\Iso8601DateTime;
 use App\Rules\ValidateClientId;
@@ -447,7 +448,7 @@ class BudgetController extends ApiController
         $limit = min(200, max(1, (int) $request->query('limit', 50)));
 
         $query = Transaction::query()
-            ->whereIn('user_id', $userIds)
+            ->where('transactions.owner_type', User::class)->whereIn('transactions.owner_id', $userIds)
             ->whereNull('transfer_id')
             ->whereBetween('datetime', [$periodStart, $periodEnd]);
 

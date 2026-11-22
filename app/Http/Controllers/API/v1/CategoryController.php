@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API\v1;
 
-use Whilesmart\Entitlements\Contracts\Entitlements;
 use App\Http\Controllers\API\ApiController;
 use App\Http\Traits\ApiQueryable;
 use App\Models\Category;
@@ -171,7 +170,7 @@ class CategoryController extends ApiController
 
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
         try {
@@ -186,6 +185,8 @@ class CategoryController extends ApiController
             return $this->success($category, __('Category updated successfully'));
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to update category'), 500, [$e->getMessage()]);
         }
@@ -271,15 +272,17 @@ class CategoryController extends ApiController
 
         $data = $validator->validated();
         $user = $request->user();
-        $data['user_id'] = $user->id;
-        $category_exists = $user->categories()->where('name', $data['name'])->where('user_id', $user->id)->first();
+        $category_exists = $user->categories()->where('name', $data['name'])->first();
         if ($category_exists) {
-            return $this->failure(__('Category already exists'), 400);
-        }
+            if (!empty($data['client_id'])) {
+                if ($category_exists->client_generated_id !== $data['client_id']) {
+                    $category_exists->setClientGeneratedId($data['client_id'], $user);
+                    $category_exists->markAsSynced();
+                }
+                $category_exists->refresh();
+            }
 
-        $categoryLimit = app(Entitlements::class)->limit($user, 'max_categories');
-        if ($categoryLimit !== null && $user->categories()->count() >= $categoryLimit) {
-            return $this->failure(__('You have reached the maximum number of categories allowed.'), 403);
+            return $this->success($category_exists, __('Category already exists'), 200);
         }
 
         try {
@@ -302,6 +305,8 @@ class CategoryController extends ApiController
             return $this->success($category, __('Category created successfully'), 201);
         } catch (ValidationException $e) {
             return $this->failure(__('Validation error'), 422, $e->errors());
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create category'), 500, [$e->getMessage()]);
         }
@@ -342,7 +347,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
 
@@ -386,7 +391,7 @@ class CategoryController extends ApiController
         $user = $request->user();
         $category = $user->categories()->find($categoryId);
 
-        if (! $category) {
+        if (!$category) {
             return $this->failure(__('Category not found'), 404);
         }
 
@@ -473,7 +478,7 @@ class CategoryController extends ApiController
                         continue;
                     }
 
-                    $category = $user->categories()->create($categoryData);
+                    $category = Category::createSeeded($user, $categoryData);
                     $category->markAsSynced();
                     $created[] = $category;
                 }
@@ -484,6 +489,8 @@ class CategoryController extends ApiController
                 'skipped' => $skipped,
                 'categories' => $created,
             ], __('Default categories created successfully'), 201);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return $this->failure(__('Failed to create default categories'), 500, [$e->getMessage()]);
         }

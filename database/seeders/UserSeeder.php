@@ -3,12 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Group;
-use App\Models\Party;
 use App\Models\User;
-use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 use Whilesmart\Roles\Models\Role;
+use Whilesmart\Entitlements\Contracts\Entitlements;
 
 class UserSeeder extends Seeder
 {
@@ -109,8 +107,8 @@ class UserSeeder extends Seeder
     private function createCategoriesForUser(User $user): void
     {
         foreach ($this->incomeCategories as $category) {
-            Category::create([
-                'user_id' => $user->id,
+            Category::createSeeded($user, [
+
                 'name' => $category['name'],
                 'description' => $category['description'],
                 'type' => 'income',
@@ -118,8 +116,8 @@ class UserSeeder extends Seeder
         }
 
         foreach ($this->expenseCategories as $category) {
-            Category::create([
-                'user_id' => $user->id,
+            Category::createSeeded($user, [
+
                 'name' => $category['name'],
                 'description' => $category['description'],
                 'type' => 'expense',
@@ -130,8 +128,8 @@ class UserSeeder extends Seeder
     private function createPartiesForUser(User $user): void
     {
         foreach ($this->incomeParties as $party) {
-            Party::create([
-                'user_id' => $user->id,
+            $user->parties()->create([
+
                 'name' => $party['name'],
                 'description' => $party['description'],
                 'type' => $party['type'],
@@ -139,8 +137,8 @@ class UserSeeder extends Seeder
         }
 
         foreach ($this->expenseParties as $party) {
-            Party::create([
-                'user_id' => $user->id,
+            $user->parties()->create([
+
                 'name' => $party['name'],
                 'description' => $party['description'],
                 'type' => $party['type'],
@@ -150,9 +148,11 @@ class UserSeeder extends Seeder
 
     private function createWalletsForUser(User $user): void
     {
-        foreach ($this->wallets as $wallet) {
-            Wallet::create([
-                'user_id' => $user->id,
+        $limit = app(Entitlements::class)->limit($user, 'max_wallets');
+        $wallets = $limit === null ? $this->wallets : array_slice($this->wallets, 0, $limit);
+        foreach ($wallets as $wallet) {
+            $user->wallets()->create([
+
                 'name' => $wallet['name'],
                 'description' => $wallet['description'],
                 'type' => $wallet['type'],
@@ -163,8 +163,8 @@ class UserSeeder extends Seeder
     private function createGroupsForUser(User $user): void
     {
         foreach ($this->groups as $group) {
-            Group::create([
-                'user_id' => $user->id,
+            $user->groups()->create([
+
                 'name' => $group['name'],
                 'description' => $group['description'],
             ]);

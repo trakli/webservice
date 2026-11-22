@@ -59,7 +59,7 @@ class McpServerTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('transactions', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'wallet_id' => $wallet->id,
             'amount' => 12.5,
             'type' => 'expense',
@@ -78,7 +78,7 @@ class McpServerTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('wallets', [
-            'user_id' => $this->user->id,
+            'owner_type' => \App\Models\User::class, 'owner_id' => $this->user->id,
             'name' => 'Savings',
             'currency' => 'USD',
         ]);

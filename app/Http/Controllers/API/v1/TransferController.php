@@ -408,7 +408,7 @@ class TransferController extends ApiController
         }
 
         return Transfer::query()
-            ->where('user_id', $user->id)
+            ->ownedBy($user)
             ->join('model_sync_states', 'transfers.id', '=', 'model_sync_states.syncable_id')
             ->where('model_sync_states.syncable_type', Transfer::class)
             ->where('model_sync_states.client_generated_id', $randomId)

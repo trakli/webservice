@@ -17,7 +17,11 @@ class SendBudgetDigests extends Command
         $queued = 0;
 
         User::query()
-            ->whereHas('budgets', fn ($q) => $q->where('is_active', true))
+            ->where(function ($query) {
+                $query->whereHas('budgets', fn ($budgets) => $budgets->where('is_active', true))
+                    ->orWhereHas('workspaces', fn ($workspaces) => $workspaces->where('is_active', true)
+                        ->whereHas('budgets', fn ($budgets) => $budgets->where('is_active', true)));
+            })
             ->select('id')
             ->chunkById(200, function ($users) use (&$queued) {
                 foreach ($users as $user) {

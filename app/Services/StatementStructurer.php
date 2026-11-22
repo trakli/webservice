@@ -28,7 +28,7 @@ class StatementStructurer
     /**
      * @return TransactionSuggestion[]
      */
-    public function structure(string $rawText, ?string $documentType = null): array
+    public function structure(string $rawText, ?string $documentType = null, ?\App\Models\User $owner = null): array
     {
         $rawText = trim($rawText);
         if ($rawText === '') {
@@ -36,7 +36,7 @@ class StatementStructurer
         }
 
         try {
-            $response = Prism::text()
+            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
                 ->using(
                     config('services.llm.provider', 'groq'),
                     config('services.llm.model', 'llama-3.1-8b-instant'),

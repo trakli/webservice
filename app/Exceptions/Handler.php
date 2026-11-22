@@ -55,6 +55,14 @@ class Handler extends ExceptionHandler
     public function render($request, Throwable $e): Response|JsonResponse
     {
         $response = parent::render($request, $e);
+        if ($request->is('api/v1/workspaces*') && $response->getStatusCode() >= 400) {
+            $data = $response instanceof JsonResponse ? $response->getData(true) : [];
+            return app(config('user-authentication.response_formatter'))->failure(
+                $data['message'] ?? $data['error'] ?? 'Operation failed',
+                $response->getStatusCode(),
+                $data['errors'] ?? [],
+            );
+        }
 
         // Handle 500 errors - convert both HTML and Laravel's default JSON to our custom format
         if ($response->getStatusCode() === 500) {

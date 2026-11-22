@@ -23,6 +23,14 @@ class AiService
         ?string $language = null,
         ?string $role = null
     ): array {
+        $paidHost = ! app(\Whilesmart\Entitlements\Contracts\Entitlements::class) instanceof \Whilesmart\Entitlements\Support\AllowAllEntitlements;
+        $owner = \App\Models\User::find($userId);
+        if ($paidHost) {
+            if ($owner === null || blank(config('services.smartql.api_key'))) {
+                return ['success' => false, 'error' => __('Authenticated remote AI is unavailable.')];
+            }
+        }
+
         try {
             $payload = [
                 'question' => $question,
@@ -42,7 +50,7 @@ class AiService
                 $payload['format_hint'] = $formatHint;
             }
 
-            $response = Http::timeout(60)->post("{$this->baseUrl}/ask", $payload);
+            $response = $this->sendRequest($owner, $payload);
 
             if ($response->successful()) {
                 return [
@@ -53,17 +61,17 @@ class AiService
 
             Log::warning('SmartQL request failed', [
                 'status' => $response->status(),
-                'body' => $response->body(),
             ]);
 
             return [
                 'success' => false,
                 'error' => __('Failed to process your question. Please try again.'),
             ];
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('SmartQL service error', [
                 'message' => $e->getMessage(),
-                'question' => $question,
             ]);
 
             return [
@@ -71,6 +79,26 @@ class AiService
                 'error' => __('AI service is currently unavailable. Please try again later.'),
             ];
         }
+    }
+
+    private function sendRequest(?\App\Models\User $owner, array $payload): \Illuminate\Http\Client\Response
+    {
+        $paidHost = ! app(\Whilesmart\Entitlements\Contracts\Entitlements::class) instanceof \Whilesmart\Entitlements\Support\AllowAllEntitlements;
+        $http = Http::timeout(240);
+        if (filled(config('services.smartql.api_key'))) {
+            $http->withHeaders(['X-API-Key' => config('services.smartql.api_key')]);
+        }
+        $gate = app(\App\Ai\Billing\ModelCallGate::class);
+        return $gate->serialized($owner, function () use ($gate, $owner, $paidHost, $http, $payload) {
+            if ($paidHost) {
+                $gate->assertAllowed($owner);
+            }
+            $response = $http->post("{$this->baseUrl}/ask", $payload);
+            $usage = $response->json('usage') ?? $response->json('detail.usage');
+            $gate->recordRemoteUsage($owner, $usage);
+
+            return $response;
+        });
     }
 
     public function healthCheck(): bool

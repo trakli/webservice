@@ -11,13 +11,30 @@ use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
+use Prism\Prism\ValueObjects\Usage;
 use Tests\TestCase;
 
 class AgentMetricsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_an_agent_turn_records_token_usage_for_the_owner(): void
+    public function test_completed_model_call_records_token_usage_for_the_owner(): void
+    {
+        $user = User::factory()->create();
+
+        app(\App\Ai\Billing\ModelCallGate::class)->record($user, new Usage(24, 1), 'groq', 'test-model');
+
+        $this->assertDatabaseHas('token_usages', [
+            'owner_type' => $user->getMorphClass(),
+            'owner_id' => $user->id,
+            'operation' => 'model.call',
+            'prompt_tokens' => 24,
+            'completion_tokens' => 1,
+        ]);
+        $this->assertSame(25, $user->fresh()->tokensUsed());
+    }
+
+    public function test_agent_results_do_not_duplicate_completed_model_usage(): void
     {
         $user = User::factory()->create();
         $session = ChatSession::create([
@@ -49,14 +66,7 @@ class AgentMetricsTest extends TestCase
 
         (new ProcessChatMessageJob($assistant))->handle(Mockery::mock(AiService::class), $router, $agent);
 
-        $this->assertDatabaseHas('token_usages', [
-            'owner_type' => $user->getMorphClass(),
-            'owner_id' => $user->id,
-            'operation' => 'chat.agent',
-            'prompt_tokens' => 120,
-            'completion_tokens' => 30,
-        ]);
-
-        $this->assertSame(150, $user->fresh()->tokensUsed());
+        $this->assertDatabaseCount('token_usages', 0);
+        $this->assertSame(0, $user->fresh()->tokensUsed());
     }
 }
