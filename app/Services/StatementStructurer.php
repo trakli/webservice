@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Types\TransactionSuggestion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Header-aware structured extraction from a statement's raw text.
@@ -36,17 +35,17 @@ class StatementStructurer
         }
 
         try {
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
-                ->using(
-                    config('services.llm.provider', 'groq'),
-                    config('services.llm.model', 'llama-3.1-8b-instant'),
-                )
-                ->withSystemPrompt($this->systemPrompt())
-                ->withPrompt($this->buildPrompt($rawText, $documentType))
-                ->usingTemperature(0)
-                ->asText();
+            $responseText = \App\Ai\ModelCall::text(
+                'statement.structure',
+                $owner,
+                $this->systemPrompt(),
+                $this->buildPrompt($rawText, $documentType),
+                config('services.llm.provider', 'groq'),
+                config('services.llm.model', 'llama-3.1-8b-instant'),
+                0,
+            );
 
-            $rows = $this->parseJson($response->text);
+            $rows = $this->parseJson($responseText);
 
             if (! is_array($rows)) {
                 return [];

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\User;
 use App\Types\TransactionSuggestion;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 class SuggestionEnricher
 {
@@ -49,17 +48,17 @@ class SuggestionEnricher
         $prompt = $this->buildPrompt($suggestionsData, $wallets, $categories, $parties, $documentContext);
 
         try {
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($user, fn () => Prism::text())
-                ->using(
-                    config('services.llm.provider', 'groq'),
-                    config('services.llm.model', 'llama-3.1-8b-instant'),
-                )
-                ->withSystemPrompt($this->systemPrompt())
-                ->withPrompt($prompt)
-                ->usingTemperature(0)
-                ->asText();
+            $responseText = \App\Ai\ModelCall::text(
+                'suggestions.enrich',
+                $user,
+                $this->systemPrompt(),
+                $prompt,
+                config('services.llm.provider', 'groq'),
+                config('services.llm.model', 'llama-3.1-8b-instant'),
+                0,
+            );
 
-            $enriched = $this->parseResponse($response->text);
+            $enriched = $this->parseResponse($responseText);
 
             if (is_array($enriched) && count($enriched) === count($suggestions)) {
                 return $this->mergeEnrichments($suggestions, $enriched, $wallets);

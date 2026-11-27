@@ -4,7 +4,6 @@ namespace App\Services\DocumentProcessors;
 
 use App\Types\TransactionSuggestion;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Reads a store/shop receipt as a single purchase: the printed grand total, the
@@ -21,9 +20,10 @@ class ReceiptReader
         $model = config('services.llm.model', 'llama-3.1-8b-instant');
 
         try {
-            $llm = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
-                ->using($provider, $model)
-                ->withSystemPrompt(<<<'PROMPT'
+            $llmText = \App\Ai\ModelCall::text(
+                'receipt.read',
+                $owner,
+                <<<'PROMPT'
 You are a receipt parser. The text is one store or shop receipt for a single
 purchase. Return ONLY a valid JSON object (no markdown, no other text) with keys:
 - amount: number, the receipt's printed grand total (what was actually paid), not the sum of line items
@@ -33,12 +33,14 @@ purchase. Return ONLY a valid JSON object (no markdown, no other text) with keys
 - description: short string of what was bought, or null
 - currency: 3-letter currency code, or null
 Use null for anything you cannot determine.
-PROMPT)
-                ->withPrompt("Parse this receipt:\n\n" . $rawText)
-                ->usingTemperature(0)
-                ->asText();
+PROMPT,
+                "Parse this receipt:\n\n" . $rawText,
+                $provider,
+                $model,
+                0,
+            );
 
-            $data = $this->parseLlmJson($llm->text);
+            $data = $this->parseLlmJson($llmText);
             if (! is_array($data)) {
                 return null;
             }
