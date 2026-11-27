@@ -11,7 +11,6 @@ use App\Services\AiRouter;
 use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Prism\Prism\ValueObjects\Usage;
 use Tests\TestCase;
 
 class AgentMetricsTest extends TestCase
@@ -22,7 +21,7 @@ class AgentMetricsTest extends TestCase
     {
         $user = User::factory()->create();
 
-        app(\App\Ai\Billing\ModelCallGate::class)->record($user, new Usage(24, 1), 'groq', 'test-model');
+        app(\App\Ai\Billing\ModelCallGate::class)->record($user, ['prompt_tokens' => 24, 'completion_tokens' => 1], 'groq', 'test-model');
 
         $this->assertDatabaseHas('token_usages', [
             'owner_type' => $user->getMorphClass(),

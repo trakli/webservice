@@ -4,7 +4,6 @@ namespace App\Ai\Billing;
 
 use Closure;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Prism\Prism\ValueObjects\Usage;
 use Whilesmart\Agents\Contracts\RunGuard;
 use Whilesmart\Agents\ValueObjects\AgentRequest;
 use Whilesmart\Agents\ValueObjects\AgentResult;
@@ -15,8 +14,13 @@ class MeteredRuns implements RunGuard
 {
     private const MAX_TOKENS = 4096;
 
-    public function __construct(private ModelCallGate $gate) {}
+    public function __construct(private ModelCallGate $gate)
+    {
+    }
 
+    /**
+     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
+     */
     public function handle(string $name, AgentRequest $request, Closure $next): AgentResult
     {
         $owner = $request->context->user;
@@ -48,13 +52,7 @@ class MeteredRuns implements RunGuard
         if (array_sum($usage) === 0) {
             return $result;
         }
-        $this->gate->record($request->context->user, new Usage(
-            $usage['prompt_tokens'],
-            $usage['completion_tokens'],
-            $usage['cache_write_input_tokens'],
-            $usage['cache_read_input_tokens'],
-            $usage['thought_tokens'],
-        ), (string) $request->provider, (string) $request->model);
+        $this->gate->record($request->context->user, $usage, (string) $request->provider, (string) $request->model);
 
         return $result;
     }
