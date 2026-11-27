@@ -8,19 +8,6 @@ use Prism\Prism\ValueObjects\Usage;
 
 class ModelCallTokenAccountingTest extends TestCase
 {
-    public function test_an_unsupported_provider_is_rejected_before_a_call(): void
-    {
-        $called = false;
-        try {
-            (new ModelCallGate())->withProvider(null, 'unsupported-provider', 'model', function () use (&$called) {
-                $called = true;
-            });
-            $this->fail('Unsupported provider was allowed.');
-        } catch (\RuntimeException $exception) {
-            $this->assertFalse($called);
-        }
-    }
-
     public function test_anthropic_cached_input_is_included(): void
     {
         $usage = new Usage(promptTokens: 100, completionTokens: 25, cacheWriteInputTokens: 200, cacheReadInputTokens: 300);

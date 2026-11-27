@@ -5,7 +5,6 @@ namespace App\Services;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Prism\Prism\Facades\Prism;
 use Throwable;
 
 class AiRouter
@@ -23,18 +22,18 @@ class AiRouter
                 ? "Conversation so far:\n{$conversation}\n\nLatest message: {$question}"
                 : $question;
 
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
-                ->using(
-                    config('services.llm.provider'),
-                    config('services.llm.model'),
-                )
-                ->withSystemPrompt($this->classifierSystemPrompt())
-                ->withPrompt($prompt)
-                ->usingTemperature(0)
-                ->asText();
+            $responseText = \App\Ai\ModelCall::text(
+                'router.classify',
+                $owner,
+                $this->classifierSystemPrompt(),
+                $prompt,
+                config('services.llm.provider'),
+                config('services.llm.model'),
+                0,
+            );
 
 
-            $label = strtolower(trim($response->text, " \t\n\r\0\x0B\"'.,"));
+            $label = strtolower(trim($responseText, " \t\n\r\0\x0B\"'.,"));
             $route = match ($label) {
                 self::ROUTE_GENERAL => self::ROUTE_GENERAL,
                 self::ROUTE_AGENT => self::ROUTE_AGENT,
@@ -43,7 +42,7 @@ class AiRouter
 
             Log::debug('AiRouter classified question', [
                 'question' => $question,
-                'raw' => $response->text,
+                'raw' => $responseText,
                 'route' => $route,
             ]);
 
@@ -63,20 +62,20 @@ class AiRouter
         ?Model $owner = null,
     ): array {
         try {
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
-                ->using(
-                    config('services.llm.provider'),
-                    config('services.llm.model'),
-                )
-                ->withSystemPrompt($this->generalSystemPrompt($dataFailureHint))
-                ->withPrompt($question)
-                ->usingTemperature(0.3)
-                ->asText();
+            $responseText = \App\Ai\ModelCall::text(
+                'router.general',
+                $owner,
+                $this->generalSystemPrompt($dataFailureHint),
+                $question,
+                config('services.llm.provider'),
+                config('services.llm.model'),
+                0.3,
+            );
 
 
             return [
                 'success' => true,
-                'text' => $response->text,
+                'text' => $responseText,
             ];
         } catch (Throwable $e) {
             Log::error('AiRouter answerGeneral failed', ['message' => $e->getMessage()]);
@@ -91,18 +90,18 @@ class AiRouter
     public function generateTitle(string $firstQuestion, ?Model $owner = null): ?string
     {
         try {
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($owner, fn () => Prism::text())
-                ->using(
-                    config('services.llm.provider'),
-                    config('services.llm.model'),
-                )
-                ->withSystemPrompt($this->titleSystemPrompt())
-                ->withPrompt($firstQuestion)
-                ->usingTemperature(0.3)
-                ->asText();
+            $responseText = \App\Ai\ModelCall::text(
+                'router.title',
+                $owner,
+                $this->titleSystemPrompt(),
+                $firstQuestion,
+                config('services.llm.provider'),
+                config('services.llm.model'),
+                0.3,
+            );
 
 
-            $title = trim($response->text);
+            $title = trim($responseText);
             $title = trim($title, "\"'.,;:!?\n\r\t ");
 
             if ($title === '') {

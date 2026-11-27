@@ -11,7 +11,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Prism\Prism\Facades\Prism;
 
 /**
  * Generic remote document processor.
@@ -413,9 +412,10 @@ class RemoteDocumentProcessor implements DocumentProcessor, ProvidesExtractionCo
         $rawText = mb_substr($rawText, 0, 8000);
 
         try {
-            $response = app(\App\Ai\Billing\ModelCallGate::class)->withOwner($user, fn () => Prism::text())
-                ->using($provider, $model)
-                ->withSystemPrompt(<<<'PROMPT'
+            $responseText = \App\Ai\ModelCall::text(
+                'statement.extract',
+                $user,
+                <<<'PROMPT'
 You are a financial document parser. Given raw text extracted from a financial
 document (bank statement, receipt, invoice), extract all transactions you can find.
 
@@ -427,12 +427,14 @@ Each transaction must have these keys:
 - currency: 3-letter currency code (e.g. USD, EUR)
 
 If you cannot determine a field, use null. Skip non-transaction text (headers, footers, account info).
-PROMPT)
-                ->withPrompt("Extract transactions from this document text:\n\n" . $rawText)
-                ->usingTemperature(0)
-                ->asText();
+PROMPT,
+                "Extract transactions from this document text:\n\n" . $rawText,
+                $provider,
+                $model,
+                0,
+            );
 
-            $parsed = $this->parseLlmJson($response->text);
+            $parsed = $this->parseLlmJson($responseText);
 
             if (! is_array($parsed) || empty($parsed)) {
                 return [];
