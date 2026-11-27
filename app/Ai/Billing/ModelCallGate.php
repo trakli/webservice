@@ -6,7 +6,6 @@ use Whilesmart\Entitlements\Support\AllowAllEntitlements;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Prism\Prism\ValueObjects\Usage;
 use Whilesmart\AgentMetrics\Facades\TokenMeter;
 use Whilesmart\Entitlements\Contracts\Entitlements;
 
@@ -73,22 +72,28 @@ class ModelCallGate
         }
     }
 
-    public static function totalTokens(Usage $usage, string $provider): int
+    /**
+     * @param array<string, int> $usage A run's usage as the agents package reports it.
+     */
+    public static function totalTokens(array $usage, string $provider): int
     {
-        $total = $usage->promptTokens + $usage->completionTokens;
+        $total = ($usage['prompt_tokens'] ?? 0) + ($usage['completion_tokens'] ?? 0);
 
         if (in_array($provider, ['anthropic', 'openai'], true)) {
-            $total += ($usage->cacheWriteInputTokens ?? 0) + ($usage->cacheReadInputTokens ?? 0);
+            $total += ($usage['cache_write_input_tokens'] ?? 0) + ($usage['cache_read_input_tokens'] ?? 0);
         }
 
         if ($provider === 'gemini') {
-            $total += $usage->thoughtTokens ?? 0;
+            $total += $usage['thought_tokens'] ?? 0;
         }
 
         return $total;
     }
 
-    public function record(?Model $owner, Usage $usage, string $provider, string $model, array $metadata = []): void
+    /**
+     * @param array<string, int> $usage A run's usage as the agents package reports it.
+     */
+    public function record(?Model $owner, array $usage, string $provider, string $model, array $metadata = []): void
     {
         if ($owner === null) {
             return;
@@ -98,7 +103,7 @@ class ModelCallGate
             return;
         }
 
-        $values = $usage->toArray();
+        $values = $usage;
         $values['total_tokens'] = self::totalTokens($usage, $provider);
         TokenMeter::record(
             owner: $owner,

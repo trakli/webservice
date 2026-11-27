@@ -38,7 +38,7 @@ class MeteredRunsTest extends TestCase
             'entitlements.usage_lock_store' => 'array',
         ]);
         Http::preventStrayRequests();
-        $this->owner = new User;
+        $this->owner = new User();
         $this->owner->setRawAttributes(['id' => 17]);
     }
 
@@ -166,8 +166,8 @@ class MeteredRunsTest extends TestCase
 
     public function test_self_hosted_runs_are_recorded_without_a_limit(): void
     {
-        $this->app->instance(Entitlements::class, new AllowAllEntitlements);
-        TokenMeter::shouldReceive('record')->once()->andReturn(new TokenUsage);
+        $this->app->instance(Entitlements::class, new AllowAllEntitlements());
+        TokenMeter::shouldReceive('record')->once()->andReturn(new TokenUsage());
         Http::fake(['api.anthropic.com/*' => Http::response($this->fixture('stream-basic-text-1.sse'))]);
         $deltas = [];
 
@@ -212,7 +212,7 @@ class MeteredRunsTest extends TestCase
             $this->assertSame($tokens, $arguments[3]['total_tokens']);
 
             return true;
-        })->andReturn(new TokenUsage);
+        })->andReturn(new TokenUsage());
     }
 
     private function fixture(string $name): StreamInterface
